@@ -30,7 +30,11 @@ class TelemetryCollector:
         self.data_buffer2: list[TelemetryFrame] = []
         self.last_lap_number = -1
 
-        self.session_base_name = "f4_laguna_"
+        self.session_car = "f4"
+        self.session_track = "algarve"
+
+        # self.session_base_name = "f4_laguna_"
+        self.session_base_name = f"{self.session_car}_{self.session_track}_"
         self.session_name = ""
 
     def connect(self) -> bool:
@@ -60,7 +64,9 @@ class TelemetryCollector:
 
         return self.ir_connected
 
-    def save_data(self, format: Literal["json", "parquet"] = "parquet"):
+    def save_data(
+        self, lap_time: int = 0, format: Literal["json", "parquet"] = "parquet"
+    ):
         """Save the data buffer to a json file."""
         logger.info(f"Saving telemetry data to {format}")
 
@@ -71,11 +77,13 @@ class TelemetryCollector:
             case "json":
                 self._save_data_json()
             case "parquet":
-                self._save_data_parquet()
+                self._save_data_parquet(lap_time=lap_time)
             case _:
                 raise ValueError(f"Unsupported format: {format}")
 
-    def _save_data_parquet(self, output_dir=settings.TELEMETRY_OUTPUT_DIR):
+    def _save_data_parquet(
+        self, lap_time: int = 0, output_dir=settings.TELEMETRY_OUTPUT_DIR
+    ):
         """Save the data buffer to a parquet file."""
         if not self.session_name:
             self.session_name = self.session_base_name + datetime.now().strftime(
@@ -88,7 +96,7 @@ class TelemetryCollector:
         output_dir.mkdir(parents=True, exist_ok=True)
 
         timestamp = datetime.now().isoformat().replace(":", "_")
-        output_file = f"{output_dir}/telemetry_{timestamp}.parquet"
+        output_file = f"{output_dir}/telemetry_{lap_time}_{timestamp}.parquet"
 
         # Save the data buffer to a parquet file
         df = pd.DataFrame([data.model_dump() for data in self.data_buffer])
@@ -117,7 +125,8 @@ class TelemetryCollector:
             # New lap, save and reset the buffer. Save the telemetry to a json file.
 
             if self.last_lap_number != -1:
-                self.save_data()
+                last_time = data.last_lap_time
+                self.save_data(last_time)
 
             self.last_lap_number = data.lap_number
             self.data_buffer = []
