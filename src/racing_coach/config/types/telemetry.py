@@ -1,5 +1,9 @@
-from pydantic import BaseModel, Field
 from datetime import datetime
+from pathlib import Path
+
+import irsdk
+import pandas as pd
+from pydantic import BaseModel, Field
 
 
 class TelemetryFrame(BaseModel):
@@ -66,12 +70,12 @@ class TelemetryFrame(BaseModel):
     on_pit_road: bool = Field(description="Whether car is on pit road")
 
     @classmethod
-    def from_irsdk(cls, ir, timestamp):
+    def from_irsdk(cls, ir: irsdk.IRSDK, timestamp: datetime) -> "TelemetryFrame":
         """
         Create a TelemetryFrame object from an iRacing SDK telemetry sample.
 
         Args:
-            ir (dict): The telemetry sample from the iRacing SDK.
+            ir (irsdk.IRSDK): The telemetry sample from the iRacing SDK.
             timestamp (datetime.datetime): The timestamp of the telemetry frame.
 
         Returns:
@@ -162,3 +166,52 @@ class TelemetryFrame(BaseModel):
             track_surface=ir["PlayerTrackSurface"],
             on_pit_road=ir["OnPitRoad"],
         )
+
+
+class LapTelemetry(BaseModel):
+    frames: list[TelemetryFrame] = Field(
+        description="List of telemetry frames for the lap"
+    )
+    lap_time: float | None = Field(description="Total lap time in seconds")
+
+    def to_parquet(self, file_path: str | Path) -> None:
+        """Save the LapTelemetry object to a Parquet file."""
+        df = pd.DataFrame([frame.model_dump() for frame in self.frames])
+
+        df["lap_time"] = self.lap_time  # will add the value to all rows
+
+        df.to_parquet(file_path)
+
+    @classmethod
+    def from_parquet(cls, file_path: str | Path):
+        """Load a LapTelemetry object from a Parquet file."""
+        df = pd.read_parquet(file_path)
+
+        # lap_time = df["lap_time"].iloc[0]
+
+        # df = df.drop(columns=["lap_time"])
+
+        frames = [TelemetryFrame(**row) for _, row in df.iterrows()]
+
+        return cls(frames=frames, lap_time=None)
+
+    def get_lap_time(self):
+        return self.frames[-1].session_time - self.frames[0].session_time
+
+    def is_valid(self):
+        """Check for any off-track or other abnormalities that invalidate the lap."""
+
+        # Can check for current track surface and see if it is off-track
+        # Can also check if the incident count has increased since the start of the lap
+
+        for i, frame in enumerate(self.frames):
+            # -1: not in world
+            # 0: off track
+            # 1: pit stall
+            # 2: approaching pits
+            # 3: on track
+
+            if frame.track_surface != 3:
+                return False, i
+
+        return True
