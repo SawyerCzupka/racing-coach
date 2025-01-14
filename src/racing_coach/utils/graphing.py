@@ -2,8 +2,8 @@ import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-from racing_coach.analysis.events.braking import BrakingEvent
-from racing_coach.config.types.telemetry import LapTelemetry
+from racing_coach.analysis.braking import BrakingEvent
+from racing_coach.core.types.telemetry import LapTelemetry
 
 
 def make_lap_telemetry_plot(lap: LapTelemetry) -> go.Figure:

@@ -1,9 +1,9 @@
 import logging
 from dataclasses import dataclass
 
-from racing_coach.config.types.telemetry import LapTelemetry
+from racing_coach.core.types.telemetry import LapTelemetry
 
-from racing_coach.config.settings import get_settings
+from racing_coach.core.settings import get_settings
 
 settings = get_settings()
 

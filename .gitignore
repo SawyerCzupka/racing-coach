@@ -1,7 +1,13 @@
 .venv
 
+.vscode
+.claudesync
+
 # JetBrains
 .idea/
+
+# pytest
+.pytest_cache
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
