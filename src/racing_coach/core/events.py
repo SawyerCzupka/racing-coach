@@ -1,11 +1,10 @@
+import asyncio
+import logging
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum, auto
-from typing import Any, Protocol, Callable, TypeAlias
-from concurrent.futures import ThreadPoolExecutor
-import asyncio
-import logging
-
+from typing import Any, Callable, Protocol, TypeAlias
 
 logger = logging.getLogger(__name__)
 
