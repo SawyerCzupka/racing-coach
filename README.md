@@ -11,7 +11,7 @@ An AI-powered sim racing coach that provides real-time feedback to improve your 
 
 ## Installation
 
-1. Make sure you have Python 3.9+ and Poetry installed
+1. Make sure you have Python 3.10+ and Poetry installed
 2. Clone this repository:
 
 ```bash
