@@ -2,20 +2,24 @@ import logging
 
 from racing_coach.core.types.telemetry import LapTelemetry
 from racing_coach.collectors.iracing import TelemetryCollector
+from racing_coach.core.events import EventBus, EventType, HandlerContext
 
 logger = logging.getLogger(__name__)
 
 
 class RacingCoach:
     def __init__(self):
-        self.collector = TelemetryCollector()
+        self.event_bus = EventBus()
+        self.collector = TelemetryCollector(self.event_bus)
 
-        self.collector.subscribe("lap_completed", self._handle_lap_completed)
+        self.event_bus.subscribe(EventType.LAP_COMPLETED, self._handle_lap_completed)
 
-    def _handle_lap_completed(self, lap: LapTelemetry) -> None:
+    def _handle_lap_completed(self, context: HandlerContext) -> None:
         """Handle a completed lap."""
 
-        pass
+        lap: LapTelemetry = context.event.data
+
+        print(lap.is_valid())
 
     def run(self):
         """Run the racing coach.

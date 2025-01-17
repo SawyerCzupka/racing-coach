@@ -4,7 +4,8 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum, auto
-from typing import Any, Callable, Protocol, TypeAlias
+from typing import Any, Callable, TypeAlias
+
 
 logger = logging.getLogger(__name__)
 
@@ -40,17 +41,6 @@ class HandlerContext:
 HandlerType: TypeAlias = Callable[[HandlerContext], Any]
 
 
-def test(test: HandlerType):
-    print("foo")
-
-
-def fuck(context: HandlerContext) -> int:
-    return 5
-
-
-test(fuck)
-
-
 class EventBus:
     """Event bus for broadcasting events."""
 
@@ -62,7 +52,7 @@ class EventBus:
     ) -> None:
         """Initialize the event bus."""
 
-        self._handlers: dict[EventType, list[Callable]] = {}
+        self._handlers: dict[EventType, list[HandlerType]] = {}
         self._queue: asyncio.Queue[Event] = asyncio.Queue(maxsize=max_queue_size)
         self._thread_pool = ThreadPoolExecutor(
             max_workers=max_workers, thread_name_prefix=thread_name_prefix
@@ -71,7 +61,7 @@ class EventBus:
         # self._process_task: asyncio.Task | None = None
         self._loop: asyncio.AbstractEventLoop | None = None
 
-    def subscribe(self, event_type: EventType, handler: Callable) -> None:
+    def subscribe(self, event_type: EventType, handler: HandlerType) -> None:
         if event_type not in self._handlers:
             self._handlers[event_type] = []
 
@@ -79,7 +69,7 @@ class EventBus:
             self._handlers[event_type].append(handler)
             logger.info(f"Added handler {handler} for event {event_type}")
 
-    def unsubscribe(self, event_type: EventType, handler: Callable) -> None:
+    def unsubscribe(self, event_type: EventType, handler: HandlerType) -> None:
         if event_type in self._handlers and handler in self._handlers[event_type]:
             self._handlers[event_type].remove(handler)
             logger.info(f"Removed handler {handler} for event {event_type}")
