@@ -47,7 +47,7 @@ class EventBus:
     def __init__(
         self,
         max_queue_size: int = 1000,  # 0 = no limit
-        max_workers: int = 0,  # None = use all available cores
+        max_workers: int | None = None,  # None = use all available cores
         thread_name_prefix: str = "EventHandler",
     ) -> None:
         """Initialize the event bus."""
@@ -85,17 +85,37 @@ class EventBus:
 
     def thread_safe_publish(self, event: Event) -> None:
         """Called from collector thread or handlers to publish events"""
-        if self._loop is None:
+        if not self._running or self._loop is None:
             raise RuntimeError("Event bus not running")
-        asyncio.run_coroutine_threadsafe(self._queue.put(event), self._loop)
 
-    async def start(self) -> None:
+        # asyncio.run_coroutine_threadsafe(self._queue.put(event), self._loop)
+        asyncio.run_coroutine_threadsafe(self.publish(event), self._loop)
+
+    # async def start(self) -> None:
+    #     """Start the event bus."""
+    #     if self._running:
+    #         return
+    #     self._running = True
+    #     self._loop = asyncio.get_event_loop()
+    #     asyncio.create_task(self._process_events())
+    #     logger.info("Event bus started")
+
+    def start(self) -> None:
         """Start the event bus."""
         if self._running:
             return
         self._running = True
-        self._loop = asyncio.get_event_loop()
-        asyncio.create_task(self._process_events())
+        self._loop = asyncio.new_event_loop()
+
+        # Create a new thread to run the event loop
+        def run_event_loop():
+            asyncio.set_event_loop(self._loop)
+            self._loop.run_until_complete(self._process_events())
+
+        import threading
+
+        self._thread = threading.Thread(target=run_event_loop, daemon=True)
+        self._thread.start()
         logger.info("Event bus started")
 
     async def stop(self) -> None:
@@ -117,8 +137,8 @@ class EventBus:
 
                 context = HandlerContext(event_bus=self, event=event)
 
-                for handler in handlers:
-                    self._loop.run_in_executor(self._thread_pool, handler, context)
+                # for handler in handlers:
+                #     self._loop.run_in_executor(self._thread_pool, handler, context)
 
                 if handlers:
                     await asyncio.gather(
@@ -141,6 +161,6 @@ class EventBus:
                 if not self._running:
                     break
 
-    @property
+    # @property
     def is_running(self) -> bool:
         return self._running

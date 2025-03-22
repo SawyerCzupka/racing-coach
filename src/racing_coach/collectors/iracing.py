@@ -9,7 +9,7 @@ from datetime import datetime
 from typing import Any, Callable, Literal, TypeAlias
 
 from racing_coach.core.events import Event, EventBus, EventType
-from racing_coach.core.types.telemetry import LapTelemetry, TelemetryFrame
+from racing_coach.core.schema.telemetry import LapTelemetry, TelemetryFrame
 
 from .connection import iRacingConnectionManager
 

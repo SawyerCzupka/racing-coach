@@ -1,6 +1,7 @@
 import logging
+import asyncio
 
-from racing_coach.core.types.telemetry import LapTelemetry
+from racing_coach.core.schema.telemetry import LapTelemetry, TelemetryFrame
 from racing_coach.collectors.iracing import TelemetryCollector
 from racing_coach.core.events import EventBus, EventType, HandlerContext
 
@@ -13,13 +14,21 @@ class RacingCoach:
         self.collector = TelemetryCollector(self.event_bus)
 
         self.event_bus.subscribe(EventType.LAP_COMPLETED, self._handle_lap_completed)
+        self.event_bus.subscribe(EventType.TELEMETRY_FRAME, self._log_frame)
+        # asyncio.run(self.event_bus.start())
+        self.event_bus.start()
 
     def _handle_lap_completed(self, context: HandlerContext) -> None:
         """Handle a completed lap."""
 
         lap: LapTelemetry = context.event.data
 
-        print(lap.is_valid())
+        logger.info(lap.is_valid())
+
+    def _log_frame(self, context: HandlerContext) -> None:
+        frame: TelemetryFrame = context.event.data
+
+        logger.info(frame.throttle)
 
     def run(self):
         """Run the racing coach.
@@ -29,12 +38,16 @@ class RacingCoach:
 
         """
 
-        self.collector.connect()
+        # self.collector.connect()
         self.collector.start()
 
         logger.info("Racing coach started")
 
 
-if __name__ == "__main__":
+def main():
     coach = RacingCoach()
     coach.run()
+
+
+if __name__ == "__main__":
+    main()
