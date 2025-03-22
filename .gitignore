@@ -1,7 +1,10 @@
 .venv
 
+data
+
 .vscode
 .claudesync
+.claudeignore
 
 # JetBrains
 .idea/
