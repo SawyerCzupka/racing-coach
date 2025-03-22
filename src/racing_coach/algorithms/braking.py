@@ -1,7 +1,7 @@
 import logging
 from dataclasses import dataclass
 
-from racing_coach.core.types.telemetry import LapTelemetry
+from racing_coach.core.schema.telemetry import LapTelemetry
 
 from racing_coach.core.settings import get_settings
 
@@ -36,10 +36,7 @@ def run(lap: LapTelemetry) -> list[BrakingEvent]:
         # if not frame.brake > BrakingEventAnalyzer.brake_threshold:
         #     continue
 
-        if (
-            not in_brake_event
-            and frame.brake > brake_threshold
-        ):
+        if not in_brake_event and frame.brake > brake_threshold:
             in_brake_event = True
 
             current_event = BrakingEvent(
@@ -51,9 +48,7 @@ def run(lap: LapTelemetry) -> list[BrakingEvent]:
 
         # In braking zone, still on the brakes
         elif in_brake_event and frame.brake > brake_threshold:
-            current_event.max_pressure = max(
-                current_event.max_pressure, frame.brake
-            )
+            current_event.max_pressure = max(current_event.max_pressure, frame.brake)
 
         # In braking zone, off the brakes
         elif in_brake_event and frame.brake < brake_threshold:
@@ -61,9 +56,7 @@ def run(lap: LapTelemetry) -> list[BrakingEvent]:
 
             current_event.end_frame = i
 
-            duration = (
-                frame.timestamp - lap.frames[current_event.start_frame].timestamp
-            )
+            duration = frame.timestamp - lap.frames[current_event.start_frame].timestamp
 
             current_event.braking_duration = duration.total_seconds()
 
