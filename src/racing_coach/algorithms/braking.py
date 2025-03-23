@@ -28,7 +28,7 @@ def run(lap: LapTelemetry) -> list[BrakingEvent]:
 
     events: list[BrakingEvent] = []
 
-    current_event: BrakingEvent | None = None
+    # current_event: BrakingEvent | None = None
 
     in_brake_event = False
 
