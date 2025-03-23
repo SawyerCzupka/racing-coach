@@ -9,7 +9,11 @@ from datetime import datetime
 from typing import Any, Callable, Literal, TypeAlias
 
 from racing_coach.core.events import Event, EventBus, EventType
-from racing_coach.core.schema.telemetry import LapTelemetry, TelemetryFrame
+from racing_coach.core.schema.telemetry import (
+    LapTelemetry,
+    SessionFrame,
+    TelemetryFrame,
+)
 
 from .connection import iRacingConnectionManager
 
@@ -59,6 +63,19 @@ class TelemetryCollector:
 
         return True
 
+    def collect_session_frame(self):
+        ir = self.connection.get_ir()
+        if not ir:
+            return False
+
+        ir.freeze_var_buffer_latest()
+
+        frame = SessionFrame.from_irsdk(ir, datetime.now())
+
+        self.event_bus.thread_safe_publish(
+            Event(type=EventType.SESSION_FRAME, data=frame)
+        )
+
     def start(self):
         """Main loop for collecting telemetry data."""
         if not self.connection.connect():
@@ -66,6 +83,8 @@ class TelemetryCollector:
             return
 
         self.running = True
+
+        self.collect_session_frame()
         try:
             while self.running:
                 if not self.connection.ensure_connected():

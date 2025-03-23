@@ -6,7 +6,6 @@ from datetime import datetime
 from enum import Enum, auto
 from typing import Any, Callable, TypeAlias
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -17,7 +16,7 @@ class EventType(Enum):
     CORNER_ENTERED = auto()
     CORNER_EXITED = auto()
     TELEMETRY_FRAME = auto()
-    SESSION_STARTED = auto()
+    SESSION_FRAME = auto()
     SESSION_ENDED = auto()
 
     # System
@@ -109,6 +108,9 @@ class EventBus:
 
         # Create a new thread to run the event loop
         def run_event_loop():
+            if self._loop is None:
+                raise RuntimeError("Event bus not running")
+
             asyncio.set_event_loop(self._loop)
             self._loop.run_until_complete(self._process_events())
 
