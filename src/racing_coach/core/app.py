@@ -1,9 +1,15 @@
-import logging
 import asyncio
+import logging
 
-from racing_coach.core.schema.telemetry import LapTelemetry, TelemetryFrame
 from racing_coach.collectors.iracing import TelemetryCollector
 from racing_coach.core.events import EventBus, EventType, HandlerContext
+from racing_coach.core.schema.telemetry import (
+    LapTelemetry,
+    TelemetryFrame,
+    SessionFrame,
+)
+from racing_coach.core.settings import settings
+from racing_coach.database import DatabaseManager, DatabaseHandler
 
 logger = logging.getLogger(__name__)
 
@@ -13,8 +19,14 @@ class RacingCoach:
         self.event_bus = EventBus()
         self.collector = TelemetryCollector(self.event_bus)
 
+        if settings.DB_ENABLED:
+            self.db_manager = DatabaseManager(force_recreate=True)
+            self.db_handler = DatabaseHandler(self.event_bus, self.db_manager)
+            logger.info("Database enabled")
+
         self.event_bus.subscribe(EventType.LAP_COMPLETED, self._handle_lap_completed)
         self.event_bus.subscribe(EventType.TELEMETRY_FRAME, self._log_frame)
+        self.event_bus.subscribe(EventType.SESSION_FRAME, self._log_session_frame)
         # asyncio.run(self.event_bus.start())
         self.event_bus.start()
 
@@ -29,6 +41,11 @@ class RacingCoach:
         frame: TelemetryFrame = context.event.data
 
         logger.info(frame.throttle)
+
+    def _log_session_frame(self, context: HandlerContext) -> None:
+        frame: SessionFrame = context.event.data
+
+        logger.info(f"Session Frame from Event Bus: {frame.model_dump()}")
 
     def run(self):
         """Run the racing coach.

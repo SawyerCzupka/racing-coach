@@ -5,6 +5,10 @@ import irsdk
 import pandas as pd
 from pydantic import BaseModel, Field
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 class TelemetryFrame(BaseModel):
     """A single frame of driving telemetry data."""
@@ -178,7 +182,7 @@ class SessionFrame(BaseModel):
     # Track
     track_id: int = Field(description="Track ID")
     track_name: str = Field(description="Track name")
-    track_config_name: str = Field(description="Track config name")
+    track_config_name: str | None = Field(description="Track config name")
     track_type: str = Field(description="Track type", default="road course")
 
     # Car
@@ -190,7 +194,7 @@ class SessionFrame(BaseModel):
     series_id: int = Field(description="Series ID")
 
     # Session
-    session_type: str = Field(description="Session type")
+    # session_type: str = Field(description="Session type")
 
     @classmethod
     def from_irsdk(cls, ir: irsdk.IRSDK, timestamp: datetime):
@@ -211,7 +215,7 @@ class SessionFrame(BaseModel):
             car_name=driver["CarScreenName"],
             car_class_id=driver["CarClassID"],
             series_id=weekend_info["SeriesID"],  # type: ignore
-            session_type=weekend_info["SessionType"],  # type: ignore
+            # session_type=weekend_info["SessionType"],  # type: ignore
         )
 
 
@@ -249,7 +253,7 @@ class LapTelemetry(BaseModel):
     def get_lap_time(self):
         return self.frames[-1].session_time - self.frames[0].session_time
 
-    def is_valid(self):
+    def is_valid(self) -> tuple[bool, int]:
         """Check for any off-track or other abnormalities that invalidate the lap."""
 
         # Can check for current track surface and see if it is off-track
@@ -265,4 +269,4 @@ class LapTelemetry(BaseModel):
             if frame.track_surface != 3:
                 return False, i
 
-        return True
+        return True, -1
