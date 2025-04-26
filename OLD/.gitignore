@@ -42,6 +42,3 @@ MANIFEST
 
 # iRacing
 *.ibt
-
-*.parquet
-data_out/

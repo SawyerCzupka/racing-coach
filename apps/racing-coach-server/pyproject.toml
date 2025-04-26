@@ -1,0 +1,18 @@
+[project]
+name = "racing-coach-server"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [{ name = "Sawyer", email = "sawyerczupka@gmail.com" }]
+requires-python = ">=3.12"
+dependencies = ["fastapi>=0.115.12", "racing-coach-core", "uvicorn>=0.34.0"]
+
+[tool.uv.sources]
+racing-coach-core = { path = "../../libs/racing-coach-core", editable = true }
+
+# [project.scripts]
+# run-server = "racing_coach_server.app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

@@ -1,0 +1,43 @@
+{
+	"folders": [
+		{
+			"path": "apps/racing-coach-client",
+			"name": "Racing Coach Client",
+		},
+		{
+			"path": "apps/racing-coach-server",
+			"name": "Racing Coach Server",
+		},
+		{
+			"path": "libs/racing-coach-core",
+			"name": "Racing Coach Core Library",
+		},
+		{
+			"path": ".",
+			"name": "Racing Coach Workspace",
+		}
+	],
+	"settings": {
+		"files.exclude": {
+			"apps/": true,
+			"libs/": true,
+		},
+		// "python-envs.pythonProjects": [
+		// 	{
+		// 		"path": "apps/racing-coach-client",
+		// 		"envManager": "ms-python.python:venv",
+		// 		"packageManager": "ms-python.python:pip"
+		// 	},
+		// 	{
+		// 		"path": "libs/racing-coach-core",
+		// 		"envManager": "ms-python.python:venv",
+		// 		"packageManager": "ms-python.python:pip"
+		// 	},
+		// 	{
+		// 		"path": "apps/racing-coach-server",
+		// 		"envManager": "ms-python.python:venv",
+		// 		"packageManager": "ms-python.python:pip"
+		// 	}
+		// ]
+	}
+}
