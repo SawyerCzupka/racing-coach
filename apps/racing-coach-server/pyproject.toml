@@ -5,7 +5,14 @@ description = "Add your description here"
 readme = "README.md"
 authors = [{ name = "Sawyer", email = "sawyerczupka@gmail.com" }]
 requires-python = ">=3.12"
-dependencies = ["fastapi>=0.115.12", "racing-coach-core", "uvicorn>=0.34.0"]
+dependencies = [
+    "fastapi>=0.115.12",
+    "psycopg2>=2.9.10",
+    "pydantic-settings>=2.9.1",
+    "racing-coach-core",
+    "sqlalchemy>=2.0.40",
+    "uvicorn>=0.34.0",
+]
 
 [tool.uv.sources]
 racing-coach-core = { path = "../../libs/racing-coach-core", editable = true }
