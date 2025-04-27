@@ -4,6 +4,7 @@ from pathlib import Path
 import irsdk
 import pandas as pd
 from pydantic import BaseModel, Field
+from uuid import UUID, uuid4
 
 import logging
 
@@ -89,32 +90,32 @@ class TelemetryFrame(BaseModel):
         """
         return cls(
             timestamp=timestamp,
-            session_time=ir["SessionTime"],  # type: ignore
-            lap_number=ir["Lap"],  # type: ignore
-            lap_distance_pct=ir["LapDistPct"],  # type: ignore
-            lap_distance=ir["LapDist"],  # type: ignore
-            current_lap_time=ir["LapCurrentLapTime"],  # type: ignore
-            last_lap_time=ir["LapLastLapTime"],  # type: ignore
-            best_lap_time=ir["LapBestLapTime"],  # type: ignore
-            speed=ir["Speed"],  # type: ignore
-            rpm=ir["RPM"],  # type: ignore
-            gear=ir["Gear"],  # type: ignore
-            throttle=ir["Throttle"],  # type: ignore
-            brake=ir["Brake"],  # type: ignore
-            clutch=ir["Clutch"],  # type: ignore
-            steering_angle=ir["SteeringWheelAngle"],  # type: ignore
-            lateral_acceleration=ir["LatAccel"],  # type: ignore
-            longitudinal_acceleration=ir["LongAccel"],  # type: ignore
-            vertical_acceleration=ir["VertAccel"],  # type: ignore
-            yaw_rate=ir["YawRate"],  # type: ignore
-            roll_rate=ir["RollRate"],  # type: ignore
-            pitch_rate=ir["PitchRate"],  # type: ignore
-            position_x=ir["VelocityX"],  # type: ignore
-            position_y=ir["VelocityY"],  # type: ignore
-            position_z=ir["VelocityZ"],  # type: ignore
-            yaw=ir["Yaw"],  # type: ignore
-            pitch=ir["Pitch"],  # type: ignore
-            roll=ir["Roll"],  # type: ignore
+            session_time=ir["SessionTime"],
+            lap_number=ir["Lap"],
+            lap_distance_pct=ir["LapDistPct"],
+            lap_distance=ir["LapDist"],
+            current_lap_time=ir["LapCurrentLapTime"],
+            last_lap_time=ir["LapLastLapTime"],
+            best_lap_time=ir["LapBestLapTime"],
+            speed=ir["Speed"],
+            rpm=ir["RPM"],
+            gear=ir["Gear"],
+            throttle=ir["Throttle"],
+            brake=ir["Brake"],
+            clutch=ir["Clutch"],
+            steering_angle=ir["SteeringWheelAngle"],
+            lateral_acceleration=ir["LatAccel"],
+            longitudinal_acceleration=ir["LongAccel"],
+            vertical_acceleration=ir["VertAccel"],
+            yaw_rate=ir["YawRate"],
+            roll_rate=ir["RollRate"],
+            pitch_rate=ir["PitchRate"],
+            position_x=ir["VelocityX"],
+            position_y=ir["VelocityY"],
+            position_z=ir["VelocityZ"],
+            yaw=ir["Yaw"],
+            pitch=ir["Pitch"],
+            roll=ir["Roll"],
             tire_temps={
                 "LF": {
                     "left": ir["LFtempCL"],
@@ -136,7 +137,7 @@ class TelemetryFrame(BaseModel):
                     "middle": ir["RRtempCM"],
                     "right": ir["RRtempCR"],
                 },
-            },  # type: ignore
+            },
             tire_wear={
                 "LF": {
                     "left": ir["LFwearL"],
@@ -158,19 +159,19 @@ class TelemetryFrame(BaseModel):
                     "middle": ir["RRwearM"],
                     "right": ir["RRwearR"],
                 },
-            },  # type: ignore
+            },
             brake_line_pressure={
                 "LF": ir["LFbrakeLinePress"],
                 "RF": ir["RFbrakeLinePress"],
                 "LR": ir["LRbrakeLinePress"],
                 "RR": ir["RRbrakeLinePress"],
-            },  # type: ignore
-            track_temp=ir["TrackTempCrew"],  # type: ignore
-            track_wetness=ir["TrackWetness"],  # type: ignore
-            air_temp=ir["AirTemp"],  # type: ignore
-            session_flags=ir["SessionFlags"],  # type: ignore
-            track_surface=ir["PlayerTrackSurface"],  # type: ignore
-            on_pit_road=ir["OnPitRoad"],  # type: ignore
+            },
+            track_temp=ir["TrackTempCrew"],
+            track_wetness=ir["TrackWetness"],
+            air_temp=ir["AirTemp"],
+            session_flags=ir["SessionFlags"],
+            track_surface=ir["PlayerTrackSurface"],
+            on_pit_road=ir["OnPitRoad"],
         )
 
 
@@ -178,6 +179,10 @@ class SessionFrame(BaseModel):
     """Frame of data pertaining to a session."""
 
     timestamp: datetime = Field(description="Timestamp of the session frame")
+
+    session_id: UUID = Field(
+        description="Session ID", default_factory=uuid4, editable=False
+    )
 
     # Track
     track_id: int = Field(description="Track ID")
@@ -201,20 +206,20 @@ class SessionFrame(BaseModel):
         weekend_info = ir["WeekendInfo"]
         driver_info = ir["DriverInfo"]
 
-        car_idx = driver_info["DriverCarIdx"]  # type: ignore
+        car_idx = driver_info["DriverCarIdx"]
 
-        driver = driver_info["Drivers"][car_idx]  # type: ignore
+        driver = driver_info["Drivers"][car_idx]
 
         return cls(
             timestamp=timestamp,
-            track_id=weekend_info["TrackID"],  # type: ignore
-            track_name=weekend_info["TrackName"],  # type: ignore
-            track_config_name=weekend_info["TrackConfigName"],  # type: ignore
-            track_type=weekend_info["TrackType"],  # type: ignore
+            track_id=weekend_info["TrackID"],
+            track_name=weekend_info["TrackName"],
+            track_config_name=weekend_info["TrackConfigName"],
+            track_type=weekend_info["TrackType"],
             car_id=driver["CarID"],
             car_name=driver["CarScreenName"],
             car_class_id=driver["CarClassID"],
-            series_id=weekend_info["SeriesID"],  # type: ignore
+            series_id=weekend_info["SeriesID"],
             # session_type=weekend_info["SessionType"],  # type: ignore
         )
 
