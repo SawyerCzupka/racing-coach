@@ -1,26 +1,26 @@
 """SQLAlchemy models for the Racing Coach database."""
 
-from datetime import datetime
 import uuid
+from datetime import datetime
+
 from sqlalchemy import (
-    Column,
-    Integer,
-    Float,
-    String,
-    Boolean,
-    ForeignKey,
-    DateTime,
-    func,
-    Text,
     JSON,
-    UniqueConstraint,
+    Boolean,
+    Column,
+    DateTime,
+    Float,
+    ForeignKey,
     Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    func,
 )
-from sqlalchemy.dialects.postgresql import UUID, JSONB
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import relationship
 
-Base = declarative_base()
+from .database import Base
 
 
 class TrackSession(Base):

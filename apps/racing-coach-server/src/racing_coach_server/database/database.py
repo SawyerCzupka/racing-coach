@@ -1,26 +1,29 @@
+from typing import Generator
 from sqlalchemy import create_engine
-from racing_coach_server.config import Settings
+from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.exc import SQLAlchemyError
 import logging
 
+from racing_coach_server.config import settings
+
 logger = logging.getLogger(__name__)
 
-settings = Settings()
+try:
+    engine = create_engine(settings.DB_CONNECTION_STR, echo=True)
+
+except SQLAlchemyError as e:
+    logger.error(f"Error creating database engine: {e}")
+    raise
+
+Base = declarative_base()
+
+SessionFactory = sessionmaker(bind=engine)
 
 
-def create_db_engine(connection_string: str):
-    """
-    Create a SQLAlchemy engine for the TimescaleDB database.
-
-    Args:
-        connection_string (str): The database connection string.
-
-    Returns:
-        sqlalchemy.engine.Engine: The SQLAlchemy engine.
-    """
+def get_db_session() -> Generator[Session, None, None]:
+    db_session = SessionFactory()
     try:
-        engine = create_engine(connection_string, echo=True)
-        return engine
-    except SQLAlchemyError as e:
-        logger.error(f"Error creating database engine: {e}")
-        raise
+        yield db_session
+    finally:
+        db_session.close()

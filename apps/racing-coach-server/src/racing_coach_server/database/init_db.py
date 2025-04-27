@@ -6,13 +6,10 @@ including the hypertable setup for time-series data.
 
 import logging
 
-from sqlalchemy import create_engine, text
+from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import scoped_session, sessionmaker
 
 from racing_coach_server.database.models import Base
-
-from .database import create_db_engine
 
 logger = logging.getLogger(__name__)
 
@@ -43,20 +40,7 @@ def init_db(engine):
         raise
 
 
-def setup_database(connection_string: str):
-    """
-    Set up the database by creating the engine and initializing it.
-
-    Args:
-        connection_string (str): The database connection string.
-    """
-    engine = create_db_engine(connection_string)
-    init_db(engine)
-
-
 if __name__ == "__main__":
-    # Example usage
-    connection_string = (
-        "postgresql+psycopg2://postgres:postgres@localhost:5432/racing_coach"
-    )
-    setup_database(connection_string)
+    from .database import engine  # uses connection string from settings
+
+    init_db(engine)
