@@ -39,8 +39,11 @@ class iRacingConnectionManager:
     def is_connected(self) -> bool:
         return self.ir_connected and self.ir is not None
 
-    def get_ir(self) -> irsdk.IRSDK | None:
-        return self.ir if self.is_connected() else None
+    def get_ir(self) -> irsdk.IRSDK:
+        if not self.is_connected() or not self.ir:
+            raise RuntimeError("get_ir() called while not connected to iRacing")
+
+        return self.ir
 
     def disconnect(self):
         if self.ir:

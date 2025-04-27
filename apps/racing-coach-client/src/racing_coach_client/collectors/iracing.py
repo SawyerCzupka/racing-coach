@@ -28,19 +28,19 @@ class TelemetryCollector:
         self.connection = iRacingConnectionManager()
         self.event_bus = event_bus
 
-        self.session_frame: SessionFrame | None = None
-
-        self.running: bool = False
-
+        self._running: bool = False
         self._collection_thread = None
+
+        # object to hold the current session with a unique uuid
+        self.current_session: SessionFrame | None = None
 
     def start(self):
         """Start the telemetry collector."""
-        if self.running:
+        if self._running:
             logger.warning("Telemetry collector is already running.")
             return
 
-        self.running = True
+        self._running = True
         self._collection_thread = threading.Thread(
             target=self._collection_loop, name="TelemetryCollectorThread", daemon=True
         )
@@ -48,15 +48,26 @@ class TelemetryCollector:
         logger.info("Telemetry collector thread started")
 
     def _collection_loop(self):
-        """Main loop for collecting telemetry data."""
+        """
+        Main loop for collecting telemetry data.
+
+        This method runs in a separate thread and continuously collects telemetry
+        data from iRacing until the `running` flag is set to False.
+        """
         if not self.connection.connect():
             logger.error("Failed to connect to iRacing")
-            self.running = False
+            self._running = False
             return
 
-        self.set_session_frame()
+        # Collect the initial session frame
+        self.current_session = self.collect_session_frame()
+        if not self.current_session:
+            logger.error("Failed to collect session frame")
+            self._running = False
+            return
+
         try:
-            while self.running:
+            while self._running:
                 # Check if the connection is still valid
                 if not self.connection.ensure_connected():
                     time.sleep(1)
@@ -67,42 +78,36 @@ class TelemetryCollector:
         except KeyboardInterrupt:
             logger.info("Stopping telemetry collection")
         finally:
-            self.running = False  # not sure if this is strictly necessary
+            self._running = False  # not sure if this is strictly necessary
             self.connection.disconnect()
 
     def stop(self):
         """Stop the telemetry collector."""
-        self.running = False
+        self._running = False
         self.connection.disconnect()
 
     def collect_and_publish_telemetry_frame(self):
         """Collect a single frame of telemetry data."""
         ir = self.connection.get_ir()
-        assert ir, "iRacing connection is not established."
 
         ir.freeze_var_buffer_latest()
 
-        frame = TelemetryFrame.from_irsdk(ir, datetime.now())
+        telemetry_frame = TelemetryFrame.from_irsdk(ir, datetime.now())
 
         self.event_bus.thread_safe_publish(
             Event(
                 type=EventType.TELEMETRY_FRAME,
-                data={"TelemetryFrame": frame, "SessionFrame": self.session_frame},
+                data={
+                    "TelemetryFrame": telemetry_frame,
+                    "SessionFrame": self.current_session,
+                },
             )
         )
 
-    def set_session_frame(self) -> SessionFrame:
-        """Set the session frame."""
+    def collect_session_frame(self) -> SessionFrame:
+        """Collects and sets the current session frame."""
         ir = self.connection.get_ir()
-
-        assert ir, "iRacing connection is not established."
-        assert (
-            self.connection.is_connected() == True
-        ), "iRacing connection is not established."
 
         ir.freeze_var_buffer_latest()
 
-        self.session_frame = SessionFrame.from_irsdk(ir, datetime.now())
-
-        assert self.session_frame, "Session frame is not initialized."
-        return self.session_frame
+        return SessionFrame.from_irsdk(ir, datetime.now())
