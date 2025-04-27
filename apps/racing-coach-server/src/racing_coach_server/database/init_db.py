@@ -5,31 +5,16 @@ including the hypertable setup for time-series data.
 """
 
 import logging
+
 from sqlalchemy import create_engine, text
-from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import scoped_session, sessionmaker
 
 from racing_coach_server.database.models import Base
 
+from .database import create_db_engine
+
 logger = logging.getLogger(__name__)
-
-
-def create_db_engine(connection_string: str):
-    """
-    Create a SQLAlchemy engine for the TimescaleDB database.
-
-    Args:
-        connection_string (str): The database connection string.
-
-    Returns:
-        sqlalchemy.engine.Engine: The SQLAlchemy engine.
-    """
-    try:
-        engine = create_engine(connection_string, echo=True)
-        return engine
-    except SQLAlchemyError as e:
-        logger.error(f"Error creating database engine: {e}")
-        raise
 
 
 def init_db(engine):
