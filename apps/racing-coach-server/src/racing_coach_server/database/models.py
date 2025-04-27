@@ -23,8 +23,8 @@ from sqlalchemy.orm import relationship
 Base = declarative_base()
 
 
-class Session(Base):
-    __tablename__ = "session"
+class TrackSession(Base):
+    __tablename__ = "track_session"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     track_id = Column(Integer, nullable=False)
@@ -43,9 +43,11 @@ class Session(Base):
     )
 
     # Relationships
-    laps = relationship("Lap", back_populates="session", cascade="all, delete-orphan")
+    laps = relationship(
+        "Lap", back_populates="track_session", cascade="all, delete-orphan"
+    )
     telemetry_frames = relationship(
-        "Telemetry", back_populates="session", cascade="all, delete-orphan"
+        "Telemetry", back_populates="track_session", cascade="all, delete-orphan"
     )
 
     # Indexes
@@ -62,8 +64,10 @@ class Lap(Base):
     __tablename__ = "lap"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    session_id = Column(
-        UUID(as_uuid=True), ForeignKey("session.id", ondelete="CASCADE"), nullable=False
+    track_session_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("track_session.id", ondelete="CASCADE"),
+        nullable=False,
     )
     lap_number = Column(Integer, nullable=False)
     lap_time = Column(Float, nullable=True)  # May be null if lap is not completed
@@ -76,15 +80,17 @@ class Lap(Base):
     )
 
     # Relationships
-    session = relationship("Session", back_populates="laps")
+    track_session = relationship("TrackSession", back_populates="laps")
     telemetry_frames = relationship(
         "Telemetry", back_populates="lap", cascade="all, delete-orphan"
     )
 
     # Indexes and constraints
     __table_args__ = (
-        UniqueConstraint("session_id", "lap_number", name="uq_session_lap_number"),
-        Index("idx_lap_session_number", "session_id", "lap_number"),
+        UniqueConstraint(
+            "track_session_id", "lap_number", name="uq_track_session_id_lap_number"
+        ),
+        Index("idx_track_session_id_lap_number", "track_session_id", "lap_number"),
     )
 
 
@@ -94,8 +100,10 @@ class Telemetry(Base):
     __tablename__ = "telemetry"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    session_id = Column(
-        UUID(as_uuid=True), ForeignKey("session.id", ondelete="CASCADE"), nullable=False
+    track_session_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("track_session.id", ondelete="CASCADE"),
+        nullable=False,
     )
     lap_id = Column(
         UUID(as_uuid=True), ForeignKey("lap.id", ondelete="CASCADE"), nullable=False
@@ -107,8 +115,8 @@ class Telemetry(Base):
         primary_key=True,
         server_default=func.now(),
         nullable=False,
-    )
-    session_time = Column(Float, nullable=False)
+    )  # Global timestamp for telemetry data
+    session_time = Column(Float, nullable=False)  # Timestamp as reported by iRacing
 
     # Lap information
     lap_number = Column(Integer, nullable=False)
@@ -193,12 +201,13 @@ class Telemetry(Base):
     on_pit_road = Column(Boolean, nullable=True)
 
     # Relationships
-    session = relationship("Session", back_populates="telemetry_frames")
+    track_session = relationship("TrackSession", back_populates="telemetry_frames")
     lap = relationship("Lap", back_populates="telemetry_frames")
 
     # Indexes for efficient time-series queries
     __table_args__ = (
         Index("idx_telemetry_lap_id", "lap_id"),
-        Index("idx_telemetry_session_id", "session_id"),
+        Index("idx_telemetry_track_session_id", "track_session_id"),
         Index("idx_telemetry_timestamp", "timestamp"),
+        Index("idx_session_time", "session_time"),
     )
