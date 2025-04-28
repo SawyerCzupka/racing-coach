@@ -39,6 +39,29 @@ class HandlerContext:
 
 HandlerType: TypeAlias = Callable[[HandlerContext], Any]
 
+_SUBSCRIPTION_REGISTRY: list[tuple[EventType, Callable]] = []
+_INSTANCE_SUBSCRIPTION_MARKERS: dict[type, list[tuple[EventType, str]]] = {}
+
+
+def subscribe(event_type: EventType):
+    def decorator(fn: Callable):
+        qualname = fn.__qualname__
+        if "." in qualname:
+            # Get the class name, e.g. "MyClass"
+            cls_name = qualname.split(".")[0]
+            # Get the class object from globals.
+            cls = fn.__globals__.get(cls_name)
+            # This will almost always be true with the current code structure but is technically not guaranteed (method inside class inside function)
+            if cls:
+                _INSTANCE_SUBSCRIPTION_MARKERS.setdefault(cls, []).append(
+                    (event_type, fn.__name__)
+                )
+        else:
+            _SUBSCRIPTION_REGISTRY.append((event_type, fn))
+        return fn
+
+    return decorator
+
 
 class EventBus:
     """Event bus for broadcasting events."""
@@ -174,3 +197,29 @@ class EventBus:
     # @property
     def is_running(self) -> bool:
         return self._running
+
+
+class HandlerMeta(type):
+    def __call__(cls, *args, **kwargs):
+        instance = super().__call__(*args, **kwargs)
+
+        if not hasattr(instance, "event_bus") or not isinstance(
+            instance.event_bus, EventBus
+        ):
+            raise AttributeError(
+                f"Handler Class '{cls.__name__}' must have an 'event_bus' attribute of type EventBus. "
+                "Did you forget to call super().__init__(event_bus)?"
+            )
+
+        markers = _INSTANCE_SUBSCRIPTION_MARKERS.get(cls, [])
+        for event_type, method_name in markers:
+            method = getattr(instance, method_name)
+            instance.event_bus.subscribe(event_type, method)
+        return instance
+
+
+class EventHandler(metaclass=HandlerMeta):
+    """Base class for all event handler classes."""
+
+    def __init__(self, event_bus: "EventBus"):
+        self.event_bus = event_bus
