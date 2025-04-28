@@ -6,25 +6,34 @@ The motivation for this is that I don't want to send every telemetry event to th
 but rather only the lap events. This way, I can reduce the amount of data sent to the server.
 """
 
-from racing_coach_core.events import Event, EventBus, EventType, HandlerContext
-from racing_coach_core.models.telemetry import (
-    TelemetryFrame,
-    SessionFrame,
-    LapTelemetry,
-)
 import logging
+from typing import Any
+
+from racing_coach_core.events import (
+    Event,
+    EventBus,
+    EventType,
+    HandlerContext,
+    subscribe,
+    EventHandler,
+)
+from racing_coach_core.models.telemetry import (
+    LapTelemetry,
+    SessionFrame,
+    TelemetryFrame,
+)
 
 logger = logging.getLogger(__name__)
 
 
-class LapHandler:
-    def __init__(self, event_bus):
-        self.event_bus = event_bus
-        self.current_lap = -1
+class LapHandler(EventHandler):
+    def __init__(self, event_bus: EventBus):
+        super().__init__(event_bus)
 
-        self.telemetry_buffer = []
+        self.current_lap: int = -1
+        self.telemetry_buffer: list[TelemetryFrame] = []
 
-    def _validate_data(self, data):
+    def _validate_data(self, data: Any) -> bool:
         valid = True
         if not isinstance(data, dict):
             logger.error("Data is not a dictionary")
@@ -47,6 +56,7 @@ class LapHandler:
             valid = False
         return valid
 
+    @subscribe(EventType.TELEMETRY_FRAME)
     def handle_telemetry_frame(self, context: HandlerContext):
         data = context.event.data
         if not self._validate_data(data):
@@ -69,7 +79,9 @@ class LapHandler:
 
         lap_telemetry = LapTelemetry(frames=self.telemetry_buffer, lap_time=None)
 
-        self.event_bus.publish(Event(EventType.LAP_TELEMETRY_SEQUENCE, lap_telemetry))
+        self.event_bus.thread_safe_publish(
+            Event(EventType.LAP_TELEMETRY_SEQUENCE, lap_telemetry)
+        )
 
         # Clear the buffer after publishing
         self.telemetry_buffer.clear()
