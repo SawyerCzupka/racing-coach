@@ -1,12 +1,11 @@
+import logging
 from datetime import datetime
 from pathlib import Path
+from uuid import UUID, uuid4
 
 import irsdk
 import pandas as pd
 from pydantic import BaseModel, Field
-from uuid import UUID, uuid4
-
-import logging
 
 logger = logging.getLogger(__name__)
 
