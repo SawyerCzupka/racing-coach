@@ -18,26 +18,10 @@
 		}
 	],
 	"settings": {
-		"files.exclude": {
-			"apps/": true,
-			"libs/": true,
+		"python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
+		"python.terminal.activateEnvironment": true,
+		"[python]": {
+			"editor.defaultFormatter": "ms-python.black-formatter"
 		},
-		// "python-envs.pythonProjects": [
-		// 	{
-		// 		"path": "apps/racing-coach-client",
-		// 		"envManager": "ms-python.python:venv",
-		// 		"packageManager": "ms-python.python:pip"
-		// 	},
-		// 	{
-		// 		"path": "libs/racing-coach-core",
-		// 		"envManager": "ms-python.python:venv",
-		// 		"packageManager": "ms-python.python:pip"
-		// 	},
-		// 	{
-		// 		"path": "apps/racing-coach-server",
-		// 		"envManager": "ms-python.python:venv",
-		// 		"packageManager": "ms-python.python:pip"
-		// 	}
-		// ]
 	}
 }
