@@ -1,11 +1,10 @@
 from fastapi import APIRouter
-
+from racing_coach_core.events import Event, EventBus, EventType
 from racing_coach_core.models.telemetry import (
-    TelemetryFrame,
-    SessionFrame,
     LapTelemetry,
+    SessionFrame,
+    TelemetryFrame,
 )
-from racing_coach_core.events import EventBus, Event, EventType
 
 router = APIRouter()
 

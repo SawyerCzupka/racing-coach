@@ -1,7 +1,8 @@
+import logging
+import uuid
+
 from ..models import Lap
 from .base import BaseRepository
-import uuid
-import logging
 
 logger = logging.getLogger(__name__)
 

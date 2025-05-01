@@ -1,11 +1,12 @@
-from sqlalchemy.orm import Session as SQLAlchemySession
 from racing_coach_core.models.telemetry import (
+    LapTelemetry,
     SessionFrame,
     TelemetryFrame,
-    LapTelemetry,
 )
-from ..repositories import SessionRepository, TelemetryRepository, LapRepository
-from ..models import TrackSession, Telemetry, Lap
+from sqlalchemy.orm import Session as SQLAlchemySession
+
+from ..models import Lap, Telemetry, TrackSession
+from ..repositories import LapRepository, SessionRepository, TelemetryRepository
 
 
 class TelemetryService:

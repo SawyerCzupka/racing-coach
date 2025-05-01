@@ -1,6 +1,7 @@
-from fastapi import FastAPI
-import uvicorn
 import logging
+
+import uvicorn
+from fastapi import FastAPI
 
 from racing_coach_server.api.router import router as api_router
 
