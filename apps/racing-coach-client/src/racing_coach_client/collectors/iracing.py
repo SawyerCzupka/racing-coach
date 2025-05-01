@@ -6,11 +6,9 @@ import logging
 import threading
 import time
 from datetime import datetime
+
 from racing_coach_core.events import Event, EventBus, EventType
-from racing_coach_core.models.telemetry import (
-    SessionFrame,
-    TelemetryFrame,
-)
+from racing_coach_core.models.telemetry import SessionFrame, TelemetryFrame
 
 from .connection import iRacingConnectionManager
 

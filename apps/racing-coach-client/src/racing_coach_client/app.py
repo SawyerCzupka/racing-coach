@@ -1,5 +1,6 @@
 import pandas as pd
 from racing_coach_core.events import EventBus, EventType
+
 from .collectors.iracing import TelemetryCollector
 from .handlers import LapHandler
 
