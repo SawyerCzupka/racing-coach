@@ -24,8 +24,6 @@ class LapRepository(BaseRepository):
         )
 
         self.db_session.add(lap)
-        self.db_session.commit()
-        self.db_session.refresh(lap)
-
-        logger.info(f"Created new lap record with ID: {lap.id}")
+        # self.db_session.commit()
+        # self.db_session.refresh(lap)
         return lap

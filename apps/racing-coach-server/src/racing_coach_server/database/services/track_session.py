@@ -17,5 +17,6 @@ class TrackSessionService:
         # If the session does not exist, create a new one
         if not track_session:
             track_session = self.repository.create_from_session_frame(session_frame)
+            self.db_session.commit()
 
         return track_session

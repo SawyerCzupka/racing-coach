@@ -89,6 +89,6 @@ class TelemetryRepository(BaseRepository):
         )
 
         self.db_session.add(telemetry)
-        self.db_session.commit()
+        # self.db_session.commit()
 
         return telemetry

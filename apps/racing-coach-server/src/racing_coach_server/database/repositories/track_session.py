@@ -28,7 +28,7 @@ class SessionRepository(BaseRepository):
         )
 
         self.db_session.add(track_session)
-        self.db_session.commit()
+        # self.db_session.commit()
 
         return track_session
 
