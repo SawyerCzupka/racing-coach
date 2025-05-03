@@ -3,9 +3,13 @@ from racing_coach_core.events import EventBus, EventType
 
 from racing_coach_client.handlers.lap_upload_handler import LapUploadHandler
 
-from .collectors.iracing import TelemetryCollector
-from .handlers import LapHandler
-from .server_api import client
+from racing_coach_client.collectors.iracing import TelemetryCollector
+from racing_coach_client.handlers import LapHandler
+from racing_coach_client.server_api import client
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class RacingCoachClient:
@@ -18,6 +22,7 @@ class RacingCoachClient:
 
         self.initialize_handlers()
 
+        logger.info("test")
         print("Racing Coach Client initialized.")
         # You can initialize other client-specific components here if needed
 
@@ -31,7 +36,7 @@ class RacingCoachClient:
     def run(self):
         print("Running Racing Coach Client...")
 
-        self.collector._collection_loop()
+        self.collector.start()
 
         # Here you can add the main logic for your client application
         # For example, starting the telemetry collector or connecting to a server
@@ -43,4 +48,7 @@ def main():
 
 
 if __name__ == "__main__":
+    logging.basicConfig(
+        level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+    )
     main()
