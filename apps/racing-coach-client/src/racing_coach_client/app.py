@@ -1,8 +1,11 @@
 import pandas as pd
 from racing_coach_core.events import EventBus, EventType
 
+from racing_coach_client.handlers.lap_upload_handler import LapUploadHandler
+
 from .collectors.iracing import TelemetryCollector
 from .handlers import LapHandler
+from .server_api import client
 
 
 class RacingCoachClient:
@@ -10,6 +13,7 @@ class RacingCoachClient:
         self.event_bus = EventBus()
         self.collector = TelemetryCollector(self.event_bus)
 
+        self.api_client = client.RacingCoachServerClient()
         self.event_bus.start()
 
         self.initialize_handlers()
@@ -20,9 +24,8 @@ class RacingCoachClient:
     def initialize_handlers(self):
         # Initialize handlers and subscribe to events
         lap_handler = LapHandler(self.event_bus)
-
-        self.event_bus.subscribe(
-            EventType.TELEMETRY_FRAME, lap_handler.handle_telemetry_frame
+        lap_upload_handler = LapUploadHandler(
+            self.event_bus, api_client=self.api_client
         )
 
     def run(self):

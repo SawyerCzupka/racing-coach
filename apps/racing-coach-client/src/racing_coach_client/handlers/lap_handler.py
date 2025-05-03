@@ -33,6 +33,8 @@ class LapHandler(EventHandler):
         self.current_lap: int = -1
         self.telemetry_buffer: list[TelemetryFrame] = []
 
+        self.current_session: SessionFrame | None = None
+
     def _validate_data(self, data: Any) -> bool:
         valid = True
         if not isinstance(data, dict):
@@ -65,13 +67,19 @@ class LapHandler(EventHandler):
 
         telemetry_frame = data["TelemetryFrame"]
 
-        if telemetry_frame.lap_number != self.current_lap:
-            # New lap started
-            if len(self.telemetry_buffer) > 0:
-                self.publish_lap_and_flush_buffer()
+        if self.current_session is None:
+            self.current_session = data["SessionFrame"]
 
+        # If old lap is finished, publish the telemetry and clear the buffer
+        if telemetry_frame.lap_number != self.current_lap:
+            if len(self.telemetry_buffer) > 0:
+                logger.info(
+                    f"Lap {self.current_lap} finished. Publishing telemetry data."
+                )
+                self.publish_lap_and_flush_buffer()
             self.current_lap = telemetry_frame.lap_number
-            self.telemetry_buffer.append(telemetry_frame)
+
+        self.telemetry_buffer.append(telemetry_frame)
 
     def publish_lap_and_flush_buffer(self):
         if len(self.telemetry_buffer) == 0:
@@ -80,7 +88,13 @@ class LapHandler(EventHandler):
         lap_telemetry = LapTelemetry(frames=self.telemetry_buffer, lap_time=None)
 
         self.event_bus.thread_safe_publish(
-            Event(EventType.LAP_TELEMETRY_SEQUENCE, lap_telemetry)
+            Event(
+                EventType.LAP_TELEMETRY_SEQUENCE,
+                data={
+                    "LapTelemetry": lap_telemetry,
+                    "SessionFrame": self.current_session,
+                },
+            )
         )
 
         # Clear the buffer after publishing
