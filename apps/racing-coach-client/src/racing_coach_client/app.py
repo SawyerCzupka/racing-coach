@@ -8,6 +8,8 @@ from racing_coach_client.handlers import LapHandler
 from racing_coach_client.server_api import client
 
 import logging
+import signal
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -40,10 +42,40 @@ class RacingCoachClient:
 
         # Here you can add the main logic for your client application
         # For example, starting the telemetry collector or connecting to a server
+        try:
+            while True:
+                # Keep the main thread alive, periodically checking for shutdown signals
+                # or other conditions.
+                time.sleep(1)
+        except KeyboardInterrupt:
+            logger.info("KeyboardInterrupt received, shutting down...")
+        finally:
+            self.shutdown()
+
+    def shutdown(self):
+        logger.info("Shutting down Racing Coach Client...")
+        if self.collector:
+            self.collector.stop()
+        if self.event_bus:
+            self.event_bus.stop()
+        logger.info("Racing Coach Client shut down gracefully.")
 
 
 def main():
     client = RacingCoachClient()
+
+    # Graceful shutdown handling
+    def signal_handler(signum, frame):
+        logger.info(f"Signal {signum} received, initiating shutdown...")
+        client.shutdown()
+        # Ensure the program exits after shutdown, especially if shutdown doesn't exit itself
+        # or if it's called from a non-main thread context that might not exit.
+        # We might need to exit more forcefully if threads don't terminate.
+        exit(0)
+
+    signal.signal(signal.SIGINT, signal_handler)  # Handle Ctrl+C
+    signal.signal(signal.SIGTERM, signal_handler) # Handle termination signals
+
     client.run()
 
 
