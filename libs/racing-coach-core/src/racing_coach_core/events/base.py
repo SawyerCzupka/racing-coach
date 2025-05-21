@@ -150,9 +150,10 @@ class EventBus:
         self._thread.start()
         logger.info("Event bus started")
 
-    async def stop(self) -> None:
+    def stop(self) -> None:
         """Stop processing events and clean up."""
         if not self._running:
+            logger.warning("Event bus stop requested but not running")
             return
 
         self._running = False
