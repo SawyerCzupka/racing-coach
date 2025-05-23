@@ -45,3 +45,8 @@ MANIFEST
 
 *.parquet
 data_out/
+
+# pants
+/.pants.d
+/dist/
+.aider*
