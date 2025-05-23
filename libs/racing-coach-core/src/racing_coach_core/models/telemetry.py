@@ -186,7 +186,7 @@ class SessionFrame(BaseModel):
     # Track
     track_id: int = Field(description="Track ID")
     track_name: str = Field(description="Track name")
-    track_config_name: str | None = Field(description="Track config name")
+    track_config_name: str = Field(description="Track config name")
     track_type: str = Field(description="Track type", default="road course")
 
     # Car

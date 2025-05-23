@@ -41,6 +41,8 @@ def init_db(engine):
 
 
 if __name__ == "__main__":
-    from .database import engine  # uses connection string from settings
+    from racing_coach_server.database.database import (
+        engine,
+    )  # uses connection string from settings
 
     init_db(engine)

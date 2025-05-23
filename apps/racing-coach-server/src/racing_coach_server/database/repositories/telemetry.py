@@ -22,7 +22,7 @@ class TelemetryRepository(BaseRepository):
         brake_pressure = telemetry_frame.brake_line_pressure
 
         telemetry = Telemetry(
-            session_id=session_id,
+            track_session_id=session_id,
             lap_id=lap_id,
             timestamp=telemetry_frame.timestamp,
             session_time=telemetry_frame.session_time,

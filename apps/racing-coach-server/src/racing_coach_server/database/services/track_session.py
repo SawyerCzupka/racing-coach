@@ -18,5 +18,6 @@ class TrackSessionService:
         if not track_session:
             track_session = self.repository.create_from_session_frame(session_frame)
             self.db_session.commit()
+            self.db_session.refresh(track_session)
 
         return track_session

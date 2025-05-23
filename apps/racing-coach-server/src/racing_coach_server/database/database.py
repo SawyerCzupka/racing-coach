@@ -3,7 +3,6 @@ from typing import Generator
 
 from sqlalchemy import create_engine
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import Session, sessionmaker
 
 from racing_coach_server.config import settings
@@ -12,12 +11,9 @@ logger = logging.getLogger(__name__)
 
 try:
     engine = create_engine(settings.DB_CONNECTION_STR, echo=True)
-
 except SQLAlchemyError as e:
     logger.error(f"Error creating database engine: {e}")
     raise
-
-Base = declarative_base()
 
 SessionFactory = sessionmaker(bind=engine)
 
