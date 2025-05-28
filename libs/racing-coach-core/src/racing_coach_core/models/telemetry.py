@@ -14,7 +14,10 @@ class TelemetryFrame(BaseModel):
     """A single frame of driving telemetry data."""
 
     # Time
-    timestamp: datetime = Field(description="Timestamp of the telemetry frame")
+    timestamp: datetime = Field(
+        description="Timestamp of the telemetry frame",
+        default_factory=lambda: datetime.now(),
+    )
     session_time: float = Field(description="Seconds since session start")
 
     # Lap Information
@@ -177,7 +180,10 @@ class TelemetryFrame(BaseModel):
 class SessionFrame(BaseModel):
     """Frame of data pertaining to a session."""
 
-    timestamp: datetime = Field(description="Timestamp of the session frame")
+    timestamp: datetime = Field(
+        description="Timestamp of the session frame",
+        default_factory=lambda: datetime.now(),
+    )
 
     session_id: UUID = Field(
         description="Session ID", default_factory=uuid4, editable=False
