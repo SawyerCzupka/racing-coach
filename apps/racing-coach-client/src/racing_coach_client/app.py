@@ -40,12 +40,9 @@ class RacingCoachClient:
 
         self.collector.start()
 
-        # Here you can add the main logic for your client application
-        # For example, starting the telemetry collector or connecting to a server
+        # Main loop to keep the client running
         try:
             while True:
-                # Keep the main thread alive, periodically checking for shutdown signals
-                # or other conditions.
                 time.sleep(1)
         except KeyboardInterrupt:
             logger.info("KeyboardInterrupt received, shutting down...")
@@ -74,7 +71,7 @@ def main():
         exit(0)
 
     signal.signal(signal.SIGINT, signal_handler)  # Handle Ctrl+C
-    signal.signal(signal.SIGTERM, signal_handler) # Handle termination signals
+    signal.signal(signal.SIGTERM, signal_handler)  # Handle termination signals
 
     client.run()
 
