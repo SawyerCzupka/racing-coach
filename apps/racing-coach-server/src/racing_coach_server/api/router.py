@@ -20,15 +20,6 @@ def health_check():
     return {"status": "ok", "message": "Racing Coach Server is running."}
 
 
-@router.post("/telemetry")
-def telemetry_data(data: dict):
-    """
-    Endpoint to receive telemetry data from the client.
-    """
-    print("Telemetry data received:", data)
-    return {"status": "ok", "message": "Telemetry data processed."}
-
-
 @router.post("/telemetry/lap")
 def receive_lap(
     lap: LapTelemetry,
@@ -46,18 +37,14 @@ def receive_lap(
         # Get/add session to db so we have the session id
         db_track_session = track_session_service.add_or_get_session(session)
 
-        # add lap
-        db_lap = lap_service.lap_repository.create(
-            session_id=db_track_session.id, lap_number=lap_number
+        # Add lap to the db to get the lap id
+        db_lap = lap_service.add_lap(
+            track_session_id=db_track_session.id, lap_number=lap_number
         )
-        lap_service.db_session.commit()
 
-        # add telemetry frames
-        for frame in lap.frames:
-            telemetry_service.telemetry_repository.create_from_telemetry_frame(
-                telemetry_frame=frame, lap_id=db_lap.id, session_id=db_track_session.id
-            )
-        lap_service.db_session.commit()
+        telemetry_service.add_telemetry_sequence(
+            telemetry_sequence=lap, lap_id=db_lap.id, session_id=db_track_session.id
+        )
 
         return {
             "status": "success",

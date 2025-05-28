@@ -4,7 +4,7 @@ from racing_coach_core.models.telemetry import (
     TelemetryFrame,
 )
 from sqlalchemy.orm import Session as SQLAlchemySession
-
+from uuid import UUID
 from ..models import Lap, Telemetry, TrackSession
 from ..repositories import LapRepository, SessionRepository, TelemetryRepository
 
@@ -16,13 +16,28 @@ class LapService:
         self.track_session_repository = SessionRepository(db_session)
         self.telemetry_repository = TelemetryRepository(db_session)
 
-    # def process_lap_telemetry(
-    #     self, lap_telemetry: LapTelemetry, session: SessionFrame
-    # ) -> Lap:
+    def add_lap(
+        self,
+        track_session_id: UUID,
+        lap_number: int,
+        lap_time: float | None = None,
+        is_valid: bool = False,
+    ) -> Lap:
+        """
+        Adds a new lap to the database for a specific track session.
 
-    #     if not lap_telemetry.frames:
-    #         raise ValueError("Lap telemetry frames are empty.")
+        Args:
+            track_session_id (UUID): The unique identifier of the track session.
+            lap_number (int): The lap number to be added.
 
-    #     lap_number = lap_telemetry.frames[0].lap_number
-
-    #     # Get or create the track session
+        Returns:
+            Lap: The created Lap object.
+        """
+        lap = self.lap_repository.create(
+            track_session_id=track_session_id,
+            lap_number=lap_number,
+            lap_time=lap_time,
+            is_valid=is_valid,
+        )
+        self.db_session.commit()
+        return lap
