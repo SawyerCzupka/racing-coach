@@ -26,7 +26,7 @@ from sqlalchemy.orm import (
     MappedAsDataclass,
 )
 
-# from .database import Base
+from racing_coach_core.models.telemetry import SessionFrame
 
 
 class Base(MappedAsDataclass, DeclarativeBase):
@@ -74,6 +74,21 @@ class TrackSession(Base):
         Index("idx_session_car_id", "car_id"),
         Index("idx_session_track_id_car_id", "track_id", "car_id"),
     )
+
+    def to_session_frame(self) -> SessionFrame:
+        """Convert TrackSession to SessionFrame."""
+        return SessionFrame(
+            timestamp=self.created_at,
+            session_id=self.id,
+            track_id=self.track_id,
+            track_name=self.track_name,
+            track_config_name=self.track_config_name,
+            track_type=self.track_type,
+            car_id=self.car_id,
+            car_name=self.car_name,
+            car_class_id=self.car_class_id,
+            series_id=self.series_id,
+        )
 
 
 class Lap(Base):

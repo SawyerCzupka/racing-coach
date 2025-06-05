@@ -54,3 +54,16 @@ def receive_lap(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Server error: {str(e)}")
+
+
+@router.get("/sessions/latest")
+def get_latest_session(track_session_service: TrackSessionServiceDep) -> SessionFrame:
+    """
+    Endpoint to retrieve the latest track session.
+    """
+    latest_session = track_session_service.get_latest_session()
+
+    if not latest_session:
+        raise HTTPException(status_code=404, detail="No sessions found.")
+
+    return latest_session.to_session_frame()

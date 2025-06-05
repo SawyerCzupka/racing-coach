@@ -39,9 +39,14 @@ class SessionRepository(BaseRepository):
         result = self.db_session.execute(stmt).scalars().first()
         return result
 
-    def get_latest_session(self) -> TrackSession | None:
-        """Get the most recent session."""
-        stmt = select(TrackSession).order_by(desc(TrackSession.created_at)).limit(1)
+    def get_latest_session(self) -> TrackSession:
+        """Get the most recent session.
 
+        Raises:
+            ValueError: If no session is found.
+        """
+        stmt = select(TrackSession).order_by(desc(TrackSession.created_at)).limit(1)
         result = self.db_session.execute(stmt).scalars().first()
+        if result is None:
+            raise ValueError("No session found.")
         return result

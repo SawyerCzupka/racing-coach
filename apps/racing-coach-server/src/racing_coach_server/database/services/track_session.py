@@ -21,3 +21,7 @@ class TrackSessionService:
             self.db_session.refresh(track_session)
 
         return track_session
+
+    def get_latest_session(self) -> TrackSession | None:
+        """Get the most recent session."""
+        return self.repository.get_latest_session()
