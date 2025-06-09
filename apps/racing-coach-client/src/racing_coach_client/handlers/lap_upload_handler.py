@@ -1,20 +1,22 @@
 import logging
 
-from racing_coach_core.events import EventHandler, EventType, subscribe
+from racing_coach_core.client import RacingCoachServerSDK
+from racing_coach_core.events import EventHandler, EventType, HandlerContext, subscribe
 from racing_coach_core.models.telemetry import LapTelemetry, SessionFrame
 
-from racing_coach_client.server_api import client
+from racing_coach_client.config import settings
 
 logger = logging.getLogger(__name__)
 
 
 class LapUploadHandler(EventHandler):
-    def __init__(self, event_bus, api_client: client.RacingCoachServerClient):
+    def __init__(self, event_bus):
         super().__init__(event_bus)
-        self.api_client = api_client
+
+        self.api_client = RacingCoachServerSDK(base_url=settings.SERVER_URL)
 
     @subscribe(EventType.LAP_TELEMETRY_SEQUENCE)
-    def handle_lap_complete_event(self, context):
+    def handle_lap_complete_event(self, context: HandlerContext):
         """Handle the lap complete event."""
         data = context.event.data
 
@@ -27,7 +29,9 @@ class LapUploadHandler(EventHandler):
 
         try:
             # Upload the lap telemetry to the server
-            response = self.api_client.upload_lap(lap_telemetry, session_frame)
+            response = self.api_client.upload_lap_telemetry(
+                lap_telemetry=lap_telemetry, session=session_frame
+            )
             logger.info(f"Lap telemetry uploaded successfully: {response}")
         except Exception as e:
             logger.error(f"Failed to upload lap telemetry: {e}")

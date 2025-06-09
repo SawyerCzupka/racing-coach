@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from racing_coach_core.events import Event, EventBus, EventType
+from racing_coach_core.models.responses import LapUploadResponse
 from racing_coach_core.models.telemetry import (
     LapTelemetry,
     SessionFrame,
@@ -27,7 +28,7 @@ def receive_lap(
     track_session_service: TrackSessionServiceDep,
     telemetry_service: TelemetryServiceDep,
     lap_service: LapServiceDep,
-):
+) -> LapUploadResponse:
     """
     Endpoint to receive lap telemetry data from the client.
     """
@@ -46,11 +47,16 @@ def receive_lap(
             telemetry_sequence=lap, lap_id=db_lap.id, session_id=db_track_session.id
         )
 
-        return {
-            "status": "success",
-            "message": f"Received lap {lap_number} with {len(lap.frames)} frames",
-            "lap_id": str(db_lap.id),
-        }
+        # return {
+        #     "status": "success",
+        #     "message": f"Received lap {lap_number} with {len(lap.frames)} frames",
+        #     "lap_id": str(db_lap.id),
+        # }
+        return LapUploadResponse(
+            status="success",
+            message=f"Received lap {lap_number} with {len(lap.frames)} frames",
+            lap_id=str(db_lap.id),
+        )
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Server error: {str(e)}")
