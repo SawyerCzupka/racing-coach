@@ -126,7 +126,7 @@ class Lap(Base):
         "Telemetry", back_populates="lap", cascade="all, delete-orphan", init=False
     )
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+        UUID(as_uuid=True), primary_key=True, default_factory=uuid.uuid4
     )
 
     # Indexes and constraints
@@ -246,7 +246,7 @@ class Telemetry(Base):
     on_pit_road: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+        UUID(as_uuid=True), primary_key=True, default_factory=uuid.uuid4
     )  # TODO: Consider removing this
 
     # Relationships
