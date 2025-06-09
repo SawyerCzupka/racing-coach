@@ -1,14 +1,12 @@
-import pandas as pd
-from racing_coach_core.events import EventBus, EventType
-
-from racing_coach_client.handlers.lap_upload_handler import LapUploadHandler
-
-from racing_coach_client.collectors.iracing import TelemetryCollector
-from racing_coach_client.handlers import LapHandler
-
 import logging
 import signal
 import time
+
+import pandas as pd
+from racing_coach_core.events import EventBus, EventType
+
+from racing_coach_client.collectors.iracing import TelemetryCollector
+from racing_coach_client.handlers import LapHandler, LapUploadHandler, LogHandler
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +35,8 @@ class RacingCoachClient:
             EventType.LAP_TELEMETRY_SEQUENCE,
             lap_upload_handler.handle_lap_complete_event,
         )
+
+        log_handler = LogHandler(self.event_bus, log_frequency=60)
 
     def run(self):
         print("Running Racing Coach Client...")
