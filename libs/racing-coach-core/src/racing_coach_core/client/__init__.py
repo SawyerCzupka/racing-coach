@@ -1,4 +1,9 @@
-from .client import RacingCoachClient
+from .client import RacingCoachServerSDK
 from .exceptions import RacingCoachClientError, ServerError, RequestError
 
-__all__ = ["RacingCoachClient", "RacingCoachClientError", "ServerError", "RequestError"]
+__all__ = [
+    "RacingCoachServerSDK",
+    "RacingCoachClientError",
+    "ServerError",
+    "RequestError",
+]
