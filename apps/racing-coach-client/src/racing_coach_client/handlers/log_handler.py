@@ -31,8 +31,8 @@ class LogHandler(EventHandler):
         session_frame = context.event.data.get("SessionFrame")
         if telemetry_frame and self.frame_count % self.log_frequency == 0:
             # Log the telemetry data
-            logger.info(f"Telemetry Frame: {telemetry_frame}")
-            logger.info(f"Session Frame: {session_frame}")
+            logger.info(f"Telemetry Frame: {telemetry_frame.model_dump_json(indent=2)}")
+            logger.info(f"Session Frame: {session_frame.model_dump_json(indent=2)}")
 
         elif not telemetry_frame:
             logger.warning("No Telemetry Frame data found in the event.")
