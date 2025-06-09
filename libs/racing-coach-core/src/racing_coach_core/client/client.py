@@ -90,8 +90,8 @@ class RacingCoachServerSDK:
             ServerError: If the server returns an error
         """
         payload = {
-            "lap": lap_telemetry.model_dump(),
-            "session": session.model_dump(),
+            "lap": lap_telemetry.model_dump(mode="json"),
+            "session": session.model_dump(mode="json"),
         }
 
         logger.info(

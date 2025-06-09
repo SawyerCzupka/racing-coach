@@ -36,7 +36,7 @@ class RacingCoachClient:
             lap_upload_handler.handle_lap_complete_event,
         )
 
-        log_handler = LogHandler(self.event_bus, log_frequency=60)
+        # log_handler = LogHandler(self.event_bus, log_frequency=60)
 
     def run(self):
         print("Running Racing Coach Client...")
