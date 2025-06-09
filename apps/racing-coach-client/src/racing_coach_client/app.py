@@ -28,7 +28,15 @@ class RacingCoachClient:
     def initialize_handlers(self):
         # Initialize handlers and subscribe to events
         lap_handler = LapHandler(self.event_bus)
+        self.event_bus.subscribe(
+            EventType.TELEMETRY_FRAME, lap_handler.handle_telemetry_frame
+        )
+
         lap_upload_handler = LapUploadHandler(self.event_bus)
+        self.event_bus.subscribe(
+            EventType.LAP_TELEMETRY_SEQUENCE,
+            lap_upload_handler.handle_lap_complete_event,
+        )
 
     def run(self):
         print("Running Racing Coach Client...")

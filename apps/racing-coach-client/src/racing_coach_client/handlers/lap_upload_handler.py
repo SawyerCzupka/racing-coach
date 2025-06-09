@@ -15,7 +15,7 @@ class LapUploadHandler(EventHandler):
 
         self.api_client = RacingCoachServerSDK(base_url=settings.SERVER_URL)
 
-    @subscribe(EventType.LAP_TELEMETRY_SEQUENCE)
+    # @subscribe(EventType.LAP_TELEMETRY_SEQUENCE)
     def handle_lap_complete_event(self, context: HandlerContext):
         """Handle the lap complete event."""
         data = context.event.data

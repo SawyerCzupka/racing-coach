@@ -58,7 +58,7 @@ class LapHandler(EventHandler):
             valid = False
         return valid
 
-    @subscribe(EventType.TELEMETRY_FRAME)
+    # @subscribe(EventType.TELEMETRY_FRAME)
     def handle_telemetry_frame(self, context: HandlerContext):
         data = context.event.data
         if not self._validate_data(data):
