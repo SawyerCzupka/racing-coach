@@ -34,5 +34,5 @@ class LogHandler(EventHandler):
             logger.info(f"Telemetry Frame: {telemetry_frame}")
             logger.info(f"Session Frame: {session_frame}")
 
-        else:
+        elif not telemetry_frame:
             logger.warning("No Telemetry Frame data found in the event.")
