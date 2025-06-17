@@ -12,16 +12,18 @@ from typing import Any
 from racing_coach_core.events import (
     Event,
     EventBus,
+    EventHandler,
     EventType,
     HandlerContext,
     subscribe,
-    EventHandler,
 )
 from racing_coach_core.models.telemetry import (
     LapTelemetry,
     SessionFrame,
     TelemetryFrame,
 )
+
+from racing_coach_client.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -65,13 +67,39 @@ class LapHandler(EventHandler):
             logger.error("Invalid data received in handle_telemetry_frame")
             return
 
-        telemetry_frame = data["TelemetryFrame"]
+        telemetry_frame: TelemetryFrame = data["TelemetryFrame"]
 
         if self.current_session is None:
             self.current_session = data["SessionFrame"]
 
         # If old lap is finished, publish the telemetry and clear the buffer
         if telemetry_frame.lap_number != self.current_lap:
+            logger.info(
+                f"Lap change detected: {self.current_lap} -> {telemetry_frame.lap_number}"
+            )
+            # Ignore laps that are not fully completed and when returning to the pits
+            if (
+                telemetry_frame.lap_distance_pct < settings.LAP_COMPLETION_THRESHOLD
+                and telemetry_frame.lap_number == 0
+            ):
+                self.current_lap = telemetry_frame.lap_number
+                self.telemetry_buffer.clear()
+                logger.info(
+                    f"Ignoring lap change to {telemetry_frame.lap_number} due to low lap distance percentage."
+                )
+                return
+
+            if self.current_lap == 0 or self.current_lap == -1:
+                # Starting first lap or leaving pits, just clear the buffer and set current lap
+                logger.info(
+                    f"Starting first lap or leaving pits. Setting current lap to {telemetry_frame.lap_number} and clearing buffer."
+                )
+
+                self.current_lap = telemetry_frame.lap_number
+                self.telemetry_buffer.clear()
+                self.telemetry_buffer.append(telemetry_frame)
+                return
+
             if len(self.telemetry_buffer) > 0:
                 logger.info(
                     f"Lap {self.current_lap} finished. Publishing telemetry data."
