@@ -1,27 +1,10 @@
 import logging
-from dataclasses import dataclass
 
 from racing_coach_core.models.telemetry import TelemetrySequence
 
-# from racing_coach.core.settings import get_settings  # Not sure how to provide this
-
-# settings = get_settings()
-
+from .events import BrakingEvent
 
 logger = logging.getLogger(__name__)
-
-# brake_threshold: float = settings.BRAKE_ZONE_MIN_PCT
-
-
-@dataclass
-class BrakingEvent:
-    start_distance: float
-    start_frame: int
-    entry_speed: float
-    max_pressure: float
-    end_frame: int = -1
-    braking_duration: float = -1
-    minimum_speed: float = -1
 
 
 def extract_braking_events(
