@@ -5,8 +5,8 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-from ..models.telemetry import LapTelemetry, SessionFrame
 from ..models.responses import HealthCheckResponse, LapUploadResponse
+from ..models.telemetry import LapTelemetry, SessionFrame
 from .exceptions import RequestError, ServerError
 
 logger = logging.getLogger(__name__)

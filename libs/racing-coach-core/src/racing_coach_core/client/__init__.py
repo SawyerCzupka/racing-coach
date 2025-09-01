@@ -1,5 +1,5 @@
 from .client import RacingCoachServerSDK
-from .exceptions import RacingCoachClientError, ServerError, RequestError
+from .exceptions import RacingCoachClientError, RequestError, ServerError
 
 __all__ = [
     "RacingCoachServerSDK",

@@ -1,5 +1,6 @@
 from pydantic import BaseModel
-from .telemetry import TelemetrySequence, SessionFrame, TelemetryFrame, LapTelemetry
+
+from .telemetry import LapTelemetry, SessionFrame, TelemetryFrame
 
 
 class TelemetryAndSession(BaseModel):

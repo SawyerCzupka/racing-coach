@@ -3,6 +3,7 @@ import logging
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from datetime import datetime
+from functools import wraps
 from typing import Any, Callable, Generic, TypeAlias, TypeVar
 
 from ..models.events import LapAndSession, TelemetryAndSession
@@ -54,6 +55,35 @@ class HandlerContext(Generic[T]):
     event_bus: "EventBus"
     event: Event[T]
     # timestamp: datetime = field(default_factory=datetime.now)
+
+
+def handler_for(
+    event_type: EventType[T],
+) -> Callable[[Callable], Callable[[HandlerContext[T]], None]]:
+    """Create a typed handler function."""
+
+    def decorator(func):
+        @wraps(func)
+        def wrapper(context: HandlerContext[T]) -> None:
+            return func(context)
+
+        wrapper._event_type = event_type
+        return wrapper
+
+    return decorator
+
+
+def event_handler(event_type: EventType[T]):
+    """Decorator that validates the handler signature matches the event type."""
+
+    def decorator(
+        func: Callable[[HandlerContext[T]], None],
+    ) -> Callable[[HandlerContext[T]], None]:
+        # Store event type for registration
+        func._event_type = event_type  # type: ignore
+        return func
+
+    return decorator
 
 
 @dataclass(frozen=True)
@@ -146,7 +176,7 @@ class EventBus:
             logger.error(f"Error publishing event {event.type}: {e}")
             raise
 
-    def thread_safe_publish(self, event: Event[Any]) -> None:
+    def thread_safe_publish(self, event: Event) -> None:
         """Called from collector thread or handlers to publish events"""
         if not self._running or self._loop is None:
             raise RuntimeError("Event bus not running")

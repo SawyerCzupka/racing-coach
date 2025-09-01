@@ -1,6 +1,6 @@
 from racing_coach_core.models.telemetry import TelemetrySequence
 
-from .events import CornerEvent, BrakingEvent
+from .events import BrakingEvent, CornerEvent
 
 D_STEERING_THRESHOLD: float = 0.15  # TODO: find a good value for this
 
