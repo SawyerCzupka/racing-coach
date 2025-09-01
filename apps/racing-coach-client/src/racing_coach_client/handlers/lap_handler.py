@@ -11,7 +11,6 @@ import logging
 from racing_coach_core.events import (
     Event,
     EventBus,
-    EventHandler,
     HandlerContext,
     SystemEvents,
 )
@@ -27,9 +26,9 @@ from racing_coach_client.config import settings
 logger = logging.getLogger(__name__)
 
 
-class LapHandler(EventHandler):
+class LapHandler:
     def __init__(self, event_bus: EventBus):
-        super().__init__(event_bus)
+        self.event_bus = event_bus
 
         self.current_lap: int = -1
         self.telemetry_buffer: list[TelemetryFrame] = []

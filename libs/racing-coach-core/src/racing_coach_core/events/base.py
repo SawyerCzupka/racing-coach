@@ -3,11 +3,9 @@ import logging
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum, auto
 from typing import Any, Callable, Generic, TypeAlias, TypeVar
 
-from ..models.telemetry import TelemetryFrame, TelemetrySequence
-from ..models.events import TelemetryAndSession, LapAndSession
+from ..models.events import LapAndSession, TelemetryAndSession
 
 logger = logging.getLogger(__name__)
 
@@ -101,8 +99,8 @@ class EventBus:
     ) -> None:
         """Initialize the event bus."""
 
-        self._handlers: dict[EventType, list[HandlerType]] = {}
-        self._queue: asyncio.Queue[Event] = asyncio.Queue(maxsize=max_queue_size)
+        self._handlers: dict[EventType[Any], list[HandlerType[Any]]] = {}
+        self._queue: asyncio.Queue[Event[Any]] = asyncio.Queue(maxsize=max_queue_size)
         self._thread_pool = ThreadPoolExecutor(
             max_workers=max_workers, thread_name_prefix=thread_name_prefix
         )
@@ -131,12 +129,12 @@ class EventBus:
         for handler in handlers:
             self.register_handler(handler)
 
-    def unsubscribe(self, event_type: EventType, handler: HandlerType) -> None:
+    def unsubscribe(self, event_type: EventType[T], handler: HandlerType[T]) -> None:
         if event_type in self._handlers and handler in self._handlers[event_type]:
             self._handlers[event_type].remove(handler)
             logger.info(f"Removed handler {handler} for event {event_type}")
 
-    async def publish(self, event: Event) -> None:
+    async def publish(self, event: Event[Any]) -> None:
         """Publish an event to the bus."""
         assert self._running, "Event bus not running"
         assert self._loop is not None, "Event loop not set"
@@ -227,27 +225,27 @@ class EventBus:
         return self._running
 
 
-class HandlerMeta(type):
-    def __call__(cls, *args, **kwargs):
-        instance = super().__call__(*args, **kwargs)
+# class HandlerMeta(type):
+#     def __call__(cls, *args, **kwargs):
+#         instance = super().__call__(*args, **kwargs)
 
-        if not hasattr(instance, "event_bus") or not isinstance(
-            instance.event_bus, EventBus
-        ):
-            raise AttributeError(
-                f"Handler Class '{cls.__name__}' must have an 'event_bus' attribute of type EventBus. "
-                "Did you forget to call super().__init__(event_bus)?"
-            )
+#         if not hasattr(instance, "event_bus") or not isinstance(
+#             instance.event_bus, EventBus
+#         ):
+#             raise AttributeError(
+#                 f"Handler Class '{cls.__name__}' must have an 'event_bus' attribute of type EventBus. "
+#                 "Did you forget to call super().__init__(event_bus)?"
+#             )
 
-        markers = _INSTANCE_SUBSCRIPTION_MARKERS.get(cls, [])
-        for event_type, method_name in markers:
-            method = getattr(instance, method_name)
-            instance.event_bus.subscribe(event_type, method)
-        return instance
+#         markers = _INSTANCE_SUBSCRIPTION_MARKERS.get(cls, [])
+#         for event_type, method_name in markers:
+#             method = getattr(instance, method_name)
+#             instance.event_bus.subscribe(event_type, method)
+#         return instance
 
 
-class EventHandler(metaclass=HandlerMeta):
-    """Base class for all event handler classes."""
+# class EventHandler(metaclass=HandlerMeta):
+#     """Base class for all event handler classes."""
 
-    def __init__(self, event_bus: "EventBus"):
-        self.event_bus = event_bus
+#     def __init__(self, event_bus: "EventBus"):
+#         self.event_bus = event_bus
