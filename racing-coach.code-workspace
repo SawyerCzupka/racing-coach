@@ -23,6 +23,6 @@
 		"[python]": {
 			"editor.defaultFormatter": "ms-python.black-formatter"
 		},
-		"python.analysis.typeCheckingMode": "standard",
+		"python.analysis.typeCheckingMode": "strict",
 	}
 }

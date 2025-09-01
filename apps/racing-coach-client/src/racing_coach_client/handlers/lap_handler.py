@@ -7,16 +7,15 @@ but rather only the lap events. This way, I can reduce the amount of data sent t
 """
 
 import logging
-from typing import Any
 
 from racing_coach_core.events import (
     Event,
     EventBus,
     EventHandler,
-    EventType,
     HandlerContext,
-    subscribe,
+    SystemEvents,
 )
+from racing_coach_core.models.events import TelemetryAndSession
 from racing_coach_core.models.telemetry import (
     LapTelemetry,
     SessionFrame,
@@ -37,40 +36,14 @@ class LapHandler(EventHandler):
 
         self.current_session: SessionFrame | None = None
 
-    def _validate_data(self, data: Any) -> bool:
-        valid = True
-        if not isinstance(data, dict):
-            logger.error("Data is not a dictionary")
-            valid = False
-        if "TelemetryFrame" not in data:
-            logger.error("Missing TelemetryFrame key in data")
-            valid = False
-        if "SessionFrame" not in data:
-            logger.error("Missing SessionFrame key in data")
-            valid = False
-        if not isinstance(data["TelemetryFrame"], TelemetryFrame):
-            logger.error(
-                "Expected TelemetryFrame data type but got {}".format(type(data))
-            )
-            valid = False
-        if not isinstance(data["SessionFrame"], SessionFrame):
-            logger.error(
-                "Expected SessionFrame data type but got {}".format(type(data))
-            )
-            valid = False
-        return valid
-
     # @subscribe(EventType.TELEMETRY_FRAME)
-    def handle_telemetry_frame(self, context: HandlerContext):
+    def handle_telemetry_frame(self, context: HandlerContext[TelemetryAndSession]):
         data = context.event.data
-        if not self._validate_data(data):
-            logger.error("Invalid data received in handle_telemetry_frame")
-            return
 
-        telemetry_frame: TelemetryFrame = data["TelemetryFrame"]
+        telemetry_frame: TelemetryFrame = data.TelemetryFrame
 
         if self.current_session is None:
-            self.current_session = data["SessionFrame"]
+            self.current_session = data.SessionFrame
 
         # If old lap is finished, publish the telemetry and clear the buffer
         if telemetry_frame.lap_number != self.current_lap:
@@ -117,11 +90,8 @@ class LapHandler(EventHandler):
 
         self.event_bus.thread_safe_publish(
             Event(
-                EventType.LAP_TELEMETRY_SEQUENCE,
-                data={
-                    "LapTelemetry": lap_telemetry,
-                    "SessionFrame": self.current_session,
-                },
+                type=SystemEvents.LAP_TELEMETRY_SEQUENCE,
+                data=lap_telemetry,
             )
         )
 
