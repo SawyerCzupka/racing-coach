@@ -7,7 +7,8 @@ import threading
 import time
 from datetime import datetime
 
-from racing_coach_core.events import Event, EventBus, EventType
+from racing_coach_core.events import Event, EventBus, SystemEvents
+from racing_coach_core.models.events import TelemetryAndSession
 from racing_coach_core.models.telemetry import SessionFrame, TelemetryFrame
 
 from .connection import iRacingConnectionManager
@@ -27,7 +28,7 @@ class TelemetryCollector:
         self.event_bus = event_bus
 
         self._running: bool = False
-        self._collection_thread = None
+        self._collection_thread: threading.Thread | None = None
 
         # object to hold the current session with a unique uuid
         self.current_session: SessionFrame | None = None
@@ -86,19 +87,22 @@ class TelemetryCollector:
 
     def collect_and_publish_telemetry_frame(self):
         """Collect a single frame of telemetry data."""
-        ir = self.connection.get_ir()
+        if self.current_session is None:
+            logger.warning("No session frame collected before publish")
+            return
 
+        ir = self.connection.get_ir()
         ir.freeze_var_buffer_latest()
 
         telemetry_frame = TelemetryFrame.from_irsdk(ir, datetime.now())
 
         self.event_bus.thread_safe_publish(
             Event(
-                type=EventType.TELEMETRY_FRAME,
-                data={
-                    "TelemetryFrame": telemetry_frame,
-                    "SessionFrame": self.current_session,
-                },
+                type=SystemEvents.TELEMETRY_FRAME,
+                data=TelemetryAndSession(
+                    TelemetryFrame=telemetry_frame,
+                    SessionFrame=self.current_session,
+                ),
             )
         )
 

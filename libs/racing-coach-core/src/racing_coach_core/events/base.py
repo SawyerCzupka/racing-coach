@@ -1,36 +1,23 @@
 import asyncio
 import logging
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from datetime import datetime
-from functools import wraps
-from typing import Any, Callable, Generic, TypeAlias, TypeVar
+from typing import Any
 
 from ..models.events import LapAndSession, TelemetryAndSession
 
 logger = logging.getLogger(__name__)
 
 
-# class EventType(Enum):
-#     LAP_TELEMETRY_SEQUENCE = auto()
-#     BRAKE_ZONE_ENTERED = auto()
-#     BRAKE_ZONE_EXITED = auto()
-#     CORNER_ENTERED = auto()
-#     CORNER_EXITED = auto()
-#     TELEMETRY_FRAME = auto()
-#     SESSION_FRAME = auto()
-#     SESSION_ENDED = auto()
-
-#     # System
-#     SHUTDOWN = auto()
-
-
-T = TypeVar("T")
+# T = TypeVar("T")
 
 
 @dataclass(frozen=True)
-class EventType(Generic[T]):
+class EventType[T]:
     name: str
+    data_type: type = field(default=T)
 
     def __repr__(self) -> str:
         return f"EventType<{self.name}>"
@@ -43,79 +30,29 @@ class SystemEvents:
     TELEMETRY_FRAME: EventType[TelemetryAndSession] = EventType("TELEMETRY_FRAME")
 
 
-@dataclass
-class Event(Generic[T]):
+@dataclass(frozen=True)
+class Event[T]:
     type: EventType[T]
     data: T
     timestamp: datetime = field(default_factory=datetime.now)
 
 
-@dataclass
-class HandlerContext(Generic[T]):
+@dataclass(frozen=True)
+class HandlerContext[T]:
     event_bus: "EventBus"
     event: Event[T]
     # timestamp: datetime = field(default_factory=datetime.now)
 
 
-def handler_for(
-    event_type: EventType[T],
-) -> Callable[[Callable], Callable[[HandlerContext[T]], None]]:
-    """Create a typed handler function."""
-
-    def decorator(func):
-        @wraps(func)
-        def wrapper(context: HandlerContext[T]) -> None:
-            return func(context)
-
-        wrapper._event_type = event_type
-        return wrapper
-
-    return decorator
-
-
-def event_handler(event_type: EventType[T]):
-    """Decorator that validates the handler signature matches the event type."""
-
-    def decorator(
-        func: Callable[[HandlerContext[T]], None],
-    ) -> Callable[[HandlerContext[T]], None]:
-        # Store event type for registration
-        func._event_type = event_type  # type: ignore
-        return func
-
-    return decorator
-
-
 @dataclass(frozen=True)
-class Handler(Generic[T]):
+class Handler[T]:
     type: EventType[T]
     fn: Callable[[HandlerContext[T]], Any]
 
 
-HandlerType: TypeAlias = Callable[[HandlerContext[T]], Any]
-
-# _SUBSCRIPTION_REGISTRY: list[tuple[EventType, Callable]] = []
-# _INSTANCE_SUBSCRIPTION_MARKERS: dict[type, list[tuple[EventType, str]]] = {}
-
-
-# def subscribe(event_type: EventType):
-#     def decorator(fn: Callable):
-#         qualname = fn.__qualname__
-#         if "." in qualname:
-#             # Get the class name, e.g. "MyClass"
-#             cls_name = qualname.split(".")[0]
-#             # Get the class object from globals.
-#             cls = fn.__globals__.get(cls_name)
-#             # This will almost always be true with the current code structure but is technically not guaranteed (method inside class inside function)
-#             if cls:
-#                 _INSTANCE_SUBSCRIPTION_MARKERS.setdefault(cls, []).append(
-#                     (event_type, fn.__name__)
-#                 )
-#         else:
-#             _SUBSCRIPTION_REGISTRY.append((event_type, fn))
-#         return fn
-
-#     return decorator
+type HandlerFunc[T] = Callable[[HandlerContext[T]], Any]
+type HandlerMethod[T] = Callable[[Any, HandlerContext[T]], Any]
+type HandlerType[T] = HandlerFunc[T] | HandlerMethod[T]
 
 
 class EventBus:
@@ -129,7 +66,7 @@ class EventBus:
     ) -> None:
         """Initialize the event bus."""
 
-        self._handlers: dict[EventType[Any], list[HandlerType[Any]]] = {}
+        self._handlers: dict[EventType[Any], list[HandlerFunc[Any]]] = {}
         self._queue: asyncio.Queue[Event[Any]] = asyncio.Queue(maxsize=max_queue_size)
         self._thread_pool = ThreadPoolExecutor(
             max_workers=max_workers, thread_name_prefix=thread_name_prefix
@@ -138,7 +75,7 @@ class EventBus:
         # self._process_task: asyncio.Task | None = None
         self._loop: asyncio.AbstractEventLoop | None = None
 
-    def subscribe(self, event_type: EventType[T], handler: HandlerType[T]) -> None:
+    def subscribe[T](self, event_type: EventType[T], handler: HandlerFunc[T]) -> None:
         """Add a handler for a specific event type.
 
         Whenever the event bus receives an event of the specified type, the handler will be called with the event context.
@@ -159,7 +96,7 @@ class EventBus:
         for handler in handlers:
             self.register_handler(handler)
 
-    def unsubscribe(self, event_type: EventType[T], handler: HandlerType[T]) -> None:
+    def unsubscribe[T](self, event_type: EventType[T], handler: HandlerType[T]) -> None:
         if event_type in self._handlers and handler in self._handlers[event_type]:
             self._handlers[event_type].remove(handler)
             logger.info(f"Removed handler {handler} for event {event_type}")
@@ -176,12 +113,11 @@ class EventBus:
             logger.error(f"Error publishing event {event.type}: {e}")
             raise
 
-    def thread_safe_publish(self, event: Event) -> None:
+    def thread_safe_publish(self, event: Event[Any]) -> None:
         """Called from collector thread or handlers to publish events"""
         if not self._running or self._loop is None:
             raise RuntimeError("Event bus not running")
 
-        # asyncio.run_coroutine_threadsafe(self._queue.put(event), self._loop)
         asyncio.run_coroutine_threadsafe(self.publish(event), self._loop)
 
     def start(self) -> None:
@@ -253,29 +189,3 @@ class EventBus:
     # @property
     def is_running(self) -> bool:
         return self._running
-
-
-# class HandlerMeta(type):
-#     def __call__(cls, *args, **kwargs):
-#         instance = super().__call__(*args, **kwargs)
-
-#         if not hasattr(instance, "event_bus") or not isinstance(
-#             instance.event_bus, EventBus
-#         ):
-#             raise AttributeError(
-#                 f"Handler Class '{cls.__name__}' must have an 'event_bus' attribute of type EventBus. "
-#                 "Did you forget to call super().__init__(event_bus)?"
-#             )
-
-#         markers = _INSTANCE_SUBSCRIPTION_MARKERS.get(cls, [])
-#         for event_type, method_name in markers:
-#             method = getattr(instance, method_name)
-#             instance.event_bus.subscribe(event_type, method)
-#         return instance
-
-
-# class EventHandler(metaclass=HandlerMeta):
-#     """Base class for all event handler classes."""
-
-#     def __init__(self, event_bus: "EventBus"):
-#         self.event_bus = event_bus

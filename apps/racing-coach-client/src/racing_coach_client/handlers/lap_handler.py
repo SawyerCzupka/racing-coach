@@ -4,7 +4,7 @@ It listens to the telemetry events and processes them to create lap events.
 
 The motivation for this is that I don't want to send every telemetry event to the server (which is a lot of data),
 but rather only the lap events. This way, I can reduce the amount of data sent to the server.
-"""
+"""  # noqa: E501
 
 import logging
 
@@ -14,7 +14,8 @@ from racing_coach_core.events import (
     HandlerContext,
     SystemEvents,
 )
-from racing_coach_core.models.events import TelemetryAndSession
+from racing_coach_core.events.checking import handler_for  # type: ignore # noqa: F401
+from racing_coach_core.models.events import LapAndSession, TelemetryAndSession
 from racing_coach_core.models.telemetry import (
     LapTelemetry,
     SessionFrame,
@@ -35,7 +36,7 @@ class LapHandler:
 
         self.current_session: SessionFrame | None = None
 
-    # @subscribe(EventType.TELEMETRY_FRAME)
+    # @handler_for(SystemEvents.TELEMETRY_FRAME)
     def handle_telemetry_frame(self, context: HandlerContext[TelemetryAndSession]):
         data = context.event.data
 
@@ -47,7 +48,7 @@ class LapHandler:
         # If old lap is finished, publish the telemetry and clear the buffer
         if telemetry_frame.lap_number != self.current_lap:
             logger.info(
-                f"Lap change detected: {self.current_lap} -> {telemetry_frame.lap_number}"
+                f"Lap change detected: {self.current_lap} -> {telemetry_frame.lap_number}"  # noqa: E501
             )
             # Ignore laps that are not fully completed and when returning to the pits
             if (
@@ -57,14 +58,15 @@ class LapHandler:
                 self.current_lap = telemetry_frame.lap_number
                 self.telemetry_buffer.clear()
                 logger.info(
-                    f"Ignoring lap change to {telemetry_frame.lap_number} due to low lap distance percentage."
+                    f"Ignoring lap change to {telemetry_frame.lap_number} due to low lap distance percentage."  # noqa: E501
                 )
                 return
 
             if self.current_lap == 0 or self.current_lap == -1:
-                # Starting first lap or leaving pits, just clear the buffer and set current lap
+                # Starting first lap or leaving pits, just clear the buffer and set current lap  # noqa: E501
                 logger.info(
-                    f"Starting first lap or leaving pits. Setting current lap to {telemetry_frame.lap_number} and clearing buffer."
+                    f"Starting first lap or leaving pits. Setting current lap to "
+                    f"{telemetry_frame.lap_number} and clearing buffer."
                 )
 
                 self.current_lap = telemetry_frame.lap_number
@@ -83,6 +85,15 @@ class LapHandler:
 
     def publish_lap_and_flush_buffer(self):
         if len(self.telemetry_buffer) == 0:
+            logger.warning(
+                "Telemetry buffer is empty while trying to publish lap telemetry."
+            )
+            return
+
+        if self.current_session is None:
+            logger.warning(
+                "Current session is None while trying to publish lap telemetry."
+            )
             return
 
         lap_telemetry = LapTelemetry(frames=self.telemetry_buffer, lap_time=None)
@@ -90,7 +101,9 @@ class LapHandler:
         self.event_bus.thread_safe_publish(
             Event(
                 type=SystemEvents.LAP_TELEMETRY_SEQUENCE,
-                data=lap_telemetry,
+                data=LapAndSession(
+                    LapTelemetry=lap_telemetry, SessionFrame=self.current_session
+                ),
             )
         )
 

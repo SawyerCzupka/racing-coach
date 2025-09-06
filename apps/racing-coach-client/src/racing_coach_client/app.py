@@ -1,13 +1,28 @@
 import logging
-import signal
 import time
+from typing import Any
 
-from racing_coach_core.events import EventBus, Handler, SystemEvents
+from racing_coach_core.events import (
+    EventBus,
+    Handler,
+    HandlerContext,
+    HandlerFunc,
+    HandlerMethod,
+    HandlerType,
+    SystemEvents,
+)
+from racing_coach_core.events.checking import handler_for
+from racing_coach_core.models.events import LapAndSession, TelemetryAndSession
 
 from racing_coach_client.collectors.iracing import TelemetryCollector
-from racing_coach_client.handlers import LapHandler, LapUploadHandler, LogHandler
+from racing_coach_client.handlers import LapHandler, LapUploadHandler
 
 logger = logging.getLogger(__name__)
+
+
+@handler_for(SystemEvents.LAP_TELEMETRY_SEQUENCE)
+def test_laps_handler(context: HandlerContext[LapAndSession]):
+    pass
 
 
 class RacingCoachClient:
@@ -23,21 +38,30 @@ class RacingCoachClient:
         print("Racing Coach Client initialized.")
 
     def initialize_handlers(self):
-        handlers: list[Handler] = []
+        handlers: list[Handler[Any]] = []
 
         lap_handler = LapHandler(self.event_bus)
         handlers.append(
-            Handler(
-                type=SystemEvents.TELEMETRY_FRAME,
-                fn=lap_handler.handle_telemetry_frame,
+            Handler[TelemetryAndSession](
+                SystemEvents.TELEMETRY_FRAME,
+                lap_handler.handle_telemetry_frame,
             )
         )
 
         lap_upload_handler = LapUploadHandler(self.event_bus)
         handlers.append(
-            Handler(
+            Handler[LapAndSession](
                 SystemEvents.LAP_TELEMETRY_SEQUENCE,
                 lap_upload_handler.handle_lap_complete_event,
+            )
+        )
+
+        test: HandlerFunc[LapAndSession] = lap_upload_handler.handle_lap_complete_event
+
+        handlers.append(
+            Handler(
+                type=SystemEvents.LAP_TELEMETRY_SEQUENCE,
+                fn=test_laps_handler,
             )
         )
 
@@ -72,16 +96,18 @@ def main():
     client = RacingCoachClient()
 
     # Graceful shutdown handling
-    def signal_handler(signum, frame):
+    import signal
+
+    def signal_handler(signum, frame):  # type: ignore
         logger.info(f"Signal {signum} received, initiating shutdown...")
         client.shutdown()
-        # Ensure the program exits after shutdown, especially if shutdown doesn't exit itself
-        # or if it's called from a non-main thread context that might not exit.
+        # Ensure the program exits after shutdown, especially if shutdown doesn't exit
+        # itself or if it's called from a non-main thread context that might not exit.
         # We might need to exit more forcefully if threads don't terminate.
         exit(0)
 
-    signal.signal(signal.SIGINT, signal_handler)  # Handle Ctrl+C
-    signal.signal(signal.SIGTERM, signal_handler)  # Handle termination signals
+    signal.signal(signal.SIGINT, signal_handler)  # type: ignore # Handle Ctrl+C
+    signal.signal(signal.SIGTERM, signal_handler)  # type: ignore # Handle termination signals
 
     client.run()
 
