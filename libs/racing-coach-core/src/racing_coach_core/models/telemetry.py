@@ -1,13 +1,28 @@
 import logging
 from datetime import datetime
 from pathlib import Path
+from typing import Protocol, Self, runtime_checkable
 from uuid import UUID, uuid4
 
-import irsdk
 import pandas as pd
 from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
+
+
+@runtime_checkable
+class TelemetryDataSource(Protocol):
+    """
+    Protocol for objects that provide telemetry data.
+
+    This protocol defines the interface for reading telemetry variables,
+    allowing the models to work with both live iRacing SDK instances and
+    recorded IBT file readers.
+    """
+
+    def __getitem__(self, key: str) -> object:
+        """Get a telemetry variable by name."""
+        ...
 
 
 class TelemetryFrame(BaseModel):
@@ -41,9 +56,7 @@ class TelemetryFrame(BaseModel):
 
     # Vehicle Dynamics
     lateral_acceleration: float = Field(description="Lateral acceleration in m/s²")
-    longitudinal_acceleration: float = Field(
-        description="Longitudinal acceleration in m/s²"
-    )
+    longitudinal_acceleration: float = Field(description="Longitudinal acceleration in m/s²")
     vertical_acceleration: float = Field(description="Vertical acceleration in m/s²")
     yaw_rate: float = Field(description="Yaw rate in rad/s")
     roll_rate: float = Field(description="Roll rate in rad/s")
@@ -79,101 +92,108 @@ class TelemetryFrame(BaseModel):
     on_pit_road: bool = Field(description="Whether car is on pit road")
 
     @classmethod
-    def from_irsdk(cls, ir: irsdk.IRSDK, timestamp: datetime) -> "TelemetryFrame":
+    def from_irsdk(cls, source: TelemetryDataSource, timestamp: datetime) -> Self:
         """
-        Create a TelemetryFrame object from an iRacing SDK telemetry sample.
+        Create a TelemetryFrame from a telemetry data source.
+
+        This method can work with any source that provides telemetry data via
+        dictionary-style access, including live iRacing SDK connections and
+        recorded IBT file readers.
 
         Args:
-            ir (irsdk.IRSDK): The telemetry sample from the iRacing SDK.
-            timestamp (datetime.datetime): The timestamp of the telemetry frame.
+            source: The telemetry data source (live or replay).
+            timestamp: The timestamp of the telemetry frame.
 
         Returns:
             TelemetryFrame: The created TelemetryFrame object.
+
+        Raises:
+            KeyError: If required telemetry variables are missing.
         """
         return cls(
             timestamp=timestamp,
-            session_time=ir["SessionTime"],  # type: ignore
-            lap_number=ir["Lap"],  # type: ignore
-            lap_distance_pct=ir["LapDistPct"],  # type: ignore
-            lap_distance=ir["LapDist"],  # type: ignore
-            current_lap_time=ir["LapCurrentLapTime"],  # type: ignore
-            last_lap_time=ir["LapLastLapTime"],  # type: ignore
-            best_lap_time=ir["LapBestLapTime"],  # type: ignore
-            speed=ir["Speed"],  # type: ignore
-            rpm=ir["RPM"],  # type: ignore
-            gear=ir["Gear"],  # type: ignore
-            throttle=ir["Throttle"],  # type: ignore
-            brake=ir["Brake"],  # type: ignore
-            clutch=ir["Clutch"],  # type: ignore
-            steering_angle=ir["SteeringWheelAngle"],  # type: ignore
-            lateral_acceleration=ir["LatAccel"],  # type: ignore
-            longitudinal_acceleration=ir["LongAccel"],  # type: ignore
-            vertical_acceleration=ir["VertAccel"],  # type: ignore
-            yaw_rate=ir["YawRate"],  # type: ignore
-            roll_rate=ir["RollRate"],  # type: ignore
-            pitch_rate=ir["PitchRate"],  # type: ignore
-            position_x=ir["VelocityX"],  # type: ignore
-            position_y=ir["VelocityY"],  # type: ignore
-            position_z=ir["VelocityZ"],  # type: ignore
-            yaw=ir["Yaw"],  # type: ignore
-            pitch=ir["Pitch"],  # type: ignore
-            roll=ir["Roll"],  # type: ignore
+            session_time=source["SessionTime"],  # type: ignore
+            lap_number=source["Lap"],  # type: ignore
+            lap_distance_pct=source["LapDistPct"],  # type: ignore
+            lap_distance=source["LapDist"],  # type: ignore
+            current_lap_time=source["LapCurrentLapTime"],  # type: ignore
+            last_lap_time=source["LapLastLapTime"],  # type: ignore
+            best_lap_time=source["LapBestLapTime"],  # type: ignore
+            speed=source["Speed"],  # type: ignore
+            rpm=source["RPM"],  # type: ignore
+            gear=source["Gear"],  # type: ignore
+            throttle=source["Throttle"],  # type: ignore
+            brake=source["Brake"],  # type: ignore
+            clutch=source["Clutch"],  # type: ignore
+            steering_angle=source["SteeringWheelAngle"],  # type: ignore
+            lateral_acceleration=source["LatAccel"],  # type: ignore
+            longitudinal_acceleration=source["LongAccel"],  # type: ignore
+            vertical_acceleration=source["VertAccel"],  # type: ignore
+            yaw_rate=source["YawRate"],  # type: ignore
+            roll_rate=source["RollRate"],  # type: ignore
+            pitch_rate=source["PitchRate"],  # type: ignore
+            position_x=source["VelocityX"],  # type: ignore
+            position_y=source["VelocityY"],  # type: ignore
+            position_z=source["VelocityZ"],  # type: ignore
+            yaw=source["Yaw"],  # type: ignore
+            pitch=source["Pitch"],  # type: ignore
+            roll=source["Roll"],  # type: ignore
             tire_temps={
                 "LF": {
-                    "left": ir["LFtempCL"],
-                    "middle": ir["LFtempCM"],
-                    "right": ir["LFtempCR"],
+                    "left": source["LFtempCL"],
+                    "middle": source["LFtempCM"],
+                    "right": source["LFtempCR"],
                 },
                 "RF": {
-                    "left": ir["RFtempCL"],
-                    "middle": ir["RFtempCM"],
-                    "right": ir["RFtempCR"],
+                    "left": source["RFtempCL"],
+                    "middle": source["RFtempCM"],
+                    "right": source["RFtempCR"],
                 },
                 "LR": {
-                    "left": ir["LRtempCL"],
-                    "middle": ir["LRtempCM"],
-                    "right": ir["LRtempCR"],
+                    "left": source["LRtempCL"],
+                    "middle": source["LRtempCM"],
+                    "right": source["LRtempCR"],
                 },
                 "RR": {
-                    "left": ir["RRtempCL"],
-                    "middle": ir["RRtempCM"],
-                    "right": ir["RRtempCR"],
+                    "left": source["RRtempCL"],
+                    "middle": source["RRtempCM"],
+                    "right": source["RRtempCR"],
                 },
             },  # type: ignore
             tire_wear={
                 "LF": {
-                    "left": ir["LFwearL"],
-                    "middle": ir["LFwearM"],
-                    "right": ir["LFwearR"],
+                    "left": source["LFwearL"],
+                    "middle": source["LFwearM"],
+                    "right": source["LFwearR"],
                 },
                 "RF": {
-                    "left": ir["RFwearL"],
-                    "middle": ir["RFwearM"],
-                    "right": ir["RFwearR"],
+                    "left": source["RFwearL"],
+                    "middle": source["RFwearM"],
+                    "right": source["RFwearR"],
                 },
                 "LR": {
-                    "left": ir["LRwearL"],
-                    "middle": ir["LRwearM"],
-                    "right": ir["LRwearR"],
+                    "left": source["LRwearL"],
+                    "middle": source["LRwearM"],
+                    "right": source["LRwearR"],
                 },
                 "RR": {
-                    "left": ir["RRwearL"],
-                    "middle": ir["RRwearM"],
-                    "right": ir["RRwearR"],
+                    "left": source["RRwearL"],
+                    "middle": source["RRwearM"],
+                    "right": source["RRwearR"],
                 },
             },  # type: ignore
             brake_line_pressure={
-                "LF": ir["LFbrakeLinePress"],
-                "RF": ir["RFbrakeLinePress"],
-                "LR": ir["LRbrakeLinePress"],
-                "RR": ir["RRbrakeLinePress"],
+                "LF": source["LFbrakeLinePress"],
+                "RF": source["RFbrakeLinePress"],
+                "LR": source["LRbrakeLinePress"],
+                "RR": source["RRbrakeLinePress"],
             },  # type: ignore
-            track_temp=ir["TrackTempCrew"],  # type: ignore
-            track_wetness=ir["TrackWetness"],  # type: ignore
-            air_temp=ir["AirTemp"],  # type: ignore
-            session_flags=ir["SessionFlags"],  # type: ignore
-            track_surface=ir["PlayerTrackSurface"],  # type: ignore
-            on_pit_road=ir["OnPitRoad"],  # type: ignore
+            track_temp=source["TrackTempCrew"],  # type: ignore
+            track_wetness=source["TrackWetness"],  # type: ignore
+            air_temp=source["AirTemp"],  # type: ignore
+            session_flags=source["SessionFlags"],  # type: ignore
+            track_surface=source["PlayerTrackSurface"],  # type: ignore
+            on_pit_road=source["OnPitRoad"],  # type: ignore
         )
 
 
@@ -205,9 +225,25 @@ class SessionFrame(BaseModel):
     # session_type: str = Field(description="Session type")
 
     @classmethod
-    def from_irsdk(cls, ir: irsdk.IRSDK, timestamp: datetime):
-        weekend_info = ir["WeekendInfo"]
-        driver_info = ir["DriverInfo"]
+    def from_irsdk(cls, source: TelemetryDataSource, timestamp: datetime) -> "SessionFrame":
+        """
+        Create a SessionFrame from a telemetry data source.
+
+        This method extracts session metadata (track, car, series info) from
+        the telemetry source.
+
+        Args:
+            source: The telemetry data source (live or replay).
+            timestamp: The timestamp of the session frame.
+
+        Returns:
+            SessionFrame: The created SessionFrame object.
+
+        Raises:
+            KeyError: If required session variables are missing.
+        """
+        weekend_info = source["WeekendInfo"]
+        driver_info = source["DriverInfo"]
 
         car_idx = driver_info["DriverCarIdx"]  # type: ignore
 

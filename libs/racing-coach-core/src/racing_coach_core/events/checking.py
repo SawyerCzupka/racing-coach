@@ -1,19 +1,12 @@
 import logging
 from collections.abc import Callable
-from functools import wraps
-from typing import TypeVar, overload
 
-from racing_coach_core.events.base import (
-    EventType,
-    HandlerFunc,
-    HandlerMethod,
-    HandlerType,
-)
+from racing_coach_core.events.base import EventType, HandlerFunc, HandlerMethod
 
 logger = logging.getLogger(__name__)
 
 
-def handler_for[X](
+def func_handles[X](
     event_type: EventType[X],
 ) -> Callable[[HandlerFunc[X]], HandlerFunc[X]]:
     """
@@ -28,7 +21,7 @@ def handler_for[X](
     return decorator
 
 
-def handler_for_method[X](
+def method_handles[X](
     event_type: EventType[X],
 ) -> Callable[[HandlerMethod[X]], HandlerMethod[X]]:
     """
@@ -37,6 +30,7 @@ def handler_for_method[X](
     """
 
     def decorator(func: HandlerMethod[X]) -> HandlerMethod[X]:
+        # func._event_type = event_type  # type: ignore
         return func
 
     return decorator

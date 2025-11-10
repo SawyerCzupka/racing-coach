@@ -101,9 +101,7 @@ class RacingCoachServerSDK:
 
         response = self._make_request("POST", "/telemetry/lap", json=payload)
 
-        logger.info(
-            f"Successfully uploaded lap telemetry: {response.get('message', 'No message')}"
-        )
+        logger.info(f"Successfully uploaded lap telemetry: {response.get('message', 'No message')}")
         return LapUploadResponse(**response)
 
     def get_latest_session(self) -> SessionFrame:
@@ -155,9 +153,7 @@ class RacingCoachServerSDK:
         url = f"{self.base_url}{endpoint}"
 
         try:
-            response = self.session.request(
-                method=method, url=url, timeout=self.timeout, **kwargs
-            )
+            response = self.session.request(method=method, url=url, timeout=self.timeout, **kwargs)
 
             # Log request details
             logger.debug(f"{method} {url} -> {response.status_code}")
@@ -177,9 +173,7 @@ class RacingCoachServerSDK:
                     )
                 else:
                     detail = (
-                        error_data.get("detail", response.reason)
-                        if error_data
-                        else response.reason
+                        error_data.get("detail", response.reason) if error_data else response.reason
                     )
                     raise RequestError(
                         f"Client error: {response.status_code} {detail}",

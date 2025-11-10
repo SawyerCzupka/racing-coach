@@ -5,6 +5,7 @@ from racing_coach_core.events import (
     HandlerContext,
     SystemEvents,
 )
+from racing_coach_core.events.checking import method_handles
 from racing_coach_core.models.events import TelemetryAndSession
 
 logger = logging.getLogger(__name__)
@@ -19,10 +20,9 @@ class LogHandler:
         self.log_frequency = log_frequency  # Log the current telemetry frame if the count is a multiple of this value
         self.frame_count = -1
 
-        self.event_bus.subscribe(
-            SystemEvents.TELEMETRY_FRAME, self.handle_telemetry_frame
-        )
+        self.event_bus.subscribe(SystemEvents.TELEMETRY_FRAME, self.handle_telemetry_frame)
 
+    @method_handles(SystemEvents.TELEMETRY_FRAME)
     def handle_telemetry_frame(self, context: HandlerContext[TelemetryAndSession]):
         """Handle the telemetry frame event and log the data."""
         data = context.event.data
@@ -34,7 +34,5 @@ class LogHandler:
         self.frame_count += 1
 
         if self.frame_count % self.log_frequency == 0:
-            logger.info(
-                f"Telemetry Frame: {data.TelemetryFrame.model_dump_json(indent=2)}"
-            )
+            logger.info(f"Telemetry Frame: {data.TelemetryFrame.model_dump_json(indent=2)}")
             logger.info(f"Session Frame: {data.SessionFrame.model_dump_json(indent=2)}")

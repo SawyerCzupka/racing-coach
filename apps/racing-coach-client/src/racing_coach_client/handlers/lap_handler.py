@@ -14,7 +14,7 @@ from racing_coach_core.events import (
     HandlerContext,
     SystemEvents,
 )
-from racing_coach_core.events.checking import handler_for  # type: ignore # noqa: F401
+from racing_coach_core.events.checking import method_handles
 from racing_coach_core.models.events import LapAndSession, TelemetryAndSession
 from racing_coach_core.models.telemetry import (
     LapTelemetry,
@@ -36,7 +36,7 @@ class LapHandler:
 
         self.current_session: SessionFrame | None = None
 
-    # @handler_for(SystemEvents.TELEMETRY_FRAME)
+    @method_handles(SystemEvents.TELEMETRY_FRAME)
     def handle_telemetry_frame(self, context: HandlerContext[TelemetryAndSession]):
         data = context.event.data
 
@@ -75,9 +75,7 @@ class LapHandler:
                 return
 
             if len(self.telemetry_buffer) > 0:
-                logger.info(
-                    f"Lap {self.current_lap} finished. Publishing telemetry data."
-                )
+                logger.info(f"Lap {self.current_lap} finished. Publishing telemetry data.")
                 self.publish_lap_and_flush_buffer()
             self.current_lap = telemetry_frame.lap_number
 
@@ -85,15 +83,11 @@ class LapHandler:
 
     def publish_lap_and_flush_buffer(self):
         if len(self.telemetry_buffer) == 0:
-            logger.warning(
-                "Telemetry buffer is empty while trying to publish lap telemetry."
-            )
+            logger.warning("Telemetry buffer is empty while trying to publish lap telemetry.")
             return
 
         if self.current_session is None:
-            logger.warning(
-                "Current session is None while trying to publish lap telemetry."
-            )
+            logger.warning("Current session is None while trying to publish lap telemetry.")
             return
 
         lap_telemetry = LapTelemetry(frames=self.telemetry_buffer, lap_time=None)
@@ -101,9 +95,7 @@ class LapHandler:
         self.event_bus.thread_safe_publish(
             Event(
                 type=SystemEvents.LAP_TELEMETRY_SEQUENCE,
-                data=LapAndSession(
-                    LapTelemetry=lap_telemetry, SessionFrame=self.current_session
-                ),
+                data=LapAndSession(LapTelemetry=lap_telemetry, SessionFrame=self.current_session),
             )
         )
 

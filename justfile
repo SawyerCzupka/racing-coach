@@ -2,14 +2,24 @@
 default:
     @just --list
 
+format:
+    cd apps/racing-coach-client && uvx ruff format src/
+    cd apps/racing-coach-server && uvx ruff format src/
+    cd libs/racing-coach-core && uvx ruff format src/
+
+sort:
+    cd apps/racing-coach-client && uvx ruff check src/ --select I --fix
+    cd apps/racing-coach-server && uvx ruff check src/ --select I --fix
+    cd libs/racing-coach-core && uvx ruff check src/ --select I --fix
+
 # Sync all projects
-sync-all:
+sync-all *args:
     @echo "Syncing racing-coach-core..."
-    cd libs/racing-coach-core && uv sync
+    cd libs/racing-coach-core && uv sync {{args}}
     @echo "Syncing racing-coach-client..."
-    cd apps/racing-coach-client && uv sync
+    cd apps/racing-coach-client && uv sync {{args}}
     @echo "Syncing racing-coach-server..."
-    cd apps/racing-coach-server && uv sync
+    cd apps/racing-coach-server && uv sync {{args}}
     @echo "✓ All projects synced!"
 
 # Sync specific project
@@ -28,7 +38,7 @@ run-server:
 # Clean all environments
 clean-all:
     @echo "Cleaning all .venv directories..."
-    find . -name ".venv" -type d -exec rm -rf {} +
+    sudo find . -name ".venv" -type d -exec rm -rf {} +
     @echo "✓ All environments cleaned!"
 
 # Install a package to specific project

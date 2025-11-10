@@ -1,13 +1,14 @@
+from typing import Annotated
+
 from fastapi import Depends
 from sqlalchemy.orm import Session
 
 from racing_coach_server.database import get_db_session
 from racing_coach_server.database.services import (
+    LapService,
     TelemetryService,
     TrackSessionService,
-    LapService,
 )
-from typing import Annotated
 
 
 def get_track_session_service(
@@ -31,8 +32,6 @@ def get_lap_service(
     return LapService(db_session=db)
 
 
-TrackSessionServiceDep = Annotated[
-    TrackSessionService, Depends(get_track_session_service)
-]
+TrackSessionServiceDep = Annotated[TrackSessionService, Depends(get_track_session_service)]
 TelemetryServiceDep = Annotated[TelemetryService, Depends(get_telemetry_service)]
 LapServiceDep = Annotated[LapService, Depends(get_lap_service)]

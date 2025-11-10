@@ -2,39 +2,56 @@ import logging
 import time
 from typing import Any
 
-from racing_coach_core.events import (
-    EventBus,
-    Handler,
-    HandlerContext,
-    HandlerFunc,
-    HandlerMethod,
-    HandlerType,
-    SystemEvents,
-)
-from racing_coach_core.events.checking import handler_for
+from racing_coach_core.events import EventBus, Handler, HandlerContext, SystemEvents
+from racing_coach_core.events.checking import func_handles
 from racing_coach_core.models.events import LapAndSession, TelemetryAndSession
 
+from racing_coach_client.collectors.factory import create_telemetry_source
 from racing_coach_client.collectors.iracing import TelemetryCollector
+from racing_coach_client.config import settings
 from racing_coach_client.handlers import LapHandler, LapUploadHandler
 
 logger = logging.getLogger(__name__)
 
 
-@handler_for(SystemEvents.LAP_TELEMETRY_SEQUENCE)
+@func_handles(SystemEvents.LAP_TELEMETRY_SEQUENCE)
 def test_laps_handler(context: HandlerContext[LapAndSession]):
     pass
 
 
 class RacingCoachClient:
-    def __init__(self):
-        self.event_bus = EventBus()
-        self.collector = TelemetryCollector(self.event_bus)
+    """
+    Main application class for the Racing Coach Client.
 
+    This class orchestrates the telemetry collection, event handling, and
+    communication with the Racing Coach server.
+    """
+
+    def __init__(self):
+        """
+        Initialize the Racing Coach Client.
+
+        Creates the event bus, telemetry source, collector, and handlers.
+        The telemetry source type (live or replay) is determined by the
+        application configuration.
+        """
+        # Create event bus
+        self.event_bus = EventBus()
+
+        # Create telemetry source based on configuration
+        logger.info(f"Initializing telemetry source (mode: {settings.TELEMETRY_MODE})")
+        telemetry_source = create_telemetry_source(settings)
+
+        # Create telemetry collector with the source
+        self.collector = TelemetryCollector(self.event_bus, telemetry_source)
+
+        # Start event bus
         self.event_bus.start()
 
+        # Register event handlers
         self.initialize_handlers()
 
-        logger.info("test")
+        logger.info("Racing Coach Client initialized")
         print("Racing Coach Client initialized.")
 
     def initialize_handlers(self):
@@ -56,8 +73,6 @@ class RacingCoachClient:
             )
         )
 
-        test: HandlerFunc[LapAndSession] = lap_upload_handler.handle_lap_complete_event
-
         handlers.append(
             Handler(
                 type=SystemEvents.LAP_TELEMETRY_SEQUENCE,
@@ -66,8 +81,6 @@ class RacingCoachClient:
         )
 
         self.event_bus.register_handlers(handlers)
-
-        # log_handler = LogHandler(self.event_bus, log_frequency=60)
 
     def run(self):
         print("Running Racing Coach Client...")
@@ -113,7 +126,5 @@ def main():
 
 
 if __name__ == "__main__":
-    logging.basicConfig(
-        level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-    )
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
     main()

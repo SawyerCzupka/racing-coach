@@ -39,9 +39,7 @@ def receive_lap(
         db_track_session = track_session_service.add_or_get_session(session)
 
         # Add lap to the db to get the lap id
-        db_lap = lap_service.add_lap(
-            track_session_id=db_track_session.id, lap_number=lap_number
-        )
+        db_lap = lap_service.add_lap(track_session_id=db_track_session.id, lap_number=lap_number)
 
         telemetry_service.add_telemetry_sequence(
             telemetry_sequence=lap, lap_id=db_lap.id, session_id=db_track_session.id
