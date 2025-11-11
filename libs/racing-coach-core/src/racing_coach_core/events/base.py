@@ -11,22 +11,18 @@ from ..models.events import LapAndSession, TelemetryAndSession
 logger = logging.getLogger(__name__)
 
 
-# T = TypeVar("T")
-
-
 @dataclass(frozen=True)
 class EventType[T]:
     name: str
-    data_type: type = field(default=T)
+    # data_type: type = field(default=type[T])
+    data_type: type = type[T]
 
     def __repr__(self) -> str:
         return f"EventType<{self.name}>"
 
 
 class SystemEvents:
-    LAP_TELEMETRY_SEQUENCE: EventType[LapAndSession] = EventType(
-        "LAP_TELEMETRY_SEQUENCE"
-    )
+    LAP_TELEMETRY_SEQUENCE: EventType[LapAndSession] = EventType("LAP_TELEMETRY_SEQUENCE")
     TELEMETRY_FRAME: EventType[TelemetryAndSession] = EventType("TELEMETRY_FRAME")
 
 
@@ -44,15 +40,16 @@ class HandlerContext[T]:
     # timestamp: datetime = field(default_factory=datetime.now)
 
 
-@dataclass(frozen=True)
-class Handler[T]:
-    type: EventType[T]
-    fn: Callable[[HandlerContext[T]], Any]
-
-
 type HandlerFunc[T] = Callable[[HandlerContext[T]], Any]
 type HandlerMethod[T] = Callable[[Any, HandlerContext[T]], Any]
 type HandlerType[T] = HandlerFunc[T] | HandlerMethod[T]
+
+
+@dataclass(frozen=True)
+class Handler[T]:
+    type: EventType[T]
+    # fn: Callable[[HandlerContext[T]], Any]
+    fn: HandlerFunc[T]
 
 
 class EventBus:
@@ -78,7 +75,8 @@ class EventBus:
     def subscribe[T](self, event_type: EventType[T], handler: HandlerFunc[T]) -> None:
         """Add a handler for a specific event type.
 
-        Whenever the event bus receives an event of the specified type, the handler will be called with the event context.
+        Whenever the event bus receives an event of the specified type, the handler will be called
+        with the event context.
         """
         if event_type not in self._handlers:
             self._handlers[event_type] = []
@@ -96,7 +94,7 @@ class EventBus:
         for handler in handlers:
             self.register_handler(handler)
 
-    def unsubscribe[T](self, event_type: EventType[T], handler: HandlerType[T]) -> None:
+    def unsubscribe[T](self, event_type: EventType[T], handler: HandlerFunc[T]) -> None:
         if event_type in self._handlers and handler in self._handlers[event_type]:
             self._handlers[event_type].remove(handler)
             logger.info(f"Removed handler {handler} for event {event_type}")
@@ -168,9 +166,7 @@ class EventBus:
                     # Run all handlers at the same time in their own threads
                     await asyncio.gather(
                         *(
-                            self._loop.run_in_executor(
-                                self._thread_pool, handler, context
-                            )
+                            self._loop.run_in_executor(self._thread_pool, handler, context)
                             for handler in handlers
                         ),
                         return_exceptions=True,

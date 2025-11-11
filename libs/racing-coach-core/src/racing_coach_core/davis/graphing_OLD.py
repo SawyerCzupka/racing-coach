@@ -24,9 +24,7 @@ def make_lap_telemetry_plot(lap: LapTelemetry) -> go.Figure:
         col=1,
     )
     fig.add_trace(
-        go.Scatter(
-            x=df["time_elapsed"], y=df["brake"], name="Brake", line=dict(color="red")
-        ),
+        go.Scatter(x=df["time_elapsed"], y=df["brake"], name="Brake", line=dict(color="red")),
         row=1,
         col=1,
     )
@@ -118,8 +116,6 @@ def make_lap_telemetry_plot_with_braking(
         )
 
     # Update title to reflect addition of braking events
-    fig.update_layout(
-        title_text=f"Lap {df['lap_number'].iloc[0]} Telemetry with Braking Events"
-    )
+    fig.update_layout(title_text=f"Lap {df['lap_number'].iloc[0]} Telemetry with Braking Events")
 
     return fig

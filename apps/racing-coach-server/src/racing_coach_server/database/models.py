@@ -3,6 +3,7 @@
 import uuid
 from datetime import datetime
 
+from racing_coach_core.models.telemetry import SessionFrame
 from sqlalchemy import (
     JSON,
     Boolean,
@@ -19,14 +20,12 @@ from sqlalchemy import (
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import (
-    relationship,
-    Mapped,
-    mapped_column,
     DeclarativeBase,
+    Mapped,
     MappedAsDataclass,
+    mapped_column,
+    relationship,
 )
-
-from racing_coach_core.models.telemetry import SessionFrame
 
 
 class Base(MappedAsDataclass, DeclarativeBase):
@@ -131,9 +130,7 @@ class Lap(Base):
 
     # Indexes and constraints
     __table_args__ = (
-        UniqueConstraint(
-            "track_session_id", "lap_number", name="uq_track_session_id_lap_number"
-        ),
+        UniqueConstraint("track_session_id", "lap_number", name="uq_track_session_id_lap_number"),
         Index("idx_track_session_id_lap_number", "track_session_id", "lap_number"),
     )
 
@@ -253,9 +250,7 @@ class Telemetry(Base):
     track_session: Mapped["TrackSession"] = relationship(
         "TrackSession", back_populates="telemetry_frames", init=False
     )
-    lap: Mapped["Lap"] = relationship(
-        "Lap", back_populates="telemetry_frames", init=False
-    )
+    lap: Mapped["Lap"] = relationship("Lap", back_populates="telemetry_frames", init=False)
 
     # Indexes for efficient time-series queries
     __table_args__ = (

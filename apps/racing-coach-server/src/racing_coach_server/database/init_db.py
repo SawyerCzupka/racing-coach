@@ -29,9 +29,7 @@ def init_db(engine):
         # Create hypertables for time-series data
         with engine.connect() as conn:
             conn.execute(
-                text(
-                    "SELECT create_hypertable('telemetry', 'timestamp', if_not_exists => TRUE);"
-                )
+                text("SELECT create_hypertable('telemetry', 'timestamp', if_not_exists => TRUE);")
             )
             logger.info("Telemetry table converted to TimescaleDB hypertable.")
 

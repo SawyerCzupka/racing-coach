@@ -2,7 +2,7 @@ import logging
 
 from racing_coach_core.client import RacingCoachServerSDK
 from racing_coach_core.events import EventBus, HandlerContext, SystemEvents
-from racing_coach_core.events.checking import handler_for_method
+from racing_coach_core.events.checking import method_handles
 from racing_coach_core.models.events import LapAndSession
 
 from racing_coach_client.config import settings
@@ -15,7 +15,7 @@ class LapUploadHandler:
         self.event_bus = event_bus
         self.api_client = RacingCoachServerSDK(base_url=settings.SERVER_URL)
 
-    @handler_for_method(SystemEvents.LAP_TELEMETRY_SEQUENCE)
+    @method_handles(SystemEvents.LAP_TELEMETRY_SEQUENCE)
     def handle_lap_complete_event(self, context: HandlerContext[LapAndSession]):
         """Handle the lap complete event."""
         data = context.event.data

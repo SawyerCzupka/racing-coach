@@ -32,9 +32,7 @@ def extract_braking_events(
         elif current_event and frame.brake < brake_threshold:
             current_event.end_frame = i
 
-            duration = (
-                frame.timestamp - sequence.frames[current_event.start_frame].timestamp
-            )
+            duration = frame.timestamp - sequence.frames[current_event.start_frame].timestamp
 
             current_event.braking_duration = duration.total_seconds()
             current_event.minimum_speed = frame.speed

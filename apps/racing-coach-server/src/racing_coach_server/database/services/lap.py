@@ -1,10 +1,12 @@
+from uuid import UUID
+
 from racing_coach_core.models.telemetry import (
     LapTelemetry,
     SessionFrame,
     TelemetryFrame,
 )
 from sqlalchemy.orm import Session as SQLAlchemySession
-from uuid import UUID
+
 from ..models import Lap, Telemetry, TrackSession
 from ..repositories import LapRepository, SessionRepository, TelemetryRepository
 
