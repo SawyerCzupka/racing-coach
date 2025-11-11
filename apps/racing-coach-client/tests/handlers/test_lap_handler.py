@@ -248,37 +248,40 @@ class TestLapHandlerUnit:
         assert handler.current_lap == 0
 
     def test_publish_lap_and_flush_buffer_with_empty_buffer(
-        self, running_event_bus: EventBus
+        self, running_event_bus: EventBus, caplog: pytest.LogCaptureFixture
     ) -> None:
         """Test that publishing with empty buffer logs warning."""
-        handler: LapHandler = LapHandler(running_event_bus)
-
         import logging
 
-        with pytest.LogCaptureFixture.for_logger(
-            "racing_coach_client.handlers.lap_handler", level=logging.WARNING
-        ) as log_capture:
+        handler: LapHandler = LapHandler(running_event_bus)
+
+        with caplog.at_level(logging.WARNING):
             handler.publish_lap_and_flush_buffer()
 
         # Should not raise error, just log warning
         assert len(handler.telemetry_buffer) == 0
+        # Verify warning was logged
+        assert any("empty" in record.message.lower() for record in caplog.records)
 
     def test_publish_lap_and_flush_buffer_without_session(
-        self, running_event_bus: EventBus, telemetry_frame_factory: Callable[..., TelemetryFrame]
+        self,
+        running_event_bus: EventBus,
+        telemetry_frame_factory: Callable[..., TelemetryFrame],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Test that publishing without session logs warning."""
+        import logging
+
         handler: LapHandler = LapHandler(running_event_bus)
         handler.telemetry_buffer = [telemetry_frame_factory.build()]  # type: ignore[attr-defined]
 
-        import logging
-
-        with pytest.LogCaptureFixture.for_logger(
-            "racing_coach_client.handlers.lap_handler", level=logging.WARNING
-        ) as log_capture:
+        with caplog.at_level(logging.WARNING):
             handler.publish_lap_and_flush_buffer()
 
         # Should not raise error, just log warning
         assert handler.current_session is None
+        # Verify warning was logged
+        assert any("session" in record.message.lower() for record in caplog.records)
 
 
 @pytest.mark.integration

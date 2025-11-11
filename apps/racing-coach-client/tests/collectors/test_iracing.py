@@ -205,7 +205,7 @@ class TestTelemetryCollectorWithRealIBT:
         # Create replay source
         source: ReplayTelemetrySource = ReplayTelemetrySource(
             file_path=ibt_file_path,
-            playback_speed=10.0,  # Speed up for testing
+            speed_multiplier=10.0,  # Speed up for testing
             loop=False,
         )
 
@@ -254,7 +254,7 @@ class TestTelemetryCollectorWithRealIBT:
         # Create replay source
         source: ReplayTelemetrySource = ReplayTelemetrySource(
             file_path=ibt_file_path,
-            playback_speed=10.0,
+            speed_multiplier=10.0,
             loop=False,
         )
 

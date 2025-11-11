@@ -71,7 +71,7 @@ class TestReplayTelemetrySourceUnit:
         mock_ibt.get.side_effect = get_side_effect
 
         # Test
-        source: ReplayTelemetrySource = ReplayTelemetrySource(file_path=Path("/fake/path.ibt"), playback_speed=1.0)
+        source: ReplayTelemetrySource = ReplayTelemetrySource(file_path=Path("/fake/path.ibt"), speed_multiplier=1.0)
         source.startup()
 
         initial_frame: int = source.current_frame
@@ -122,7 +122,7 @@ class TestReplayTelemetrySourceUnit:
         mock_ibt.get.return_value = 1.0
 
         # Test with 2x speed
-        source: ReplayTelemetrySource = ReplayTelemetrySource(file_path=Path("/fake/path.ibt"), playback_speed=2.0)
+        source: ReplayTelemetrySource = ReplayTelemetrySource(file_path=Path("/fake/path.ibt"), speed_multiplier=2.0)
         source.startup()
 
         initial_frame: int = source.current_frame
@@ -230,7 +230,7 @@ class TestReplayTelemetrySourceIntegration:
 
     def test_playback_progression(self, ibt_file_path: Path) -> None:
         """Test that playback progresses through frames correctly."""
-        source: ReplayTelemetrySource = ReplayTelemetrySource(file_path=ibt_file_path, playback_speed=1.0)
+        source: ReplayTelemetrySource = ReplayTelemetrySource(file_path=ibt_file_path, speed_multiplier=1.0)
         source.startup()
 
         initial_frame: int = source.current_frame
@@ -268,7 +268,7 @@ class TestReplayTelemetrySourceIntegration:
 
     def test_playback_speed_double(self, ibt_file_path: Path) -> None:
         """Test that 2x playback speed advances twice as fast."""
-        source: ReplayTelemetrySource = ReplayTelemetrySource(file_path=ibt_file_path, playback_speed=2.0)
+        source: ReplayTelemetrySource = ReplayTelemetrySource(file_path=ibt_file_path, speed_multiplier=2.0)
         source.startup()
 
         initial_frame: int = source.current_frame

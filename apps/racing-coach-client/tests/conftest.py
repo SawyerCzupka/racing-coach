@@ -2,6 +2,7 @@
 
 import asyncio
 import os
+import threading
 from collections.abc import AsyncGenerator, Callable
 from pathlib import Path
 from typing import Any
@@ -15,7 +16,6 @@ from racing_coach_core.events.base import SystemEvents
 from racing_coach_core.models.telemetry import TelemetryFrame, SessionFrame
 
 from tests.factories import (
-    EnhancedTelemetryFrameFactory,
     LapAndSessionFactory,
     LapTelemetryFactory,
     SessionFrameFactory,
@@ -25,7 +25,6 @@ from tests.factories import (
 
 # Register factories to create pytest fixtures automatically
 register(TelemetryFrameFactory)
-register(EnhancedTelemetryFrameFactory, "enhanced_telemetry_frame")
 register(SessionFrameFactory)
 register(LapTelemetryFactory)
 register(TelemetryAndSessionFactory)
@@ -100,11 +99,11 @@ class EventCollector:
 
     def __init__(self) -> None:
         self.events: list[Event[Any]] = []
-        self._lock: asyncio.Lock = asyncio.Lock()
+        self._lock: threading.Lock = threading.Lock()
 
-    async def collect(self, context: HandlerContext[Any]) -> None:
+    def collect(self, context: HandlerContext[Any]) -> None:
         """Handler function to collect events."""
-        async with self._lock:
+        with self._lock:
             self.events.append(context.event)
 
     def get_events_of_type[T](self, event_type: EventType[T]) -> list[Event[T]]:
@@ -213,10 +212,8 @@ def mock_telemetry_source(
 
     # Configure the mock to return data via __getitem__
     def getitem_side_effect(key: str) -> Any:
-        # Handle telemetry fields
-        if hasattr(telemetry_data, key.lower().replace("_", "")):
-            # Map iRacing field names to our model field names
-            field_mapping: dict[str, Any] = {
+        # Map iRacing field names to our model field names
+        field_mapping: dict[str, Any] = {
                 "SessionTime": telemetry_data.session_time,
                 "Lap": telemetry_data.lap_number,
                 "LapDistPct": telemetry_data.lap_distance_pct,
@@ -280,9 +277,11 @@ def mock_telemetry_source(
                 "RFbrakeLinePress": telemetry_data.brake_line_pressure["RF"],
                 "LRbrakeLinePress": telemetry_data.brake_line_pressure["LR"],
                 "RRbrakeLinePress": telemetry_data.brake_line_pressure["RR"],
-            }
-            if key in field_mapping:
-                return field_mapping[key]
+        }
+
+        # Check telemetry fields first
+        if key in field_mapping:
+            return field_mapping[key]
 
         # Handle session fields
         if key == "WeekendInfo":

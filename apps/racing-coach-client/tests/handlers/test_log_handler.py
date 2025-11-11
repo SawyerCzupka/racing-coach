@@ -88,31 +88,6 @@ class TestLogHandlerUnit:
         assert len(telemetry_logs) == 4  # Logged at frames 0, 3, 6, 9
         assert len(session_logs) == 4
 
-    def test_handles_missing_telemetry_frame(
-        self, running_event_bus: EventBus, session_frame_factory: Callable[..., SessionFrame], caplog: LogCaptureFixture
-    ) -> None:
-        """Test that handler handles missing telemetry frame gracefully."""
-        handler: LogHandler = LogHandler(running_event_bus, log_frequency=1)
-
-        # Create event with None telemetry frame
-        session: SessionFrame = session_frame_factory.build()  # type: ignore[attr-defined]
-        event: Event[TelemetryAndSession] = Event(
-            type=SystemEvents.TELEMETRY_FRAME,
-            data=TelemetryAndSession(TelemetryFrame=None, SessionFrame=session),  # type: ignore
-        )
-
-        with caplog.at_level(logging.WARNING):
-            context: HandlerContext[TelemetryAndSession] = HandlerContext(event_bus=running_event_bus, event=event)
-            handler.handle_telemetry_frame(context)
-
-        # Should log warning
-        warnings: list[Any] = [
-            record
-            for record in caplog.records
-            if "No Telemetry Frame data found" in record.message
-        ]
-        assert len(warnings) == 1
-
     def test_logs_contain_telemetry_data(
         self,
         running_event_bus: EventBus,

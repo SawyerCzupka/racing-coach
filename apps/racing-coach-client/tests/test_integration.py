@@ -173,7 +173,7 @@ class TestEndToEndWithRealIBT:
         # Create source and handlers
         source: ReplayTelemetrySource = ReplayTelemetrySource(
             file_path=ibt_file_path,
-            playback_speed=20.0,  # Speed up significantly for testing
+            speed_multiplier=20.0,  # Speed up significantly for testing
             loop=False,
         )
 
@@ -240,7 +240,7 @@ class TestEndToEndWithRealIBT:
 
         # Create source and collector
         source: ReplayTelemetrySource = ReplayTelemetrySource(
-            file_path=ibt_file_path, playback_speed=20.0, loop=False
+            file_path=ibt_file_path, speed_multiplier=20.0, loop=False
         )
         collector: TelemetryCollector = TelemetryCollector(running_event_bus, source)
         collector.start()
@@ -280,7 +280,7 @@ class TestEndToEndWithRealIBT:
 
         # Create source and collector
         source: ReplayTelemetrySource = ReplayTelemetrySource(
-            file_path=ibt_file_path, playback_speed=10.0, loop=False
+            file_path=ibt_file_path, speed_multiplier=10.0, loop=False
         )
         collector: TelemetryCollector = TelemetryCollector(running_event_bus, source)
         collector.start()
@@ -320,11 +320,11 @@ class TestEventBusSubscriberPattern:
         # Register both
         handler1: Handler[TelemetryAndSession] = Handler(
             type=SystemEvents.TELEMETRY_FRAME,
-            func=collector1.collect,
+            fn=collector1.collect,
         )
         handler2: Handler[TelemetryAndSession] = Handler(
             type=SystemEvents.TELEMETRY_FRAME,
-            func=collector2.collect,
+            fn=collector2.collect,
         )
         running_event_bus.register_handlers([handler1, handler2])
 
