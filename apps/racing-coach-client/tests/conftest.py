@@ -2,7 +2,7 @@
 
 import asyncio
 import os
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Callable
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
@@ -12,6 +12,7 @@ from pytest_factoryboy import register
 from racing_coach_core.events.base import Event, EventBus, EventType, Handler, HandlerContext
 from racing_coach_core.models.events import LapAndSession, TelemetryAndSession
 from racing_coach_core.events.base import SystemEvents
+from racing_coach_core.models.telemetry import TelemetryFrame, SessionFrame
 
 from tests.factories import (
     EnhancedTelemetryFrameFactory,
@@ -37,7 +38,7 @@ register(LapAndSessionFactory)
 
 
 @pytest.fixture
-def ibt_file_path() -> Path | None:
+def ibt_file_path() -> Path:
     """
     Get the path to an IBT file for testing.
 
@@ -45,13 +46,16 @@ def ibt_file_path() -> Path | None:
     If not set, tests requiring this fixture will be skipped.
 
     Returns:
-        Path to IBT file if configured, None otherwise.
+        Path to IBT file if configured.
+
+    Raises:
+        pytest.skip: If REPLAY_FILE_PATH is not set or file doesn't exist.
     """
-    file_path = os.getenv("REPLAY_FILE_PATH")
+    file_path: str | None = os.getenv("REPLAY_FILE_PATH")
     if not file_path:
         pytest.skip("REPLAY_FILE_PATH not set - skipping IBT file tests")
 
-    path = Path(file_path)
+    path: Path = Path(file_path)
     if not path.exists():
         pytest.skip(f"IBT file not found at {file_path}")
 
@@ -72,7 +76,7 @@ def event_bus() -> EventBus:
 @pytest.fixture
 async def running_event_bus() -> AsyncGenerator[EventBus, None]:
     """Create and start an EventBus instance for integration testing."""
-    bus = EventBus(max_queue_size=100, max_workers=2)
+    bus: EventBus = EventBus(max_queue_size=100, max_workers=2)
     bus.start()
     # Give the event bus time to start up
     await asyncio.sleep(0.1)
@@ -94,25 +98,25 @@ class EventCollector:
     Provides methods to wait for specific events and access collected events.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.events: list[Event[Any]] = []
-        self._lock = asyncio.Lock()
+        self._lock: asyncio.Lock = asyncio.Lock()
 
     async def collect(self, context: HandlerContext[Any]) -> None:
         """Handler function to collect events."""
         async with self._lock:
             self.events.append(context.event)
 
-    def get_events_of_type(self, event_type: EventType[Any]) -> list[Event[Any]]:
+    def get_events_of_type[T](self, event_type: EventType[T]) -> list[Event[T]]:
         """Get all collected events of a specific type."""
-        return [e for e in self.events if e.type == event_type]
+        return [e for e in self.events if e.type == event_type]  # type: ignore[return-value]
 
-    async def wait_for_event(
+    async def wait_for_event[T](
         self,
-        event_type: EventType[Any],
+        event_type: EventType[T],
         timeout: float = 5.0,
         count: int = 1,
-    ) -> list[Event[Any]]:
+    ) -> list[Event[T]]:
         """
         Wait for a specific number of events of a given type.
 
@@ -127,9 +131,9 @@ class EventCollector:
         Raises:
             TimeoutError: If events are not received within timeout
         """
-        start_time = asyncio.get_event_loop().time()
+        start_time: float = asyncio.get_event_loop().time()
         while True:
-            events = self.get_events_of_type(event_type)
+            events: list[Event[T]] = self.get_events_of_type(event_type)
             if len(events) >= count:
                 return events[:count]
 
@@ -161,9 +165,9 @@ def telemetry_frame_collector(
 
     This fixture requires a running event bus.
     """
-    handler = Handler(
+    handler: Handler[TelemetryAndSession] = Handler(
         type=SystemEvents.TELEMETRY_FRAME,
-        func=event_collector.collect,
+        fn=event_collector.collect,
     )
     running_event_bus.register_handlers([handler])
     return event_collector
@@ -178,9 +182,9 @@ def lap_sequence_collector(
 
     This fixture requires a running event bus.
     """
-    handler = Handler(
+    handler: Handler[LapAndSession] = Handler(
         type=SystemEvents.LAP_TELEMETRY_SEQUENCE,
-        func=event_collector.collect,
+        fn=event_collector.collect,
     )
     running_event_bus.register_handlers([handler])
     return event_collector
@@ -193,26 +197,26 @@ def lap_sequence_collector(
 
 @pytest.fixture
 def mock_telemetry_source(
-    telemetry_frame_factory: TelemetryFrameFactory,
-    session_frame_factory: SessionFrameFactory,
+    telemetry_frame_factory: Callable[..., TelemetryFrame],
+    session_frame_factory: Callable[..., SessionFrame],
 ) -> MagicMock:
     """
     Create a mock telemetry source that returns realistic test data.
 
     The mock implements the TelemetryDataSource protocol.
     """
-    mock = MagicMock()
+    mock: MagicMock = MagicMock()
 
     # Create sample data
-    telemetry_data = telemetry_frame_factory.build()
-    session_data = session_frame_factory.build()
+    telemetry_data: TelemetryFrame = telemetry_frame_factory.build()  # type: ignore[attr-defined]
+    session_data: SessionFrame = session_frame_factory.build()  # type: ignore[attr-defined]
 
     # Configure the mock to return data via __getitem__
     def getitem_side_effect(key: str) -> Any:
         # Handle telemetry fields
         if hasattr(telemetry_data, key.lower().replace("_", "")):
             # Map iRacing field names to our model field names
-            field_mapping = {
+            field_mapping: dict[str, Any] = {
                 "SessionTime": telemetry_data.session_time,
                 "Lap": telemetry_data.lap_number,
                 "LapDistPct": telemetry_data.lap_distance_pct,

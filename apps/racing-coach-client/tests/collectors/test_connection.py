@@ -10,26 +10,26 @@ from racing_coach_client.collectors.connection import iRacingConnectionManager
 class TestIRacingConnectionManager:
     """Unit tests for iRacingConnectionManager."""
 
-    def test_initial_state(self):
+    def test_initial_state(self) -> None:
         """Test that connection manager starts in disconnected state."""
-        manager = iRacingConnectionManager()
+        manager: iRacingConnectionManager = iRacingConnectionManager()
         assert manager.ir is None
         assert manager.ir_connected is False
         assert not manager.is_connected()
 
     @patch("racing_coach_client.collectors.connection.irsdk.IRSDK")
-    def test_connect_success(self, mock_irsdk_class):
+    def test_connect_success(self, mock_irsdk_class: MagicMock) -> None:
         """Test successful connection to iRacing."""
         # Setup mock
-        mock_ir = MagicMock()
+        mock_ir: MagicMock = MagicMock()
         mock_ir.startup.return_value = True
         mock_ir.is_initialized = True
         mock_ir.is_connected = True
         mock_irsdk_class.return_value = mock_ir
 
         # Test
-        manager = iRacingConnectionManager()
-        result = manager.connect()
+        manager: iRacingConnectionManager = iRacingConnectionManager()
+        result: bool = manager.connect()
 
         # Verify
         assert result is True
@@ -39,16 +39,16 @@ class TestIRacingConnectionManager:
         mock_ir.startup.assert_called_once()
 
     @patch("racing_coach_client.collectors.connection.irsdk.IRSDK")
-    def test_connect_failure_startup_fails(self, mock_irsdk_class):
+    def test_connect_failure_startup_fails(self, mock_irsdk_class: MagicMock) -> None:
         """Test connection failure when startup() returns False."""
         # Setup mock
-        mock_ir = MagicMock()
+        mock_ir: MagicMock = MagicMock()
         mock_ir.startup.return_value = False
         mock_irsdk_class.return_value = mock_ir
 
         # Test
-        manager = iRacingConnectionManager()
-        result = manager.connect()
+        manager: iRacingConnectionManager = iRacingConnectionManager()
+        result: bool = manager.connect()
 
         # Verify
         assert result is False
@@ -56,34 +56,34 @@ class TestIRacingConnectionManager:
         assert not manager.is_connected()
 
     @patch("racing_coach_client.collectors.connection.irsdk.IRSDK")
-    def test_connect_failure_not_initialized(self, mock_irsdk_class):
+    def test_connect_failure_not_initialized(self, mock_irsdk_class: MagicMock) -> None:
         """Test connection failure when SDK is not initialized."""
         # Setup mock
-        mock_ir = MagicMock()
+        mock_ir: MagicMock = MagicMock()
         mock_ir.startup.return_value = True
         mock_ir.is_initialized = False
         mock_ir.is_connected = False
         mock_irsdk_class.return_value = mock_ir
 
         # Test
-        manager = iRacingConnectionManager()
-        result = manager.connect()
+        manager: iRacingConnectionManager = iRacingConnectionManager()
+        result: bool = manager.connect()
 
         # Verify
         assert result is False
         assert not manager.ir_connected
 
     @patch("racing_coach_client.collectors.connection.irsdk.IRSDK")
-    def test_disconnect(self, mock_irsdk_class):
+    def test_disconnect(self, mock_irsdk_class: MagicMock) -> None:
         """Test disconnecting from iRacing."""
         # Setup - first connect
-        mock_ir = MagicMock()
+        mock_ir: MagicMock = MagicMock()
         mock_ir.startup.return_value = True
         mock_ir.is_initialized = True
         mock_ir.is_connected = True
         mock_irsdk_class.return_value = mock_ir
 
-        manager = iRacingConnectionManager()
+        manager: iRacingConnectionManager = iRacingConnectionManager()
         manager.connect()
         assert manager.ir_connected
 
@@ -97,25 +97,25 @@ class TestIRacingConnectionManager:
         mock_ir.shutdown.assert_called_once()
 
     @patch("racing_coach_client.collectors.connection.irsdk.IRSDK")
-    def test_disconnect_when_not_connected(self, mock_irsdk_class):
+    def test_disconnect_when_not_connected(self, mock_irsdk_class: MagicMock) -> None:
         """Test that disconnect handles being called when not connected."""
-        manager = iRacingConnectionManager()
+        manager: iRacingConnectionManager = iRacingConnectionManager()
         manager.disconnect()  # Should not raise an error
 
         assert manager.ir is None
         assert not manager.ir_connected
 
     @patch("racing_coach_client.collectors.connection.irsdk.IRSDK")
-    def test_get_ir_when_connected(self, mock_irsdk_class):
+    def test_get_ir_when_connected(self, mock_irsdk_class: MagicMock) -> None:
         """Test getting iRacing SDK instance when connected."""
         # Setup
-        mock_ir = MagicMock()
+        mock_ir: MagicMock = MagicMock()
         mock_ir.startup.return_value = True
         mock_ir.is_initialized = True
         mock_ir.is_connected = True
         mock_irsdk_class.return_value = mock_ir
 
-        manager = iRacingConnectionManager()
+        manager: iRacingConnectionManager = iRacingConnectionManager()
         manager.connect()
 
         # Test
@@ -124,24 +124,24 @@ class TestIRacingConnectionManager:
         # Verify
         assert ir is mock_ir
 
-    def test_get_ir_when_not_connected(self):
+    def test_get_ir_when_not_connected(self) -> None:
         """Test that get_ir raises error when not connected."""
-        manager = iRacingConnectionManager()
+        manager: iRacingConnectionManager = iRacingConnectionManager()
 
         with pytest.raises(RuntimeError, match="not connected to iRacing"):
             manager.get_ir()
 
     @patch("racing_coach_client.collectors.connection.irsdk.IRSDK")
-    def test_check_connection_detects_disconnect(self, mock_irsdk_class):
+    def test_check_connection_detects_disconnect(self, mock_irsdk_class: MagicMock) -> None:
         """Test that connection manager detects when iRacing disconnects."""
         # Setup - first connect
-        mock_ir = MagicMock()
+        mock_ir: MagicMock = MagicMock()
         mock_ir.startup.return_value = True
         mock_ir.is_initialized = True
         mock_ir.is_connected = True
         mock_irsdk_class.return_value = mock_ir
 
-        manager = iRacingConnectionManager()
+        manager: iRacingConnectionManager = iRacingConnectionManager()
         manager.connect()
         assert manager.ir_connected
 
@@ -150,7 +150,7 @@ class TestIRacingConnectionManager:
         mock_ir.is_connected = False
 
         # Test
-        result = manager._check_connection()
+        result: bool = manager._check_connection()
 
         # Verify
         assert result is False
@@ -158,18 +158,18 @@ class TestIRacingConnectionManager:
         mock_ir.shutdown.assert_called_once()
 
     @patch("racing_coach_client.collectors.connection.irsdk.IRSDK")
-    def test_ensure_connected_when_not_connected(self, mock_irsdk_class):
+    def test_ensure_connected_when_not_connected(self, mock_irsdk_class: MagicMock) -> None:
         """Test ensure_connected connects when not connected."""
         # Setup
-        mock_ir = MagicMock()
+        mock_ir: MagicMock = MagicMock()
         mock_ir.startup.return_value = True
         mock_ir.is_initialized = True
         mock_ir.is_connected = True
         mock_irsdk_class.return_value = mock_ir
 
         # Test
-        manager = iRacingConnectionManager()
-        result = manager.ensure_connected()
+        manager: iRacingConnectionManager = iRacingConnectionManager()
+        result: bool = manager.ensure_connected()
 
         # Verify
         assert result is True
@@ -177,21 +177,21 @@ class TestIRacingConnectionManager:
         mock_ir.startup.assert_called_once()
 
     @patch("racing_coach_client.collectors.connection.irsdk.IRSDK")
-    def test_ensure_connected_when_already_connected(self, mock_irsdk_class):
+    def test_ensure_connected_when_already_connected(self, mock_irsdk_class: MagicMock) -> None:
         """Test ensure_connected checks connection when already connected."""
         # Setup - first connect
-        mock_ir = MagicMock()
+        mock_ir: MagicMock = MagicMock()
         mock_ir.startup.return_value = True
         mock_ir.is_initialized = True
         mock_ir.is_connected = True
         mock_irsdk_class.return_value = mock_ir
 
-        manager = iRacingConnectionManager()
+        manager: iRacingConnectionManager = iRacingConnectionManager()
         manager.connect()
         mock_ir.startup.reset_mock()  # Reset the startup call count
 
         # Test
-        result = manager.ensure_connected()
+        result: bool = manager.ensure_connected()
 
         # Verify
         assert result is True
@@ -200,16 +200,16 @@ class TestIRacingConnectionManager:
         mock_ir.startup.assert_not_called()
 
     @patch("racing_coach_client.collectors.connection.irsdk.IRSDK")
-    def test_ensure_connected_reconnects_after_disconnect(self, mock_irsdk_class):
+    def test_ensure_connected_reconnects_after_disconnect(self, mock_irsdk_class: MagicMock) -> None:
         """Test ensure_connected reconnects after detecting a disconnect."""
         # Setup - first connect
-        mock_ir = MagicMock()
+        mock_ir: MagicMock = MagicMock()
         mock_ir.startup.return_value = True
         mock_ir.is_initialized = True
         mock_ir.is_connected = True
         mock_irsdk_class.return_value = mock_ir
 
-        manager = iRacingConnectionManager()
+        manager: iRacingConnectionManager = iRacingConnectionManager()
         manager.connect()
 
         # Simulate disconnect
@@ -221,7 +221,7 @@ class TestIRacingConnectionManager:
         mock_ir.startup.return_value = True
 
         # Test
-        result = manager.ensure_connected()
+        result: bool = manager.ensure_connected()
 
         # Verify - should have tried to startup again
         assert mock_ir.startup.called
