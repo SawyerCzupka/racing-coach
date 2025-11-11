@@ -233,7 +233,7 @@ class TestEventBusPublishIntegration:
         event_type = EventType[str](name="TEST", data_type=str)
         event = Event(type=event_type, data="test data")
 
-        with pytest.raises(AssertionError):
+        with pytest.raises(RuntimeError, match="Event bus not running"):
             await event_bus.publish(event)
 
     async def test_handler_receives_event(self, running_event_bus: EventBus):

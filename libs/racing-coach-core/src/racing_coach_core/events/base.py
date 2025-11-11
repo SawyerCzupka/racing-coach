@@ -64,7 +64,8 @@ class EventBus:
         """Initialize the event bus."""
 
         self._handlers: dict[EventType[Any], list[HandlerFunc[Any]]] = {}
-        self._queue: asyncio.Queue[Event[Any]] = asyncio.Queue(maxsize=max_queue_size)
+        self._max_queue_size = max_queue_size
+        self._queue: asyncio.Queue[Event[Any]] | None = None  # Created in start()
         self._thread_pool = ThreadPoolExecutor(
             max_workers=max_workers, thread_name_prefix=thread_name_prefix
         )
@@ -100,23 +101,49 @@ class EventBus:
             logger.info(f"Removed handler {handler} for event {event_type}")
 
     async def publish(self, event: Event[Any]) -> None:
-        """Publish an event to the bus."""
-        assert self._running, "Event bus not running"
-        assert self._loop is not None, "Event loop not set"
+        """Publish an event to the bus.
 
-        try:
-            await self._queue.put(event)
-            logger.debug(f"Published event {event.type}")
-        except Exception as e:
-            logger.error(f"Error publishing event {event.type}: {e}")
-            raise
-
-    def thread_safe_publish(self, event: Event[Any]) -> None:
-        """Called from collector thread or handlers to publish events"""
-        if not self._running or self._loop is None:
+        This method can be called from any event loop. It will schedule the event
+        to be added to the EventBus's queue in the EventBus's own event loop.
+        """
+        if not self._running or self._loop is None or self._queue is None:
             raise RuntimeError("Event bus not running")
 
-        asyncio.run_coroutine_threadsafe(self.publish(event), self._loop)
+        # Check if we're in the EventBus's event loop
+        try:
+            current_loop = asyncio.get_running_loop()
+            if current_loop is self._loop:
+                # We're in the EventBus's event loop, can directly await
+                await self._queue.put(event)
+                logger.debug(f"Published event {event.type}")
+            else:
+                # We're in a different event loop, need to use run_coroutine_threadsafe
+                async def _put_event():
+                    await self._queue.put(event)  # type: ignore[union-attr]
+                    logger.debug(f"Published event {event.type}")
+
+                future = asyncio.run_coroutine_threadsafe(_put_event(), self._loop)
+                # Wait for completion (this blocks the current coroutine but that's okay)
+                future.result(timeout=5.0)
+        except RuntimeError:
+            # No event loop running, use run_coroutine_threadsafe
+            async def _put_event():
+                await self._queue.put(event)  # type: ignore[union-attr]
+                logger.debug(f"Published event {event.type}")
+
+            future = asyncio.run_coroutine_threadsafe(_put_event(), self._loop)
+            future.result(timeout=5.0)
+
+    def thread_safe_publish(self, event: Event[Any]) -> None:
+        """Called from non-async code or different threads to publish events."""
+        if not self._running or self._loop is None or self._queue is None:
+            raise RuntimeError("Event bus not running")
+
+        async def _put_event():
+            await self._queue.put(event)  # type: ignore[union-attr]
+            logger.debug(f"Published event {event.type}")
+
+        asyncio.run_coroutine_threadsafe(_put_event(), self._loop)
 
     def start(self) -> None:
         """Start the event bus."""
@@ -131,12 +158,25 @@ class EventBus:
                 raise RuntimeError("Event bus not running")
 
             asyncio.set_event_loop(self._loop)
+            # Create the queue in the event loop that will use it
+            self._queue = asyncio.Queue(maxsize=self._max_queue_size)
             self._loop.run_until_complete(self._process_events())
 
         import threading
 
         self._thread = threading.Thread(target=run_event_loop, daemon=True)
         self._thread.start()
+
+        # Wait for the queue to be initialized
+        import time
+        timeout = 1.0
+        start_time = time.time()
+        while self._queue is None and time.time() - start_time < timeout:
+            time.sleep(0.01)
+
+        if self._queue is None:
+            raise RuntimeError("Failed to initialize event queue")
+
         logger.info("Event bus started")
 
     def stop(self) -> None:
@@ -149,8 +189,8 @@ class EventBus:
         self._thread_pool.shutdown(wait=True)
 
     async def _process_events(self) -> None:
-        if self._loop is None:
-            raise RuntimeError("Event bus not running")
+        if self._loop is None or self._queue is None:
+            raise RuntimeError("Event bus not properly initialized")
 
         while self._running:
             try:
