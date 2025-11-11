@@ -102,7 +102,7 @@ class EventCollector:
         self._lock: threading.Lock = threading.Lock()
 
     def collect(self, context: HandlerContext[Any]) -> None:
-        """Handler function to collect events."""
+        """Handler function to collect events (sync handler for thread pool execution)."""
         with self._lock:
             self.events.append(context.event)
 
