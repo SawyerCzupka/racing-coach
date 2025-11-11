@@ -12,6 +12,12 @@ data
 # pytest
 .pytest_cache
 
+# Coverage reports
+.coverage
+htmlcov/
+*.cover
+.coverage.*
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

@@ -626,6 +626,14 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [{ name = "ruff", specifier = ">=0.12.11" }]
+test = [
+    { name = "factory-boy", specifier = ">=3.3.0" },
+    { name = "pytest", specifier = ">=8.0.0" },
+    { name = "pytest-asyncio", specifier = ">=0.24.0" },
+    { name = "pytest-cov", specifier = ">=6.0.0" },
+    { name = "pytest-factoryboy", specifier = ">=2.8.0" },
+    { name = "pytest-mock", specifier = ">=3.14.0" },
+]
 
 [[package]]
 name = "racing-coach-server"
