@@ -5,8 +5,8 @@ from typing import Any
 
 import pytest
 from pytest_factoryboy import register
-
 from racing_coach_core.events.base import Event, EventBus, EventType
+
 from tests.factories import (
     LapAndSessionFactory,
     LapTelemetryFactory,

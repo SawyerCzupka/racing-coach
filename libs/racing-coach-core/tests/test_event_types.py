@@ -3,7 +3,6 @@
 from datetime import datetime
 
 import pytest
-
 from racing_coach_core.events.base import (
     Event,
     EventType,
@@ -114,15 +113,11 @@ class TestEvent:
         event = Event(type=event_type, data=complex_data)
         assert event.data == complex_data
 
-    def test_event_with_system_event_type(
-        self, telemetry_and_session_factory
-    ):
+    def test_event_with_system_event_type(self, telemetry_and_session_factory):
         """Test creating an Event with a system event type."""
         # Create an instance from the factory
         telemetry_data = telemetry_and_session_factory()
-        event = Event(
-            type=SystemEvents.TELEMETRY_FRAME, data=telemetry_data
-        )
+        event = Event(type=SystemEvents.TELEMETRY_FRAME, data=telemetry_data)
         assert event.type == SystemEvents.TELEMETRY_FRAME
         assert isinstance(event.data, TelemetryAndSession)
 
@@ -131,25 +126,19 @@ class TestEvent:
 class TestHandlerContext:
     """Test the HandlerContext class."""
 
-    def test_create_handler_context(
-        self, event_bus, sample_event: Event[str]
-    ):
+    def test_create_handler_context(self, event_bus, sample_event: Event[str]):
         """Test creating a HandlerContext."""
         context = HandlerContext(event_bus=event_bus, event=sample_event)
         assert context.event_bus is event_bus
         assert context.event is sample_event
 
-    def test_handler_context_frozen(
-        self, event_bus, sample_event: Event[str]
-    ):
+    def test_handler_context_frozen(self, event_bus, sample_event: Event[str]):
         """Test that HandlerContext is immutable (frozen)."""
         context = HandlerContext(event_bus=event_bus, event=sample_event)
         with pytest.raises(Exception):  # dataclass frozen=True raises FrozenInstanceError
             context.event = None  # type: ignore
 
-    def test_handler_context_access_event_data(
-        self, event_bus, sample_event: Event[str]
-    ):
+    def test_handler_context_access_event_data(self, event_bus, sample_event: Event[str]):
         """Test accessing event data through HandlerContext."""
         context = HandlerContext(event_bus=event_bus, event=sample_event)
         assert context.event.data == "test data"

@@ -5,7 +5,6 @@ import time
 from typing import Any
 
 import pytest
-
 from racing_coach_core.events.base import (
     Event,
     EventBus,
@@ -165,9 +164,7 @@ class TestEventBusHandlerRegistration:
 
         assert len(event_bus._handlers[sample_event_type]) == 2  # type: ignore
 
-    def test_register_handlers_list(
-        self, event_bus: EventBus, sample_event_type: EventType[str]
-    ):
+    def test_register_handlers_list(self, event_bus: EventBus, sample_event_type: EventType[str]):
         """Test registering a list of Handler objects."""
 
         def handler_func1(context: HandlerContext[str]) -> None:
@@ -282,9 +279,7 @@ class TestEventBusPublishIntegration:
         assert received_data1 == ["test data"]
         assert received_data2 == ["test data"]
 
-    async def test_handler_not_called_for_different_event_type(
-        self, running_event_bus: EventBus
-    ):
+    async def test_handler_not_called_for_different_event_type(self, running_event_bus: EventBus):
         """Test that handlers are only called for their subscribed event types."""
         event_type1 = EventType[str](name="TYPE_1", data_type=str)
         event_type2 = EventType[str](name="TYPE_2", data_type=str)
@@ -324,9 +319,7 @@ class TestEventBusPublishIntegration:
         assert received_data == [f"data_{i}" for i in range(5)]
 
     @pytest.mark.slow
-    async def test_handler_exception_does_not_stop_processing(
-        self, running_event_bus: EventBus
-    ):
+    async def test_handler_exception_does_not_stop_processing(self, running_event_bus: EventBus):
         """Test that an exception in one handler doesn't stop other handlers."""
         event_type = EventType[str](name="TEST", data_type=str)
         received_data = []

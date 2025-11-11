@@ -1,7 +1,6 @@
 """Tests for event handler decorators."""
 
 import pytest
-
 from racing_coach_core.events.base import EventType, HandlerContext
 from racing_coach_core.events.checking import func_handles, method_handles
 
@@ -237,8 +236,9 @@ class TestDecoratorInteroperability:
         # Even though the decorator doesn't do much, the function should still work
         running_event_bus.subscribe(event_type, my_handler)
 
-        from racing_coach_core.events.base import Event
         import asyncio
+
+        from racing_coach_core.events.base import Event
 
         event = Event(type=event_type, data="test data")
         await running_event_bus.publish(event)
@@ -269,8 +269,9 @@ class TestDecoratorInteroperability:
 
         running_event_bus.subscribe(event_type, bound_handler)
 
-        from racing_coach_core.events.base import Event
         import asyncio
+
+        from racing_coach_core.events.base import Event
 
         event = Event(type=event_type, data="test data")
         await running_event_bus.publish(event)

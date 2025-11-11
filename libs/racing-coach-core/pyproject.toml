@@ -53,4 +53,5 @@ test = [
     "pytest-mock>=3.14.0",
     "factory-boy>=3.3.0",
     "pytest-factoryboy>=2.8.0",
+    "types-factory-boy>=0.4.1",
 ]
