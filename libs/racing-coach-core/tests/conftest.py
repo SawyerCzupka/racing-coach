@@ -1,6 +1,7 @@
 """Pytest configuration and shared fixtures."""
 
 import asyncio
+from collections.abc import AsyncGenerator
 from typing import Any
 
 import pytest
@@ -42,7 +43,7 @@ def event_bus() -> EventBus:
 
 
 @pytest.fixture
-async def running_event_bus() -> EventBus:
+async def running_event_bus() -> AsyncGenerator[EventBus, None]:
     """Create and start an EventBus instance for integration testing."""
     bus = EventBus(max_queue_size=100, max_workers=2)
     bus.start()

@@ -1,6 +1,7 @@
 """Factories for creating test data using factory_boy."""
 
 from datetime import datetime, timezone
+from typing import Any
 from uuid import uuid4
 
 from factory import Factory, Faker, LazyAttribute, LazyFunction, SubFactory
@@ -12,7 +13,7 @@ from racing_coach_core.models.telemetry import (
 )
 
 
-class TelemetryFrameFactory(Factory):
+class TelemetryFrameFactory(Factory[TelemetryFrame]):
     """Factory for creating TelemetryFrame instances."""
 
     class Meta:
@@ -58,7 +59,7 @@ class TelemetryFrameFactory(Factory):
     roll = Faker("pyfloat", min_value=-3.14, max_value=3.14)
 
     # Tire Data
-    tire_temps = LazyAttribute(
+    tire_temps: dict[str, dict[str, float]] = LazyAttribute(
         lambda _: {
             "LF": {"left": 80.0, "middle": 85.0, "right": 82.0},
             "RF": {"left": 81.0, "middle": 86.0, "right": 83.0},
@@ -66,7 +67,7 @@ class TelemetryFrameFactory(Factory):
             "RR": {"left": 79.0, "middle": 84.0, "right": 81.0},
         }
     )
-    tire_wear = LazyAttribute(
+    tire_wear: dict[str, dict[str, float]] = LazyAttribute(
         lambda _: {
             "LF": {"left": 0.95, "middle": 0.93, "right": 0.94},
             "RF": {"left": 0.94, "middle": 0.92, "right": 0.93},
@@ -74,7 +75,7 @@ class TelemetryFrameFactory(Factory):
             "RR": {"left": 0.95, "middle": 0.93, "right": 0.94},
         }
     )
-    brake_line_pressure = LazyAttribute(
+    brake_line_pressure: dict[str, float] = LazyAttribute(
         lambda _: {
             "LF": 2.5,
             "RF": 2.5,
@@ -94,7 +95,7 @@ class TelemetryFrameFactory(Factory):
     on_pit_road = Faker("pybool")
 
 
-class SessionFrameFactory(Factory):
+class SessionFrameFactory(Factory[SessionFrame]):
     """Factory for creating SessionFrame instances."""
 
     class Meta:
@@ -118,31 +119,33 @@ class SessionFrameFactory(Factory):
     series_id = Faker("pyint", min_value=1, max_value=100)
 
 
-class LapTelemetryFactory(Factory):
+class LapTelemetryFactory(Factory[LapTelemetry]):
     """Factory for creating LapTelemetry instances."""
 
     class Meta:
         model = LapTelemetry
 
-    frames = LazyAttribute(lambda _: [TelemetryFrameFactory() for _ in range(100)])
+    frames: list[TelemetryFrame] = LazyAttribute(
+        lambda _: [TelemetryFrameFactory.create() for _ in range(100)]
+    )
     lap_time = Faker("pyfloat", min_value=60, max_value=180)
 
 
-class TelemetryAndSessionFactory(Factory):
+class TelemetryAndSessionFactory(Factory[TelemetryAndSession]):
     """Factory for creating TelemetryAndSession instances."""
 
     class Meta:
         model = TelemetryAndSession
 
-    TelemetryFrame = SubFactory(TelemetryFrameFactory)
-    SessionFrame = SubFactory(SessionFrameFactory)
+    TelemetryFrame: TelemetryFrame = SubFactory(TelemetryFrameFactory)  # type: ignore[assignment]
+    SessionFrame: SessionFrame = SubFactory(SessionFrameFactory)  # type: ignore[assignment]
 
 
-class LapAndSessionFactory(Factory):
+class LapAndSessionFactory(Factory[LapAndSession]):
     """Factory for creating LapAndSession instances."""
 
     class Meta:
         model = LapAndSession
 
-    LapTelemetry = SubFactory(LapTelemetryFactory)
-    SessionFrame = SubFactory(SessionFrameFactory)
+    LapTelemetry: LapTelemetry = SubFactory(LapTelemetryFactory)  # type: ignore[assignment]
+    SessionFrame: SessionFrame = SubFactory(SessionFrameFactory)  # type: ignore[assignment]
