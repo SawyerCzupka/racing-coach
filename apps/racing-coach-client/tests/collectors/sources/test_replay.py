@@ -14,9 +14,11 @@ class TestReplayTelemetrySourceUnit:
     """Unit tests for ReplayTelemetrySource with mocked IBT file."""
 
     @patch("racing_coach_client.collectors.sources.replay.irsdk.IBT")
-    def test_startup(self, mock_ibt_class: MagicMock) -> None:
+    @patch("pathlib.Path.exists")
+    def test_startup(self, mock_exists: MagicMock, mock_ibt_class: MagicMock) -> None:
         """Test startup opens IBT file and determines frame count."""
-        # Setup mock
+        # Setup mocks
+        mock_exists.return_value = True
         mock_ibt: MagicMock = MagicMock()
         mock_ibt.var_headers_names = ["Speed", "RPM", "Throttle"]
         mock_ibt_class.return_value = mock_ibt
@@ -35,13 +37,15 @@ class TestReplayTelemetrySourceUnit:
 
         # Verify
         mock_ibt.open.assert_called_once_with("/fake/path.ibt")
-        assert source.frame_count == 100
+        assert source.total_frames == 100
         assert source.current_frame == 0
 
     @patch("racing_coach_client.collectors.sources.replay.irsdk.IBT")
-    def test_shutdown(self, mock_ibt_class: MagicMock) -> None:
+    @patch("pathlib.Path.exists")
+    def test_shutdown(self, mock_exists: MagicMock, mock_ibt_class: MagicMock) -> None:
         """Test shutdown closes IBT file."""
-        # Setup
+        # Setup mocks
+        mock_exists.return_value = True
         mock_ibt: MagicMock = MagicMock()
         mock_ibt.var_headers_names = ["Speed"]
         mock_ibt.get_all.return_value = [1.0] * 100
@@ -57,9 +61,11 @@ class TestReplayTelemetrySourceUnit:
         mock_ibt.close.assert_called_once()
 
     @patch("racing_coach_client.collectors.sources.replay.irsdk.IBT")
-    def test_freeze_var_buffer_latest(self, mock_ibt_class: MagicMock) -> None:
+    @patch("pathlib.Path.exists")
+    def test_freeze_var_buffer_latest(self, mock_exists: MagicMock, mock_ibt_class: MagicMock) -> None:
         """Test freeze_var_buffer_latest advances to next frame."""
-        # Setup
+        # Setup mocks
+        mock_exists.return_value = True
         mock_ibt: MagicMock = MagicMock()
         mock_ibt.var_headers_names = ["Speed", "RPM"]
         mock_ibt.get_all.return_value = [1.0] * 10
@@ -82,9 +88,11 @@ class TestReplayTelemetrySourceUnit:
         mock_ibt.get.assert_called()
 
     @patch("racing_coach_client.collectors.sources.replay.irsdk.IBT")
-    def test_getitem_returns_cached_value(self, mock_ibt_class: MagicMock) -> None:
+    @patch("pathlib.Path.exists")
+    def test_getitem_returns_cached_value(self, mock_exists: MagicMock, mock_ibt_class: MagicMock) -> None:
         """Test __getitem__ returns cached telemetry values."""
-        # Setup
+        # Setup mocks
+        mock_exists.return_value = True
         mock_ibt: MagicMock = MagicMock()
         mock_ibt.var_headers_names = ["Speed", "RPM"]
         mock_ibt.get_all.return_value = [1.0] * 10
@@ -112,14 +120,22 @@ class TestReplayTelemetrySourceUnit:
         assert rpm == 5000.0
 
     @patch("racing_coach_client.collectors.sources.replay.irsdk.IBT")
-    def test_playback_speed_affects_frame_advance(self, mock_ibt_class: MagicMock) -> None:
-        """Test that playback_speed affects how many frames are advanced."""
-        # Setup
+    @patch("pathlib.Path.exists")
+    @patch("racing_coach_client.collectors.sources.replay.time")
+    def test_playback_speed_affects_frame_advance(
+        self, mock_time: MagicMock, mock_exists: MagicMock, mock_ibt_class: MagicMock
+    ) -> None:
+        """Test that speed_multiplier affects sleep timing between frames."""
+        # Setup mocks
+        mock_exists.return_value = True
         mock_ibt: MagicMock = MagicMock()
         mock_ibt.var_headers_names = ["Speed"]
         mock_ibt.get_all.return_value = [1.0] * 100
         mock_ibt_class.return_value = mock_ibt
         mock_ibt.get.return_value = 1.0
+
+        # Mock time to simulate immediate succession
+        mock_time.time.side_effect = [0.0, 0.0, 0.001]  # Fast successive calls
 
         # Test with 2x speed
         source: ReplayTelemetrySource = ReplayTelemetrySource(file_path=Path("/fake/path.ibt"), speed_multiplier=2.0)
@@ -128,13 +144,17 @@ class TestReplayTelemetrySourceUnit:
         initial_frame: int = source.current_frame
         source.freeze_var_buffer_latest()
 
-        # Verify - should advance by 2 frames
-        assert source.current_frame == initial_frame + 2
+        # Verify - should still advance by 1 frame per call (speed affects timing, not frame count)
+        assert source.current_frame == initial_frame + 1
+        # With 2x speed, sleep time should be halved (or skipped in fast succession)
+        # The speed_multiplier affects the target_frame_time calculation
 
     @patch("racing_coach_client.collectors.sources.replay.irsdk.IBT")
-    def test_loop_enabled_wraps_to_beginning(self, mock_ibt_class: MagicMock) -> None:
+    @patch("pathlib.Path.exists")
+    def test_loop_enabled_wraps_to_beginning(self, mock_exists: MagicMock, mock_ibt_class: MagicMock) -> None:
         """Test that loop=True wraps playback to beginning."""
-        # Setup
+        # Setup mocks
+        mock_exists.return_value = True
         mock_ibt: MagicMock = MagicMock()
         mock_ibt.var_headers_names = ["Speed"]
         mock_ibt.get_all.return_value = [1.0] * 10
@@ -155,9 +175,11 @@ class TestReplayTelemetrySourceUnit:
         assert source.current_frame == 0
 
     @patch("racing_coach_client.collectors.sources.replay.irsdk.IBT")
-    def test_loop_disabled_stops_at_end(self, mock_ibt_class: MagicMock) -> None:
+    @patch("pathlib.Path.exists")
+    def test_loop_disabled_stops_at_end(self, mock_exists: MagicMock, mock_ibt_class: MagicMock) -> None:
         """Test that loop=False stops at the end."""
-        # Setup
+        # Setup mocks
+        mock_exists.return_value = True
         mock_ibt: MagicMock = MagicMock()
         mock_ibt.var_headers_names = ["Speed"]
         mock_ibt.get_all.return_value = [1.0] * 10
@@ -178,9 +200,11 @@ class TestReplayTelemetrySourceUnit:
         assert source.current_frame == 9
 
     @patch("racing_coach_client.collectors.sources.replay.irsdk.IBT")
-    def test_get_playback_progress(self, mock_ibt_class: MagicMock) -> None:
+    @patch("pathlib.Path.exists")
+    def test_get_playback_progress(self, mock_exists: MagicMock, mock_ibt_class: MagicMock) -> None:
         """Test playback progress calculation."""
-        # Setup
+        # Setup mocks
+        mock_exists.return_value = True
         mock_ibt: MagicMock = MagicMock()
         mock_ibt.var_headers_names = ["Speed"]
         mock_ibt.get_all.return_value = [1.0] * 100

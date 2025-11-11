@@ -217,11 +217,19 @@ class TestIRacingConnectionManager:
         mock_ir.is_connected = False
         mock_ir.startup.reset_mock()
 
+        # First ensure_connected call detects disconnect
+        result1: bool = manager.ensure_connected()
+        assert result1 is False
+        assert manager.ir_connected is False
+
         # Simulate reconnect working
         mock_ir.startup.return_value = True
+        mock_ir.is_initialized = True
+        mock_ir.is_connected = True
 
-        # Test
-        result: bool = manager.ensure_connected()
+        # Second ensure_connected call should reconnect
+        result2: bool = manager.ensure_connected()
 
         # Verify - should have tried to startup again
         assert mock_ir.startup.called
+        assert result2 is True
