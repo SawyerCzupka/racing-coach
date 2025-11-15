@@ -27,8 +27,8 @@ class TestTelemetryService:
 
         # Mock the query to return None (no existing session)
         mock_result = AsyncMock()
-        mock_result.scalar_one_or_none.return_value = None
-        mock_db_session.execute.return_value = mock_result
+        mock_result.scalar_one_or_none = lambda: None
+        mock_db_session.execute = AsyncMock(return_value=mock_result)
 
         # Act
         result = await service.add_or_get_session(session_frame)
@@ -55,8 +55,8 @@ class TestTelemetryService:
 
         # Mock the query to return the existing session
         mock_result = AsyncMock()
-        mock_result.scalar_one_or_none.return_value = existing_session
-        mock_db_session.execute.return_value = mock_result
+        mock_result.scalar_one_or_none = lambda: existing_session
+        mock_db_session.execute = AsyncMock(return_value=mock_result)
 
         # Act
         result = await service.add_or_get_session(session_frame)
@@ -78,8 +78,8 @@ class TestTelemetryService:
 
         # Mock the query
         mock_result = AsyncMock()
-        mock_result.scalar_one_or_none.return_value = latest_session
-        mock_db_session.execute.return_value = mock_result
+        mock_result.scalar_one_or_none = lambda: latest_session
+        mock_db_session.execute = AsyncMock(return_value=mock_result)
 
         # Act
         result = await service.get_latest_session()
@@ -98,8 +98,8 @@ class TestTelemetryService:
 
         # Mock the query to return None
         mock_result = AsyncMock()
-        mock_result.scalar_one_or_none.return_value = None
-        mock_db_session.execute.return_value = mock_result
+        mock_result.scalar_one_or_none = lambda: None
+        mock_db_session.execute = AsyncMock(return_value=mock_result)
 
         # Act
         result = await service.get_latest_session()

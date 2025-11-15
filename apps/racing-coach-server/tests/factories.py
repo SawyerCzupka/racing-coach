@@ -3,7 +3,7 @@
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from factory import Factory, Faker, LazyAttribute, LazyFunction
+from factory import Factory, Faker, LazyAttribute, LazyFunction, post_generation
 from racing_coach_core.models.telemetry import SessionFrame, TelemetryFrame
 
 from racing_coach_server.telemetry.models import Lap, Telemetry, TrackSession
@@ -140,6 +140,12 @@ class TrackSessionFactory(Factory[TrackSession]):
     car_name = Faker("company")
     car_class_id = Faker("pyint", min_value=1, max_value=50)
     series_id = Faker("pyint", min_value=1, max_value=100)
+
+    @post_generation
+    def set_timestamps(obj, create, extracted, **kwargs):
+        """Set timestamps after object creation."""
+        obj.created_at = datetime.now(timezone.utc)
+        obj.updated_at = datetime.now(timezone.utc)
 
 
 class LapFactory(Factory[Lap]):
