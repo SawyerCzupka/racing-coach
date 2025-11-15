@@ -775,6 +775,7 @@ test = [
     { name = "pytest-cov", specifier = ">=6.0.0" },
     { name = "pytest-factoryboy", specifier = ">=2.8.0" },
     { name = "pytest-mock", specifier = ">=3.14.0" },
+    { name = "pytest-randomly", specifier = ">=4.0.1" },
     { name = "types-factory-boy", specifier = ">=0.4.1" },
 ]
 
