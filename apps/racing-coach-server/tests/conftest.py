@@ -1,6 +1,7 @@
 """Pytest configuration and shared fixtures for racing-coach-server tests."""
 
 import asyncio
+import os
 from collections.abc import AsyncGenerator
 from typing import Any
 
@@ -23,6 +24,11 @@ from tests.factories import (
     TelemetryFrameFactory,
     TrackSessionFactory,
 )
+
+# Disable Ryuk to avoid port binding issues in some Docker configurations
+# Note: With Ryuk disabled, containers must be manually cleaned up if tests are interrupted.
+# The postgres_container fixture handles cleanup in the finally block.
+os.environ["TESTCONTAINERS_RYUK_DISABLED"] = "true"
 
 # Register factories to create pytest fixtures automatically
 register(TelemetryFrameFactory)
@@ -51,15 +57,18 @@ def postgres_container() -> PostgresContainer:
     Create and start a PostgreSQL container with TimescaleDB for integration tests.
 
     This fixture is session-scoped to avoid spinning up containers for each test.
+    Ensures cleanup even if tests are interrupted.
     """
     # Use the official TimescaleDB image
     postgres = PostgresContainer(
         image="timescale/timescaledb:latest-pg16",
         driver="asyncpg",
     )
-    postgres.start()
-    yield postgres
-    postgres.stop()
+    try:
+        postgres.start()
+        yield postgres
+    finally:
+        postgres.stop()
 
 
 @pytest.fixture(scope="session")
