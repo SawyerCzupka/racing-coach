@@ -23,3 +23,33 @@ run-client = "racing_coach_client.app:main"
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[dependency-groups]
+test = [
+    "factory-boy>=3.3.3",
+    "pytest>=9.0.0",
+    "pytest-asyncio>=1.3.0",
+    "pytest-cov>=7.0.0",
+    "pytest-factoryboy>=2.8.1",
+    "pytest-mock>=3.15.1",
+    "pytest-randomly>=4.0.1",
+    "pytest-repeat>=0.9.4",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+asyncio_mode = "auto"
+markers = [
+    "unit: Unit tests that mock external dependencies",
+    "integration: Integration tests that test components together",
+    "ibt: Tests that require an IBT file to run",
+    "slow: Tests that take a long time to run",
+]
+addopts = [
+    "-v",
+    "--strict-markers",
+    "--cov=racing_coach_client",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+]

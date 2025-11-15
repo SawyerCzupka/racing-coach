@@ -12,7 +12,7 @@ from typing import Any
 
 import irsdk
 
-from .base import TelemetryConnectionError, TelemetryReadError, TelemetrySource
+from .base import TelemetryConnectionError, TelemetryReadError
 
 logger = logging.getLogger(__name__)
 
@@ -66,6 +66,7 @@ class ReplayTelemetrySource:
         self.loop = loop
 
         self.ibt: irsdk.IBT | None = None
+        self.ir: irsdk.IRSDK | None = None  # For accessing session metadata
         self.current_frame: int = 0
         self.total_frames: int = 0
         self._connected: bool = False
@@ -89,11 +90,19 @@ class ReplayTelemetrySource:
             raise TelemetryConnectionError(error_msg)
 
         try:
+            # Initialize IBT for frame-by-frame telemetry access
             self.ibt = irsdk.IBT()
             self.ibt.open(str(self.file_path))
 
+            # Initialize IRSDK for session metadata access
+            self.ir = irsdk.IRSDK()
+            if not self.ir.startup(test_file=str(self.file_path)):
+                raise TelemetryConnectionError(
+                    f"Failed to load session data from IBT file: {self.file_path}"
+                )
+
             # Get available variable names
-            self._var_names = self.ibt.var_headers_names
+            self._var_names = self.ibt.var_headers_names  # type: ignore
 
             # Determine total frames
             # IBT files don't directly expose frame count, so we need to infer it
@@ -115,6 +124,13 @@ class ReplayTelemetrySource:
 
         except Exception as e:
             logger.error(f"Failed to open IBT file {self.file_path}: {e}")
+            # Clean up on failure
+            if self.ibt:
+                self.ibt.close()
+                self.ibt = None
+            if self.ir:
+                self.ir.shutdown()
+                self.ir = None
             raise TelemetryConnectionError(f"Failed to open IBT file: {e}") from e
 
     def shutdown(self) -> None:
@@ -125,8 +141,12 @@ class ReplayTelemetrySource:
             self.ibt.close()
             logger.info(f"Closed IBT file: {self.file_path}")
 
+        if self.ir:
+            self.ir.shutdown()
+
         self._connected = False
         self.ibt = None
+        self.ir = None
         self.current_frame = 0
         self._current_buffer.clear()
 
@@ -137,7 +157,7 @@ class ReplayTelemetrySource:
         Returns:
             bool: True if file is open and playback is active, False otherwise.
         """
-        return self._connected and self.ibt is not None
+        return self._connected and self.ibt is not None and self.ir is not None
 
     def freeze_var_buffer_latest(self) -> None:
         """
@@ -197,8 +217,12 @@ class ReplayTelemetrySource:
         """
         Get a telemetry variable value from the current frozen frame.
 
+        For session metadata (WeekendInfo, DriverInfo, etc.), this accesses
+        the IRSDK instance. For telemetry variables, it reads from the IBT
+        instance at the current frame.
+
         Args:
-            key: The name of the telemetry variable.
+            key: The name of the telemetry variable or session metadata key.
 
         Returns:
             The value of the requested variable.
@@ -211,6 +235,18 @@ class ReplayTelemetrySource:
         if not self.is_connected():
             raise RuntimeError("__getitem__() called while not connected")
 
+        # Session metadata keys - use IRSDK instance
+        if key in ['WeekendInfo', 'DriverInfo', 'SessionInfo', 'QualifyResultsInfo', 'CarSetup']:
+            if not self.ir:
+                raise RuntimeError("IRSDK reader is not initialized")
+            try:
+                return self.ir[key]
+            except Exception as e:
+                raise TelemetryReadError(
+                    f"Failed to read session metadata '{key}': {e}"
+                ) from e
+
+        # Telemetry variables - use IBT instance with caching
         if key not in self._current_buffer:
             # Try to read it directly if not in cache
             if not self.ibt:

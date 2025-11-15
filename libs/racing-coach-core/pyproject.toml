@@ -54,4 +54,5 @@ test = [
     "factory-boy>=3.3.0",
     "pytest-factoryboy>=2.8.0",
     "types-factory-boy>=0.4.1",
+    "pytest-randomly>=4.0.1",
 ]

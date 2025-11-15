@@ -160,7 +160,10 @@ class EventBus:
             asyncio.set_event_loop(self._loop)
             # Create the queue in the event loop that will use it
             self._queue = asyncio.Queue(maxsize=self._max_queue_size)
-            self._loop.run_until_complete(self._process_events())
+            # Schedule the event processing task
+            self._loop.create_task(self._process_events())
+            # Run the loop forever until stop() is called
+            self._loop.run_forever()
 
         import threading
 
@@ -169,6 +172,7 @@ class EventBus:
 
         # Wait for the queue to be initialized
         import time
+
         timeout = 1.0
         start_time = time.time()
         while self._queue is None and time.time() - start_time < timeout:
@@ -180,13 +184,70 @@ class EventBus:
         logger.info("Event bus started")
 
     def stop(self) -> None:
-        """Stop processing events and clean up."""
+        """Stop processing events and clean up.
+
+        This method follows asyncio best practices for clean shutdown:
+        1. Stop accepting new events
+        2. Cancel all pending tasks
+        3. Give the loop a chance to process cancellations
+        4. Stop and close the event loop
+        """
         if not self._running:
             logger.warning("Event bus stop requested but not running")
             return
 
         self._running = False
+
+        if self._loop is None or not hasattr(self, "_thread"):
+            return
+
+        # Schedule cleanup as an async task in the event loop
+        async def async_cleanup():
+            """Async cleanup to cancel all pending tasks."""
+            # Get all tasks except this cleanup task
+            pending = [
+                task for task in asyncio.all_tasks(self._loop) if task is not asyncio.current_task()
+            ]
+
+            # Cancel all pending tasks
+            for task in pending:
+                task.cancel()
+
+            # Wait for tasks to handle cancellation
+            if pending:
+                await asyncio.gather(*pending, return_exceptions=True)
+
+        # Schedule the async cleanup and then stop the loop
+        def cleanup_and_stop():
+            """Schedule async cleanup then stop the loop."""
+            # Create the cleanup task
+            cleanup_task = self._loop.create_task(async_cleanup())
+
+            # When cleanup is done, stop the loop
+            def stop_loop(task):
+                self._loop.stop()
+
+            cleanup_task.add_done_callback(stop_loop)
+
+        # Schedule the cleanup to run in the event loop thread
+        self._loop.call_soon_threadsafe(cleanup_and_stop)
+
+        # Wait for the thread to finish
+        if self._thread.is_alive():
+            self._thread.join(timeout=5.0)
+
+        # Close the event loop (now that the thread has finished)
+        if not self._loop.is_closed():
+            self._loop.close()
+
+        # Shutdown the thread pool
         self._thread_pool.shutdown(wait=True)
+
+        # Clear references
+        self._queue = None
+        self._loop = None
+
+        logger.info("Event bus stopped and cleaned up")
 
     async def _process_events(self) -> None:
         if self._loop is None or self._queue is None:
