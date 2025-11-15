@@ -1,17 +1,16 @@
 """Pytest configuration and shared fixtures for racing-coach-server tests."""
 
-import asyncio
 import os
 from collections.abc import AsyncGenerator
-from typing import Any
+from pathlib import Path
 
 import pytest
+import pytest_asyncio
 from alembic import command
 from alembic.config import Config
 from httpx import ASGITransport, AsyncClient
 from pytest_factoryboy import register
-from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from testcontainers.postgres import PostgresContainer
 
 from racing_coach_server.app import app
@@ -26,8 +25,7 @@ from tests.factories import (
 )
 
 # Disable Ryuk to avoid port binding issues in some Docker configurations
-# Note: With Ryuk disabled, containers must be manually cleaned up if tests are interrupted.
-# The postgres_container fixture handles cleanup in the finally block.
+# Note: With Ryuk disabled, containers are stopped via context manager.
 os.environ["TESTCONTAINERS_RYUK_DISABLED"] = "true"
 
 # Register factories to create pytest fixtures automatically
@@ -44,103 +42,130 @@ register(TelemetryFactory)
 
 
 @pytest.fixture(scope="session")
-def event_loop():
-    """Create event loop for the test session."""
-    loop = asyncio.get_event_loop_policy().new_event_loop()
-    yield loop
-    loop.close()
-
-
-@pytest.fixture(scope="session")
-def postgres_container() -> PostgresContainer:
+def postgres_container():
     """
-    Create and start a PostgreSQL container with TimescaleDB for integration tests.
+    Start a PostgreSQL container with TimescaleDB for the entire test session.
 
-    This fixture is session-scoped to avoid spinning up containers for each test.
-    Ensures cleanup even if tests are interrupted.
+    This fixture:
+    - Starts one PostgreSQL container per test session (expensive operation)
+    - Automatically handles container lifecycle (start/stop)
+    - Uses timescale/timescaledb:latest-pg16 image which includes TimescaleDB extension
     """
-    # Use the official TimescaleDB image
-    postgres = PostgresContainer(
-        image="timescale/timescaledb:latest-pg16",
-        driver="asyncpg",
-    )
-    try:
-        postgres.start()
+    with PostgresContainer("timescale/timescaledb:latest-pg16") as postgres:
         yield postgres
-    finally:
-        postgres.stop()
 
 
-@pytest.fixture(scope="session")
-def test_database_url(postgres_container: PostgresContainer) -> str:
-    """Get the database URL for the test database."""
-    # Replace psycopg2 driver with asyncpg
-    url = postgres_container.get_connection_url()
-    return url.replace("psycopg2", "asyncpg")
+@pytest_asyncio.fixture(scope="session")
+async def db_engine(postgres_container):
+    """
+    Create async SQLAlchemy engine with full schema from Alembic migrations.
 
+    This fixture:
+    - Gets connection URL from TestContainers
+    - Ensures TimescaleDB extension is installed
+    - Runs all Alembic migrations to populate schema
+    - Converts psycopg URL to asyncpg for async operations
+    - Creates async engine for the session
 
-@pytest.fixture(scope="session")
-def test_engine(test_database_url: str):
-    """Create a test database engine."""
-    engine = create_async_engine(test_database_url, echo=False)
+    The database schema is created once per test session for performance.
+    Individual tests get transaction isolation via the db_session fixture.
+    """
+    # Get synchronous connection URL from TestContainers
+    sync_url = postgres_container.get_connection_url()
+
+    # Ensure TimescaleDB extension is installed
+    import psycopg2
+    from sqlalchemy.engine import make_url
+
+    try:
+        # Parse SQLAlchemy URL and convert to psycopg2 format
+        url = make_url(sync_url)
+        psycopg2_url = f"postgresql://{url.username}:{url.password}@{url.host}:{url.port}/{url.database}"
+        conn = psycopg2.connect(psycopg2_url)
+        cursor = conn.cursor()
+        cursor.execute("CREATE EXTENSION IF NOT EXISTS timescaledb")
+        conn.commit()
+        cursor.close()
+        conn.close()
+    except Exception as e:
+        print(f"Warning: Could not create timescaledb extension: {e}")
+
+    # Configure Alembic programmatically
+    alembic_ini_path = Path(__file__).parent.parent / "alembic.ini"
+    alembic_config = Config(str(alembic_ini_path))
+    alembic_config.set_main_option("sqlalchemy.url", sync_url)
+
+    # Run all migrations on the test database
+    # This executes ALL your custom DDL, indexes, constraints, triggers, etc.
+    command.upgrade(alembic_config, "head")
+
+    # Convert to async URL for asyncpg driver
+    async_url = sync_url.replace("psycopg2", "asyncpg")
+
+    # Create async engine
+    engine = create_async_engine(async_url, echo=False)
+
     yield engine
-    # Cleanup happens synchronously at the end
-    import asyncio
-    asyncio.get_event_loop().run_until_complete(engine.dispose())
+
+    # Cleanup
+    await engine.dispose()
 
 
-@pytest.fixture(scope="session")
-def setup_database(test_engine, test_database_url: str) -> None:
+@pytest_asyncio.fixture(scope="session")
+async def connection(db_engine):
     """
-    Set up the test database schema using Alembic migrations.
+    Session-scoped database connection for transaction management.
 
-    This runs once per test session.
+    This connection is reused across all tests in the session.
+    Individual test isolation is handled by the transaction fixture.
     """
-    # Run Alembic migrations
-    alembic_cfg = Config("alembic.ini")
-    alembic_cfg.set_main_option("sqlalchemy.url", test_database_url)
-    command.upgrade(alembic_cfg, "head")
-
-    yield
-
-    # Teardown: drop all tables
-    import asyncio
-
-    async def cleanup():
-        async with test_engine.begin() as conn:
-            await conn.run_sync(lambda sync_conn: sync_conn.execute(text("DROP SCHEMA public CASCADE")))
-            await conn.run_sync(lambda sync_conn: sync_conn.execute(text("CREATE SCHEMA public")))
-
-    asyncio.get_event_loop().run_until_complete(cleanup())
+    async with db_engine.connect() as connection:
+        yield connection
 
 
-@pytest.fixture
-async def db_session(
-    test_engine, setup_database
-) -> AsyncGenerator[AsyncSession, None]:
+@pytest_asyncio.fixture()
+async def transaction(connection):
     """
-    Create a new database session for a test.
+    Function-scoped transaction that rolls back after each test.
 
-    This fixture is function-scoped and creates a new session for each test.
-    After the test, all changes are rolled back.
+    This ensures complete isolation between tests while maintaining
+    the efficiency of transaction rollback (~1ms) vs database recreation.
+
+    Each test gets a fresh transaction that is automatically rolled back
+    when the test completes, ensuring no test data persists.
     """
-    # Create a connection
-    async with test_engine.connect() as connection:
-        # Begin a transaction
-        trans = await connection.begin()
+    async with connection.begin() as transaction:
+        yield transaction
 
-        # Create a session bound to the connection
-        AsyncSessionFactory = async_sessionmaker(
-            bind=connection,
-            class_=AsyncSession,
-            expire_on_commit=False,
-        )
 
-        async with AsyncSessionFactory() as session:
-            yield session
+@pytest_asyncio.fixture()
+async def db_session(connection, transaction):
+    """
+    Provide isolated AsyncSession for each test with automatic rollback.
 
-        # Rollback the transaction
-        await trans.rollback()
+    This fixture:
+    - Creates a new session per test
+    - Uses savepoint for transaction isolation within parent transaction
+    - Automatically rolls back all changes after test completes
+    - Ensures complete test isolation without recreating database
+
+    Usage:
+        async def test_create_lap(db_session):
+            lap = Lap(lap_number=1, lap_time=90.5)
+            db_session.add(lap)
+            await db_session.commit()
+            # Automatically rolled back after test
+    """
+    session = AsyncSession(
+        bind=connection,
+        join_transaction_mode="create_savepoint",
+        expire_on_commit=False,
+    )
+
+    yield session
+
+    await session.close()
+    await transaction.rollback()
 
 
 # ============================================================================
