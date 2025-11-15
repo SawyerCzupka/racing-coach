@@ -80,15 +80,17 @@ def test_database_url(postgres_container: PostgresContainer) -> str:
 
 
 @pytest.fixture(scope="session")
-async def test_engine(test_database_url: str):
+def test_engine(test_database_url: str):
     """Create a test database engine."""
     engine = create_async_engine(test_database_url, echo=False)
     yield engine
-    await engine.dispose()
+    # Cleanup happens synchronously at the end
+    import asyncio
+    asyncio.get_event_loop().run_until_complete(engine.dispose())
 
 
 @pytest.fixture(scope="session")
-async def setup_database(test_engine, test_database_url: str) -> None:
+def setup_database(test_engine, test_database_url: str) -> None:
     """
     Set up the test database schema using Alembic migrations.
 
@@ -102,9 +104,14 @@ async def setup_database(test_engine, test_database_url: str) -> None:
     yield
 
     # Teardown: drop all tables
-    async with test_engine.begin() as conn:
-        await conn.run_sync(lambda sync_conn: sync_conn.execute(text("DROP SCHEMA public CASCADE")))
-        await conn.run_sync(lambda sync_conn: sync_conn.execute(text("CREATE SCHEMA public")))
+    import asyncio
+
+    async def cleanup():
+        async with test_engine.begin() as conn:
+            await conn.run_sync(lambda sync_conn: sync_conn.execute(text("DROP SCHEMA public CASCADE")))
+            await conn.run_sync(lambda sync_conn: sync_conn.execute(text("CREATE SCHEMA public")))
+
+    asyncio.get_event_loop().run_until_complete(cleanup())
 
 
 @pytest.fixture
