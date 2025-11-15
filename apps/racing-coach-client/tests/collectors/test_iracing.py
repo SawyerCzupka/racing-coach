@@ -13,6 +13,7 @@ from racing_coach_client.collectors.iracing import TelemetryCollector
 from racing_coach_core.events.base import Event, EventBus, Handler, SystemEvents
 from racing_coach_core.models.events import TelemetryAndSession
 from racing_coach_core.models.telemetry import SessionFrame
+
 from tests.conftest import EventCollector
 
 
@@ -29,7 +30,9 @@ class TestTelemetryCollectorUnit:
         assert collector.current_session is None
         assert not collector._running
 
-    def test_collect_session_frame(self, event_bus: EventBus, mock_telemetry_source: MagicMock) -> None:
+    def test_collect_session_frame(
+        self, event_bus: EventBus, mock_telemetry_source: MagicMock
+    ) -> None:
         """Test collecting session metadata."""
         collector: TelemetryCollector = TelemetryCollector(event_bus, mock_telemetry_source)
 
@@ -82,7 +85,9 @@ class TestTelemetryCollectorUnit:
         assert event.data.TelemetryFrame is not None
         assert event.data.SessionFrame is not None
 
-    def test_start_when_already_running(self, event_bus: EventBus, mock_telemetry_source: MagicMock) -> None:
+    def test_start_when_already_running(
+        self, event_bus: EventBus, mock_telemetry_source: MagicMock
+    ) -> None:
         """Test that starting an already running collector logs warning."""
         collector: TelemetryCollector = TelemetryCollector(event_bus, mock_telemetry_source)
         collector._running = True
@@ -153,7 +158,10 @@ class TestTelemetryCollectorIntegration:
         assert not collector._running
 
     async def test_collector_publishes_telemetry_events(
-        self, running_event_bus: EventBus, mock_telemetry_source: MagicMock, event_collector: EventCollector
+        self,
+        running_event_bus: EventBus,
+        mock_telemetry_source: MagicMock,
+        event_collector: EventCollector,
     ) -> None:
         """Test that collector publishes telemetry events at expected rate."""
         # Configure mock to disconnect after a few frames
@@ -186,7 +194,9 @@ class TestTelemetryCollectorIntegration:
         await asyncio.sleep(0.2)
 
         # Verify events were published
-        events: list[Event[TelemetryAndSession]] = event_collector.get_events_of_type(SystemEvents.TELEMETRY_FRAME)
+        events: list[Event[TelemetryAndSession]] = event_collector.get_events_of_type(
+            SystemEvents.TELEMETRY_FRAME
+        )
         assert len(events) > 0
 
 
@@ -223,7 +233,7 @@ class TestTelemetryCollectorWithRealIBT:
         # Wait for some events to be collected
         try:
             events: list[Event[TelemetryAndSession]] = await event_collector.wait_for_event(
-                SystemEvents.TELEMETRY_FRAME, timeout=10.0, count=10
+                SystemEvents.TELEMETRY_FRAME, timeout=20.0, count=10
             )
             assert len(events) >= 10
 

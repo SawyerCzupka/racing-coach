@@ -3,14 +3,25 @@ default:
     @just --list
 
 format:
-    cd apps/racing-coach-client && uvx ruff format src/
+    cd apps/racing-coach-client && uvx ruff format src/ tests/
     cd apps/racing-coach-server && uvx ruff format src/
-    cd libs/racing-coach-core && uvx ruff format src/
+    cd libs/racing-coach-core && uvx ruff format src/ tests/
 
 sort:
-    cd apps/racing-coach-client && uvx ruff check src/ --select I --fix
-    cd apps/racing-coach-server && uvx ruff check src/ --select I --fix
-    cd libs/racing-coach-core && uvx ruff check src/ --select I --fix
+    cd apps/racing-coach-client && uvx ruff check src/ tests/ --select I --fix
+    cd apps/racing-coach-server && uvx ruff check src/  --select I --fix
+    cd libs/racing-coach-core && uvx ruff check src/ tests/ --select I --fix
+
+sf:
+    just sort
+    just format
+
+
+testapp app subdir="tests/" *args:
+    cd apps/{{app}} && uv run pytest {{args}} {{subdir}}
+
+testlib lib subdir="tests/" *args:
+    cd libs/{{lib}} && uv run pytest {{args}} {{subdir}}
 
 # Sync all projects
 sync-all *args:

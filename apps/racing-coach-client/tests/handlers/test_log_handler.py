@@ -47,7 +47,9 @@ class TestLogHandlerUnit:
                 type=SystemEvents.TELEMETRY_FRAME,
                 data=TelemetryAndSession(TelemetryFrame=telem, SessionFrame=session),
             )
-            context: HandlerContext[TelemetryAndSession] = HandlerContext(event_bus=running_event_bus, event=event)
+            context: HandlerContext[TelemetryAndSession] = HandlerContext(
+                event_bus=running_event_bus, event=event
+            )
             handler.handle_telemetry_frame(context)
 
         assert handler.frame_count == 4  # Started at -1, incremented 5 times
@@ -69,11 +71,11 @@ class TestLogHandlerUnit:
                 session: SessionFrame = session_frame_factory.build()  # type: ignore[attr-defined]
                 event: Event[TelemetryAndSession] = Event(
                     type=SystemEvents.TELEMETRY_FRAME,
-                    data=TelemetryAndSession(
-                        TelemetryFrame=telem, SessionFrame=session
-                    ),
+                    data=TelemetryAndSession(TelemetryFrame=telem, SessionFrame=session),
                 )
-                context: HandlerContext[TelemetryAndSession] = HandlerContext(event_bus=running_event_bus, event=event)
+                context: HandlerContext[TelemetryAndSession] = HandlerContext(
+                    event_bus=running_event_bus, event=event
+                )
                 handler.handle_telemetry_frame(context)
 
         # Should log at frames 0, 3, 6, 9 (4 times)
@@ -106,7 +108,9 @@ class TestLogHandlerUnit:
                 type=SystemEvents.TELEMETRY_FRAME,
                 data=TelemetryAndSession(TelemetryFrame=telem, SessionFrame=session),
             )
-            context: HandlerContext[TelemetryAndSession] = HandlerContext(event_bus=running_event_bus, event=event)
+            context: HandlerContext[TelemetryAndSession] = HandlerContext(
+                event_bus=running_event_bus, event=event
+            )
             handler.handle_telemetry_frame(context)
 
         # Verify telemetry data in logs
@@ -141,9 +145,7 @@ class TestLogHandlerIntegration:
                 session: SessionFrame = session_frame_factory.build()  # type: ignore[attr-defined]
                 event: Event[TelemetryAndSession] = Event(
                     type=SystemEvents.TELEMETRY_FRAME,
-                    data=TelemetryAndSession(
-                        TelemetryFrame=telem, SessionFrame=session
-                    ),
+                    data=TelemetryAndSession(TelemetryFrame=telem, SessionFrame=session),
                 )
                 running_event_bus.thread_safe_publish(event)
 

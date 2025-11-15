@@ -9,6 +9,7 @@ from racing_coach_client.handlers.lap_handler import LapHandler
 from racing_coach_core.events.base import Event, EventBus, Handler, HandlerContext, SystemEvents
 from racing_coach_core.models.events import LapAndSession, TelemetryAndSession
 from racing_coach_core.models.telemetry import SessionFrame, TelemetryFrame
+
 from tests.conftest import EventCollector
 
 
@@ -44,7 +45,9 @@ class TestLapHandlerUnit:
             data=TelemetryAndSession(TelemetryFrame=telem, SessionFrame=session),
         )
 
-        context: HandlerContext[TelemetryAndSession] = HandlerContext(event_bus=running_event_bus, event=event)
+        context: HandlerContext[TelemetryAndSession] = HandlerContext(
+            event_bus=running_event_bus, event=event
+        )
         handler.handle_telemetry_frame(context)
 
         assert handler.current_session is session
@@ -69,7 +72,9 @@ class TestLapHandlerUnit:
                 data=TelemetryAndSession(TelemetryFrame=telem, SessionFrame=session),
             )
 
-            context: HandlerContext[TelemetryAndSession] = HandlerContext(event_bus=running_event_bus, event=event)
+            context: HandlerContext[TelemetryAndSession] = HandlerContext(
+                event_bus=running_event_bus, event=event
+            )
             handler.handle_telemetry_frame(context)
 
         # Verify frames are buffered
@@ -103,7 +108,9 @@ class TestLapHandlerUnit:
             data=TelemetryAndSession(TelemetryFrame=telem_outlap, SessionFrame=session),
         )
 
-        context: HandlerContext[TelemetryAndSession] = HandlerContext(event_bus=running_event_bus, event=event)
+        context: HandlerContext[TelemetryAndSession] = HandlerContext(
+            event_bus=running_event_bus, event=event
+        )
         handler.handle_telemetry_frame(context)
 
         # Send frames for lap 1
@@ -163,7 +170,9 @@ class TestLapHandlerUnit:
             data=TelemetryAndSession(TelemetryFrame=telem_outlap, SessionFrame=session),
         )
 
-        context: HandlerContext[TelemetryAndSession] = HandlerContext(event_bus=running_event_bus, event=event)
+        context: HandlerContext[TelemetryAndSession] = HandlerContext(
+            event_bus=running_event_bus, event=event
+        )
         handler.handle_telemetry_frame(context)
 
         # Transition to lap 1
@@ -208,7 +217,9 @@ class TestLapHandlerUnit:
             data=TelemetryAndSession(TelemetryFrame=telem_lap1, SessionFrame=session),
         )
 
-        context: HandlerContext[TelemetryAndSession] = HandlerContext(event_bus=running_event_bus, event=event)
+        context: HandlerContext[TelemetryAndSession] = HandlerContext(
+            event_bus=running_event_bus, event=event
+        )
         handler.handle_telemetry_frame(context)
 
         # Add some frames
@@ -225,7 +236,8 @@ class TestLapHandlerUnit:
 
         # Transition to lap 0 early (incomplete lap) - should be ignored
         telem_lap0: TelemetryFrame = telemetry_frame_factory.build(  # type: ignore[attr-defined]
-            lap_number=0, lap_distance_pct=0.2  # < LAP_COMPLETION_THRESHOLD
+            lap_number=0,
+            lap_distance_pct=0.2,  # < LAP_COMPLETION_THRESHOLD
         )
         event = Event(
             type=SystemEvents.TELEMETRY_FRAME,
@@ -317,11 +329,11 @@ class TestLapHandlerIntegration:
                 )
                 event: Event[TelemetryAndSession] = Event(
                     type=SystemEvents.TELEMETRY_FRAME,
-                    data=TelemetryAndSession(
-                        TelemetryFrame=telem, SessionFrame=session
-                    ),
+                    data=TelemetryAndSession(TelemetryFrame=telem, SessionFrame=session),
                 )
-                context: HandlerContext[TelemetryAndSession] = HandlerContext(event_bus=running_event_bus, event=event)
+                context: HandlerContext[TelemetryAndSession] = HandlerContext(
+                    event_bus=running_event_bus, event=event
+                )
                 handler.handle_telemetry_frame(context)
 
         # Wait for lap events (should be 2, since last lap is still in progress)

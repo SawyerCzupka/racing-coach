@@ -200,7 +200,9 @@ class TestIRacingConnectionManager:
         mock_ir.startup.assert_not_called()
 
     @patch("racing_coach_client.collectors.connection.irsdk.IRSDK")
-    def test_ensure_connected_reconnects_after_disconnect(self, mock_irsdk_class: MagicMock) -> None:
+    def test_ensure_connected_reconnects_after_disconnect(
+        self, mock_irsdk_class: MagicMock
+    ) -> None:
         """Test ensure_connected reconnects after detecting a disconnect."""
         # Setup - first connect
         mock_ir: MagicMock = MagicMock()

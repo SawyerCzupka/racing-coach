@@ -14,6 +14,7 @@ from racing_coach_client.handlers.log_handler import LogHandler
 from racing_coach_core.events.base import Event, EventBus, Handler, HandlerContext, SystemEvents
 from racing_coach_core.models.events import LapAndSession, TelemetryAndSession
 from racing_coach_core.models.telemetry import SessionFrame, TelemetryFrame
+
 from tests.conftest import EventCollector
 
 
@@ -108,7 +109,9 @@ class TestEventFlowWithMocks:
                 type=SystemEvents.TELEMETRY_FRAME,
                 data=TelemetryAndSession(TelemetryFrame=telem, SessionFrame=session),
             )
-            context: HandlerContext[TelemetryAndSession] = HandlerContext(event_bus=running_event_bus, event=event)
+            context: HandlerContext[TelemetryAndSession] = HandlerContext(
+                event_bus=running_event_bus, event=event
+            )
             lap_handler.handle_telemetry_frame(context)
 
         # Complete first timed lap (lap 1)
@@ -186,7 +189,9 @@ class TestEndToEndWithRealIBT:
 
         try:
             # Wait for telemetry events
-            telemetry_events: list[Event[TelemetryAndSession]] = await event_collector.wait_for_event(
+            telemetry_events: list[
+                Event[TelemetryAndSession]
+            ] = await event_collector.wait_for_event(
                 SystemEvents.TELEMETRY_FRAME, timeout=15.0, count=50
             )
             assert len(telemetry_events) >= 50
@@ -292,7 +297,9 @@ class TestEndToEndWithRealIBT:
             )
 
             # Verify session_time progresses
-            session_times: list[float] = [event.data.TelemetryFrame.session_time for event in events]
+            session_times: list[float] = [
+                event.data.TelemetryFrame.session_time for event in events
+            ]
 
             # Session time should generally increase (allowing for some tolerance)
             for i in range(1, len(session_times)):
@@ -340,8 +347,12 @@ class TestEventBusSubscriberPattern:
         await asyncio.sleep(0.5)
 
         # Both should receive all events
-        events1: list[Event[TelemetryAndSession]] = collector1.get_events_of_type(SystemEvents.TELEMETRY_FRAME)
-        events2: list[Event[TelemetryAndSession]] = collector2.get_events_of_type(SystemEvents.TELEMETRY_FRAME)
+        events1: list[Event[TelemetryAndSession]] = collector1.get_events_of_type(
+            SystemEvents.TELEMETRY_FRAME
+        )
+        events2: list[Event[TelemetryAndSession]] = collector2.get_events_of_type(
+            SystemEvents.TELEMETRY_FRAME
+        )
 
         assert len(events1) == 5
         assert len(events2) == 5

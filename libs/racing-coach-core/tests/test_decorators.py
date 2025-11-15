@@ -1,7 +1,7 @@
 """Tests for event handler decorators."""
 
 import pytest
-from racing_coach_core.events.base import EventType, HandlerContext
+from racing_coach_core.events.base import EventBus, EventType, HandlerContext
 from racing_coach_core.events.checking import func_handles, method_handles
 
 
@@ -21,10 +21,10 @@ class TestFuncHandlesDecorator:
         assert callable(my_handler)
         assert my_handler.__name__ == "my_handler"
 
-    def test_func_handles_decorator_preserves_functionality(self, event_bus):
+    def test_func_handles_decorator_preserves_functionality(self, event_bus: EventBus):
         """Test that decorated function still works correctly."""
         event_type = EventType[str](name="TEST", data_type=str)
-        called = []
+        called: list[str] = []
 
         @func_handles(event_type)
         def my_handler(context: HandlerContext[str]) -> None:
@@ -54,7 +54,7 @@ class TestFuncHandlesDecorator:
         assert callable(handler1)
         assert callable(handler2)
 
-    def test_func_handles_decorator_with_return_value(self, event_bus):
+    def test_func_handles_decorator_with_return_value(self, event_bus: EventBus):
         """Test that decorated functions can return values."""
         event_type = EventType[str](name="TEST", data_type=str)
 
@@ -104,13 +104,13 @@ class TestMethodHandlesDecorator:
         handler = MyHandler()
         assert callable(handler.handle)
 
-    def test_method_handles_decorator_preserves_functionality(self, event_bus):
+    def test_method_handles_decorator_preserves_functionality(self, event_bus: EventBus):
         """Test that decorated method still works correctly."""
         event_type = EventType[str](name="TEST", data_type=str)
 
         class MyHandler:
             def __init__(self):
-                self.called = []
+                self.called: list[str] = []
 
             @method_handles(event_type)
             def handle(self, context: HandlerContext[str]) -> None:
@@ -143,7 +143,7 @@ class TestMethodHandlesDecorator:
         assert callable(handler.handle1)
         assert callable(handler.handle2)
 
-    def test_method_handles_decorator_with_return_value(self, event_bus):
+    def test_method_handles_decorator_with_return_value(self, event_bus: EventBus):
         """Test that decorated methods can return values."""
         event_type = EventType[str](name="TEST", data_type=str)
 
@@ -161,7 +161,7 @@ class TestMethodHandlesDecorator:
         result = handler.handle(context)
         assert result == "Processed: test data"
 
-    def test_method_handles_with_state(self, event_bus):
+    def test_method_handles_with_state(self, event_bus: EventBus):
         """Test that decorated methods can maintain state."""
         event_type = EventType[str](name="TEST", data_type=str)
 
@@ -185,15 +185,15 @@ class TestMethodHandlesDecorator:
 
         assert handler.count == 3
 
-    def test_method_handles_multiple_methods_same_class(self, event_bus):
+    def test_method_handles_multiple_methods_same_class(self, event_bus: EventBus):
         """Test multiple decorated methods in the same class."""
         event_type1 = EventType[str](name="TYPE1", data_type=str)
         event_type2 = EventType[str](name="TYPE2", data_type=str)
 
         class MyHandler:
             def __init__(self):
-                self.data1 = []
-                self.data2 = []
+                self.data1: list[str] = []
+                self.data2: list[str] = []
 
             @method_handles(event_type1)
             def handle1(self, context: HandlerContext[str]) -> None:
@@ -223,11 +223,10 @@ class TestMethodHandlesDecorator:
 class TestDecoratorInteroperability:
     """Test that decorators work well with the event bus."""
 
-    @pytest.mark.skip(reason="Event bus threading timing issue - functionality tested elsewhere")
-    async def test_decorated_function_with_event_bus(self, running_event_bus):
+    async def test_decorated_function_with_event_bus(self, running_event_bus: EventBus):
         """Test that decorated functions can be used with EventBus."""
         event_type = EventType[str](name="TEST", data_type=str)
-        received = []
+        received: list[str] = []
 
         @func_handles(event_type)
         def my_handler(context: HandlerContext[str]) -> None:
@@ -248,14 +247,13 @@ class TestDecoratorInteroperability:
 
         assert received == ["test data"]
 
-    @pytest.mark.skip(reason="Event bus threading timing issue - functionality tested elsewhere")
-    async def test_decorated_method_with_event_bus(self, running_event_bus):
+    async def test_decorated_method_with_event_bus(self, running_event_bus: EventBus):
         """Test that decorated methods can be used with EventBus."""
         event_type = EventType[str](name="TEST", data_type=str)
 
         class MyHandler:
             def __init__(self):
-                self.received = []
+                self.received: list[str] = []
 
             @method_handles(event_type)
             def handle(self, context: HandlerContext[str]) -> None:
