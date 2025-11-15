@@ -1,38 +1,19 @@
-"""SQLAlchemy models for the Racing Coach database."""
+"""SQLAlchemy models for the telemetry feature."""
 
 import uuid
 from datetime import datetime
 
 from racing_coach_core.models.telemetry import SessionFrame
-from sqlalchemy import (
-    JSON,
-    Boolean,
-    Column,
-    DateTime,
-    Float,
-    ForeignKey,
-    Index,
-    Integer,
-    String,
-    Text,
-    UniqueConstraint,
-    func,
-)
-from sqlalchemy.dialects.postgresql import JSONB, UUID
-from sqlalchemy.orm import (
-    DeclarativeBase,
-    Mapped,
-    MappedAsDataclass,
-    mapped_column,
-    relationship,
-)
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Index, Integer, String, UniqueConstraint, func
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-
-class Base(MappedAsDataclass, DeclarativeBase):
-    """Base class for all SQLAlchemy models."""
+from racing_coach_server.database.base import Base
 
 
 class TrackSession(Base):
+    """Model representing a track session."""
+
     __tablename__ = "track_session"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
@@ -101,9 +82,7 @@ class Lap(Base):
         nullable=False,
     )
     lap_number: Mapped[int] = mapped_column(Integer, nullable=False)
-    lap_time: Mapped[float | None] = mapped_column(
-        Float, nullable=True
-    )  # May be null if lap is not completed
+    lap_time: Mapped[float | None] = mapped_column(Float, nullable=True)
     is_valid: Mapped[bool] = mapped_column(Boolean, default=True)
 
     # Timestamps
@@ -155,10 +134,8 @@ class Telemetry(Base):
         primary_key=True,
         server_default=func.now(),
         nullable=False,
-    )  # Global timestamp for telemetry data
-    session_time: Mapped[float] = mapped_column(
-        Float, nullable=False
-    )  # Timestamp as reported by iRacing
+    )
+    session_time: Mapped[float] = mapped_column(Float, nullable=False)
 
     # Lap information
     lap_number: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -244,7 +221,7 @@ class Telemetry(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default_factory=uuid.uuid4
-    )  # TODO: Consider removing this
+    )
 
     # Relationships
     track_session: Mapped["TrackSession"] = relationship(

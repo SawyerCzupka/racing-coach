@@ -1,18 +1,21 @@
-import logging
+"""FastAPI application setup for Racing Coach Server."""
 
-import uvicorn
 from fastapi import FastAPI
 
-from racing_coach_server.api.router import router as api_router
+from racing_coach_server.health.router import router as health_router
+from racing_coach_server.logging import setup_logging
+from racing_coach_server.telemetry.router import router as telemetry_router
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s",
+# Setup logging
+setup_logging()
+
+# Create FastAPI app
+app = FastAPI(
+    title="Racing Coach Server",
+    version="0.1.0",
+    description="API server for racing telemetry data collection and analysis",
 )
 
-app = FastAPI()
-app.include_router(api_router)
-
-
-if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info")
+# Include routers
+app.include_router(health_router, prefix="/api/v1")
+app.include_router(telemetry_router, prefix="/api/v1/telemetry")

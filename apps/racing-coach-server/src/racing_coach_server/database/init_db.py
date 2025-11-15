@@ -4,32 +4,36 @@ This module handles the creation and initialization of the TimescaleDB database,
 including the hypertable setup for time-series data.
 """
 
+import asyncio
 import logging
 
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
-from racing_coach_server.database.models import Base
+from racing_coach_server.database.base import Base
+from racing_coach_server.telemetry.models import Lap, Telemetry, TrackSession  # noqa: F401
 
 logger = logging.getLogger(__name__)
 
 
-def init_db(engine):
+async def init_db(engine):
     """
     Initialize the database by creating tables and setting up hypertables.
 
     Args:
-        engine (sqlalchemy.engine.Engine): The SQLAlchemy engine.
+        engine: The async SQLAlchemy engine
     """
     try:
         # Create all tables
-        Base.metadata.create_all(engine)
-        logger.info("Database tables created successfully.")
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+            logger.info("Database tables created successfully.")
 
-        # Create hypertables for time-series data
-        with engine.connect() as conn:
-            conn.execute(
-                text("SELECT create_hypertable('telemetry', 'timestamp', if_not_exists => TRUE);")
+            # Create hypertables for time-series data
+            await conn.execute(
+                text(
+                    "SELECT create_hypertable('telemetry', 'timestamp', if_not_exists => TRUE);"
+                )
             )
             logger.info("Telemetry table converted to TimescaleDB hypertable.")
 
@@ -38,9 +42,13 @@ def init_db(engine):
         raise
 
 
-if __name__ == "__main__":
-    from racing_coach_server.database.database import (
-        engine,
-    )  # uses connection string from settings
+async def main():
+    """Main entry point for database initialization."""
+    from racing_coach_server.database.engine import engine
 
-    init_db(engine)
+    await init_db(engine)
+    await engine.dispose()
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
