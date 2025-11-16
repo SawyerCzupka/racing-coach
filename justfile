@@ -47,10 +47,13 @@ run-server:
     cd apps/racing-coach-server && uv run python -m racing_coach_server.app
 
 # Clean all environments
-clean-all:
+clean_venvs:
     @echo "Cleaning all .venv directories..."
     sudo find . -name ".venv" -type d -exec rm -rf {} +
     @echo "✓ All environments cleaned!"
+
+clean_cache dir:
+    cd {{dir}} && find . -type d -name "__pycache__" -exec rm -r {} +
 
 # Install a package to specific project
 add project package:
