@@ -168,7 +168,11 @@ class TestReplayTelemetrySourceUnit:
     @patch("pathlib.Path.exists")
     @patch("racing_coach_client.collectors.sources.replay.time")
     def test_playback_speed_affects_frame_advance(
-        self, mock_time: MagicMock, mock_exists: MagicMock, mock_ibt_class: MagicMock, mock_irsdk_class: MagicMock
+        self,
+        mock_time: MagicMock,
+        mock_exists: MagicMock,
+        mock_ibt_class: MagicMock,
+        mock_irsdk_class: MagicMock,
     ) -> None:
         """Test that speed_multiplier affects sleep timing between frames."""
         # Setup mocks
@@ -280,7 +284,9 @@ class TestReplayTelemetrySourceUnit:
     @patch("racing_coach_client.collectors.sources.replay.irsdk.IRSDK")
     @patch("racing_coach_client.collectors.sources.replay.irsdk.IBT")
     @patch("pathlib.Path.exists")
-    def test_get_playback_progress(self, mock_exists: MagicMock, mock_ibt_class: MagicMock, mock_irsdk_class: MagicMock) -> None:
+    def test_get_playback_progress(
+        self, mock_exists: MagicMock, mock_ibt_class: MagicMock, mock_irsdk_class: MagicMock
+    ) -> None:
         """Test playback progress calculation."""
         # Setup mocks
         mock_exists.return_value = True

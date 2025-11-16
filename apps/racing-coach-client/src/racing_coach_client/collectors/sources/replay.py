@@ -236,15 +236,13 @@ class ReplayTelemetrySource:
             raise RuntimeError("__getitem__() called while not connected")
 
         # Session metadata keys - use IRSDK instance
-        if key in ['WeekendInfo', 'DriverInfo', 'SessionInfo', 'QualifyResultsInfo', 'CarSetup']:
+        if key in ["WeekendInfo", "DriverInfo", "SessionInfo", "QualifyResultsInfo", "CarSetup"]:
             if not self.ir:
                 raise RuntimeError("IRSDK reader is not initialized")
             try:
                 return self.ir[key]
             except Exception as e:
-                raise TelemetryReadError(
-                    f"Failed to read session metadata '{key}': {e}"
-                ) from e
+                raise TelemetryReadError(f"Failed to read session metadata '{key}': {e}") from e
 
         # Telemetry variables - use IBT instance with caching
         if key not in self._current_buffer:

@@ -4,12 +4,12 @@ default:
 
 format:
     cd apps/racing-coach-client && uvx ruff format src/ tests/
-    cd apps/racing-coach-server && uvx ruff format src/
+    cd apps/racing-coach-server && uvx ruff format src/ tests/
     cd libs/racing-coach-core && uvx ruff format src/ tests/
 
 sort:
     cd apps/racing-coach-client && uvx ruff check src/ tests/ --select I --fix
-    cd apps/racing-coach-server && uvx ruff check src/  --select I --fix
+    cd apps/racing-coach-server && uvx ruff check src/ tests/ --select I --fix
     cd libs/racing-coach-core && uvx ruff check src/ tests/ --select I --fix
 
 sf:

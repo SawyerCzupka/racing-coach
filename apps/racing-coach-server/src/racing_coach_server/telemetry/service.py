@@ -1,0 +1,201 @@
+"""Service for telemetry domain: sessions, laps, and telemetry data.
+
+This service consolidates all business logic and data access for the telemetry feature,
+eliminating the repository layer per the migration spec.
+"""
+
+import logging
+from uuid import UUID
+
+from racing_coach_core.models.telemetry import SessionFrame, TelemetryFrame, TelemetrySequence
+from sqlalchemy import desc, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from racing_coach_server.telemetry.exceptions import SessionNotFoundError
+from racing_coach_server.telemetry.models import Lap, Telemetry, TrackSession
+
+logger = logging.getLogger(__name__)
+
+
+class TelemetryService:
+    """Service for telemetry domain: sessions, laps, and telemetry data."""
+
+    def __init__(self, db: AsyncSession):
+        self.db = db
+
+    async def add_or_get_session(self, session_frame: SessionFrame) -> TrackSession:
+        """
+        Idempotent session creation - returns existing session if found,
+        creates new one otherwise.
+
+        Args:
+            session_frame: The session information from the client
+
+        Returns:
+            TrackSession: The existing or newly created session
+        """
+        # Check if session already exists by ID
+        stmt = select(TrackSession).where(TrackSession.id == session_frame.session_id)
+        result = await self.db.execute(stmt)
+        existing_session = result.scalar_one_or_none()
+
+        if existing_session:
+            logger.debug(f"Found existing session with ID {session_frame.session_id}")
+            return existing_session
+
+        # Create new session
+        new_session = TrackSession(
+            id=session_frame.session_id,
+            track_id=session_frame.track_id,
+            track_name=session_frame.track_name,
+            track_config_name=session_frame.track_config_name,
+            track_type=session_frame.track_type,
+            car_id=session_frame.car_id,
+            car_name=session_frame.car_name,
+            car_class_id=session_frame.car_class_id,
+            series_id=session_frame.series_id,
+        )
+        self.db.add(new_session)
+        await self.db.flush()  # Flush to ensure ID is available
+        logger.info(f"Created new session with ID {new_session.id}")
+        return new_session
+
+    async def get_latest_session(self) -> TrackSession | None:
+        """
+        Get the most recent track session.
+
+        Returns:
+            TrackSession | None: The latest session or None if no sessions exist
+        """
+        stmt = select(TrackSession).order_by(desc(TrackSession.created_at)).limit(1)
+        result = await self.db.execute(stmt)
+        session = result.scalar_one_or_none()
+
+        if session:
+            logger.debug(f"Found latest session with ID {session.id}")
+        else:
+            logger.debug("No sessions found in database")
+
+        return session
+
+    async def add_lap(
+        self,
+        track_session_id: UUID,
+        lap_number: int,
+        lap_time: float | None = None,
+        is_valid: bool = False,
+    ) -> Lap:
+        """
+        Create a lap record for a session.
+
+        Args:
+            track_session_id: The ID of the track session
+            lap_number: The lap number
+            lap_time: Optional lap time (nullable)
+            is_valid: Whether the lap is valid
+
+        Returns:
+            Lap: The created lap record
+        """
+        lap = Lap(
+            track_session_id=track_session_id,
+            lap_number=lap_number,
+            lap_time=lap_time,
+            is_valid=is_valid,
+        )
+        self.db.add(lap)
+        await self.db.flush()  # Flush to get the ID
+        logger.info(f"Created lap {lap_number} for session {track_session_id}")
+        return lap
+
+    async def add_telemetry_sequence(
+        self,
+        telemetry_sequence: TelemetrySequence,
+        lap_id: UUID,
+        session_id: UUID,
+    ) -> None:
+        """
+        Batch insert telemetry frames for a lap.
+
+        Args:
+            telemetry_sequence: The sequence of telemetry frames to add
+            lap_id: The ID of the lap
+            session_id: The ID of the session
+        """
+        frames = []
+        for frame in telemetry_sequence.frames:
+            # Extract tire data from nested dictionaries
+            tire_temps = frame.tire_temps
+            tire_wear = frame.tire_wear
+            brake_pressure = frame.brake_line_pressure
+
+            telemetry = Telemetry(
+                track_session_id=session_id,
+                lap_id=lap_id,
+                timestamp=frame.timestamp,
+                session_time=frame.session_time,
+                lap_number=frame.lap_number,
+                lap_distance_pct=frame.lap_distance_pct,
+                lap_distance=frame.lap_distance,
+                current_lap_time=frame.current_lap_time,
+                last_lap_time=frame.last_lap_time,
+                best_lap_time=frame.best_lap_time,
+                speed=frame.speed,
+                rpm=frame.rpm,
+                gear=frame.gear,
+                throttle=frame.throttle,
+                brake=frame.brake,
+                clutch=frame.clutch,
+                steering_angle=frame.steering_angle,
+                lateral_acceleration=frame.lateral_acceleration,
+                longitudinal_acceleration=frame.longitudinal_acceleration,
+                vertical_acceleration=frame.vertical_acceleration,
+                yaw_rate=frame.yaw_rate,
+                roll_rate=frame.roll_rate,
+                pitch_rate=frame.pitch_rate,
+                position_x=frame.position_x,
+                position_y=frame.position_y,
+                position_z=frame.position_z,
+                yaw=frame.yaw,
+                pitch=frame.pitch,
+                roll=frame.roll,
+                track_temp=frame.track_temp,
+                track_wetness=frame.track_wetness,
+                air_temp=frame.air_temp,
+                session_flags=frame.session_flags,
+                track_surface=frame.track_surface,
+                on_pit_road=frame.on_pit_road,
+                # Flatten tire data
+                lf_tire_temp_left=tire_temps["LF"]["left"],
+                lf_tire_temp_middle=tire_temps["LF"]["middle"],
+                lf_tire_temp_right=tire_temps["LF"]["right"],
+                rf_tire_temp_left=tire_temps["RF"]["left"],
+                rf_tire_temp_middle=tire_temps["RF"]["middle"],
+                rf_tire_temp_right=tire_temps["RF"]["right"],
+                lr_tire_temp_left=tire_temps["LR"]["left"],
+                lr_tire_temp_middle=tire_temps["LR"]["middle"],
+                lr_tire_temp_right=tire_temps["LR"]["right"],
+                rr_tire_temp_left=tire_temps["RR"]["left"],
+                rr_tire_temp_middle=tire_temps["RR"]["middle"],
+                rr_tire_temp_right=tire_temps["RR"]["right"],
+                lf_tire_wear_left=tire_wear["LF"]["left"],
+                lf_tire_wear_middle=tire_wear["LF"]["middle"],
+                lf_tire_wear_right=tire_wear["LF"]["right"],
+                rf_tire_wear_left=tire_wear["RF"]["left"],
+                rf_tire_wear_middle=tire_wear["RF"]["middle"],
+                rf_tire_wear_right=tire_wear["RF"]["right"],
+                lr_tire_wear_left=tire_wear["LR"]["left"],
+                lr_tire_wear_middle=tire_wear["LR"]["middle"],
+                lr_tire_wear_right=tire_wear["LR"]["right"],
+                rr_tire_wear_left=tire_wear["RR"]["left"],
+                rr_tire_wear_middle=tire_wear["RR"]["middle"],
+                rr_tire_wear_right=tire_wear["RR"]["right"],
+                lf_brake_pressure=brake_pressure["LF"],
+                rf_brake_pressure=brake_pressure["RF"],
+                lr_brake_pressure=brake_pressure["LR"],
+                rr_brake_pressure=brake_pressure["RR"],
+            )
+            frames.append(telemetry)
+
+        self.db.add_all(frames)
+        logger.info(f"Added {len(frames)} telemetry frames for lap {lap_id}")
