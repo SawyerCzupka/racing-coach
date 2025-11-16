@@ -1,12 +1,11 @@
 """Unit tests for telemetry router endpoints."""
 
 from contextlib import asynccontextmanager
+from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 import pytest
 from httpx import ASGITransport, AsyncClient
-from unittest.mock import AsyncMock, patch
-
 from racing_coach_server.app import app
 from racing_coach_server.telemetry.models import Lap, TrackSession
 
@@ -67,9 +66,7 @@ class TestTelemetryRouter:
 
         app.dependency_overrides[get_telemetry_service] = mock_service_dep
 
-        with patch(
-            "racing_coach_server.telemetry.router.transactional_session"
-        ) as mock_txn:
+        with patch("racing_coach_server.telemetry.router.transactional_session") as mock_txn:
             mock_txn.side_effect = mock_transaction
 
             async with AsyncClient(
@@ -128,9 +125,7 @@ class TestTelemetryRouter:
 
         app.dependency_overrides[get_telemetry_service] = mock_service_dep
 
-        async with AsyncClient(
-            transport=ASGITransport(app=app), base_url="http://test"
-        ) as client:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             # Act
             response = await client.get("/api/v1/telemetry/sessions/latest")
 
@@ -158,9 +153,7 @@ class TestTelemetryRouter:
 
         app.dependency_overrides[get_telemetry_service] = mock_service_dep
 
-        async with AsyncClient(
-            transport=ASGITransport(app=app), base_url="http://test"
-        ) as client:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             # Act
             response = await client.get("/api/v1/telemetry/sessions/latest")
 

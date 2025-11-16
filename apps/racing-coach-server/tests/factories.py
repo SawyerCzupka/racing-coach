@@ -5,9 +5,7 @@ from uuid import uuid4
 
 from factory import Factory, Faker, LazyAttribute, LazyFunction, post_generation
 from racing_coach_core.models.telemetry import SessionFrame, TelemetryFrame
-
 from racing_coach_server.telemetry.models import Lap, Telemetry, TrackSession
-
 
 # ============================================================================
 # Core Library Factories (Re-exported from racing-coach-core)

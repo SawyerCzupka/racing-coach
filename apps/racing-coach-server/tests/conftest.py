@@ -1,6 +1,5 @@
 """Pytest configuration and shared fixtures for racing-coach-server tests."""
 
-import os
 from collections.abc import AsyncGenerator
 from pathlib import Path
 
@@ -10,12 +9,19 @@ from alembic import command
 from alembic.config import Config
 from httpx import ASGITransport, AsyncClient
 from pytest_factoryboy import register
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-from testcontainers.postgres import PostgresContainer
-
+from pytest_mock import MockerFixture
 from racing_coach_server.app import app
 from racing_coach_server.database.engine import get_async_session
 from racing_coach_server.telemetry.service import TelemetryService
+from sqlalchemy.ext.asyncio import (
+    AsyncConnection,
+    AsyncEngine,
+    AsyncSession,
+    AsyncTransaction,
+    create_async_engine,
+)
+from testcontainers.postgres import PostgresContainer
+
 from tests.factories import (
     LapFactory,
     SessionFrameFactory,
@@ -23,10 +29,6 @@ from tests.factories import (
     TelemetryFrameFactory,
     TrackSessionFactory,
 )
-
-# Disable Ryuk to avoid port binding issues in some Docker configurations
-# Note: With Ryuk disabled, containers are stopped via context manager.
-os.environ["TESTCONTAINERS_RYUK_DISABLED"] = "true"
 
 # Register factories to create pytest fixtures automatically
 register(TelemetryFrameFactory)
@@ -56,7 +58,7 @@ def postgres_container():
 
 
 @pytest_asyncio.fixture(scope="session")
-async def db_engine(postgres_container):
+async def db_engine(postgres_container: PostgresContainer):
     """
     Create async SQLAlchemy engine with full schema from Alembic migrations.
 
@@ -116,7 +118,7 @@ async def db_engine(postgres_container):
 
 
 @pytest_asyncio.fixture(scope="session")
-async def connection(db_engine):
+async def connection(db_engine: AsyncEngine):
     """
     Session-scoped database connection for transaction management.
 
@@ -128,7 +130,7 @@ async def connection(db_engine):
 
 
 @pytest_asyncio.fixture()
-async def transaction(connection):
+async def transaction(connection: AsyncConnection):
     """
     Function-scoped transaction that rolls back after each test.
 
@@ -143,7 +145,7 @@ async def transaction(connection):
 
 
 @pytest_asyncio.fixture()
-async def db_session(connection, transaction):
+async def db_session(connection: AsyncConnection, transaction: AsyncTransaction):
     """
     Provide isolated AsyncSession for each test with automatic rollback.
 
@@ -213,7 +215,7 @@ async def test_client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, N
 
 
 @pytest.fixture
-def mock_db_session(mocker):
+def mock_db_session(mocker: MockerFixture):
     """Create a mock AsyncSession for unit tests."""
     mock_session = mocker.AsyncMock(spec=AsyncSession)
     mock_session.commit = mocker.AsyncMock()
@@ -230,17 +232,17 @@ def mock_db_session(mocker):
 # ============================================================================
 
 
-def pytest_configure(config):
-    """Configure custom pytest markers."""
-    config.addinivalue_line(
-        "markers",
-        "unit: mark test as a unit test (mocks external dependencies)",
-    )
-    config.addinivalue_line(
-        "markers",
-        "integration: mark test as an integration test (uses test database)",
-    )
-    config.addinivalue_line(
-        "markers",
-        "slow: mark test as slow (takes longer than 1 second)",
-    )
+# def pytest_configure(config):
+#     """Configure custom pytest markers."""
+#     config.addinivalue_line(
+#         "markers",
+#         "unit: mark test as a unit test (mocks external dependencies)",
+#     )
+#     config.addinivalue_line(
+#         "markers",
+#         "integration: mark test as an integration test (uses test database)",
+#     )
+#     config.addinivalue_line(
+#         "markers",
+#         "slow: mark test as slow (takes longer than 1 second)",
+#     )

@@ -5,10 +5,9 @@ from uuid import uuid4
 import pytest
 from httpx import AsyncClient
 from racing_coach_core.models.telemetry import LapTelemetry, SessionFrame
+from racing_coach_server.telemetry.models import Lap, Telemetry, TrackSession
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-
-from racing_coach_server.telemetry.models import Lap, Telemetry, TrackSession
 
 
 @pytest.mark.integration
@@ -44,9 +43,7 @@ class TestTelemetryEndpoints:
         """Test uploading a lap creates session, lap, and telemetry data."""
         # Arrange
         session_frame: SessionFrame = session_frame_factory.build()
-        frames = [
-            telemetry_frame_factory.build(lap_number=1) for _ in range(10)
-        ]
+        frames = [telemetry_frame_factory.build(lap_number=1) for _ in range(10)]
         lap_telemetry = LapTelemetry(frames=frames, lap_time=90.5)
 
         # Act
@@ -116,8 +113,7 @@ class TestTelemetryEndpoints:
             json={
                 "lap": {
                     "frames": [
-                        {**f.model_dump(), "timestamp": f.timestamp.isoformat()}
-                        for f in frames1
+                        {**f.model_dump(), "timestamp": f.timestamp.isoformat()} for f in frames1
                     ],
                     "lap_time": 90.5,
                 },
@@ -136,8 +132,7 @@ class TestTelemetryEndpoints:
             json={
                 "lap": {
                     "frames": [
-                        {**f.model_dump(), "timestamp": f.timestamp.isoformat()}
-                        for f in frames2
+                        {**f.model_dump(), "timestamp": f.timestamp.isoformat()} for f in frames2
                     ],
                     "lap_time": 88.3,
                 },
@@ -180,6 +175,7 @@ class TestTelemetryEndpoints:
 
         # Add small delay to ensure different timestamps
         import asyncio
+
         await asyncio.sleep(0.01)
 
         db_session.add(session2)
@@ -232,8 +228,7 @@ class TestTransactionManagement:
             json={
                 "lap": {
                     "frames": [
-                        {**f.model_dump(), "timestamp": f.timestamp.isoformat()}
-                        for f in frames
+                        {**f.model_dump(), "timestamp": f.timestamp.isoformat()} for f in frames
                     ],
                     "lap_time": 90.5,
                 },
@@ -319,8 +314,7 @@ class TestErrorHandling:
             json={
                 "lap": {
                     "frames": [
-                        {**f.model_dump(), "timestamp": f.timestamp.isoformat()}
-                        for f in frames
+                        {**f.model_dump(), "timestamp": f.timestamp.isoformat()} for f in frames
                     ],
                     "lap_time": 90.5,
                 },
@@ -338,8 +332,7 @@ class TestErrorHandling:
             json={
                 "lap": {
                     "frames": [
-                        {**f.model_dump(), "timestamp": f.timestamp.isoformat()}
-                        for f in frames
+                        {**f.model_dump(), "timestamp": f.timestamp.isoformat()} for f in frames
                     ],
                     "lap_time": 91.2,
                 },

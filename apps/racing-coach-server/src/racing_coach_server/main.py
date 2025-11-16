@@ -2,7 +2,6 @@
 
 import uvicorn
 
-
 if __name__ == "__main__":
     uvicorn.run(
         "racing_coach_server.app:app",

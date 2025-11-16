@@ -1,11 +1,11 @@
 """Unit tests for health check router."""
 
-import pytest
-from httpx import ASGITransport, AsyncClient
-from sqlalchemy.exc import SQLAlchemyError
 from unittest.mock import AsyncMock
 
+import pytest
+from httpx import ASGITransport, AsyncClient
 from racing_coach_server.app import app
+from sqlalchemy.exc import SQLAlchemyError
 
 
 @pytest.mark.unit
@@ -28,9 +28,7 @@ class TestHealthRouter:
 
         app.dependency_overrides[get_async_session] = mock_session_generator
 
-        async with AsyncClient(
-            transport=ASGITransport(app=app), base_url="http://test"
-        ) as client:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             # Act
             response = await client.get("/api/v1/health")
 
@@ -58,9 +56,7 @@ class TestHealthRouter:
 
         app.dependency_overrides[get_async_session] = mock_session_generator
 
-        async with AsyncClient(
-            transport=ASGITransport(app=app), base_url="http://test"
-        ) as client:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             # Act
             response = await client.get("/api/v1/health")
 

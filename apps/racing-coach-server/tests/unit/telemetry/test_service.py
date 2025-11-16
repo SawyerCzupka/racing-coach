@@ -1,14 +1,13 @@
 """Unit tests for TelemetryService."""
 
+from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
 from racing_coach_core.models.telemetry import LapTelemetry, SessionFrame
-from sqlalchemy import select
-from unittest.mock import AsyncMock
-
 from racing_coach_server.telemetry.models import Lap, Telemetry, TrackSession
 from racing_coach_server.telemetry.service import TelemetryService
+from sqlalchemy import select
 
 
 @pytest.mark.unit

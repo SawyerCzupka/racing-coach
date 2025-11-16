@@ -51,9 +51,7 @@ async def upload_lap(
                 telemetry_sequence=lap, lap_id=db_lap.id, session_id=db_track_session.id
             )
 
-            logger.info(
-                f"Successfully uploaded lap {lap_number} with {len(lap.frames)} frames"
-            )
+            logger.info(f"Successfully uploaded lap {lap_number} with {len(lap.frames)} frames")
 
             return LapUploadResponse(
                 status="success",
