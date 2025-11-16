@@ -1,13 +1,18 @@
 """Unit tests for telemetry router endpoints."""
 
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from typing import Any
 from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 import pytest
-from httpx import ASGITransport, AsyncClient
+from httpx import ASGITransport, AsyncClient, Response
+from racing_coach_core.models.telemetry import SessionFrame, TelemetryFrame
 from racing_coach_server.app import app
 from racing_coach_server.telemetry.models import Lap, TrackSession
+
+from tests.factories import SessionFrameFactory, TelemetryFrameFactory, TrackSessionFactory
 
 
 @pytest.mark.unit
@@ -99,7 +104,7 @@ class TestTelemetryRouter:
 
         # Assert
         assert response.status_code == 200
-        data = response.json()
+        data: dict[str, Any] = response.json()
         assert data["status"] == "success"
         assert data["lap_id"] == str(lap_id)
         mock_service.add_or_get_session.assert_called_once()
@@ -108,11 +113,11 @@ class TestTelemetryRouter:
 
     async def test_get_latest_session_success(
         self,
-        track_session_factory,
-    ):
+        track_session_factory: TrackSessionFactory,
+    ) -> None:
         """Test retrieving the latest session."""
         # Arrange
-        mock_session = track_session_factory.build()
+        mock_session: TrackSession = track_session_factory.build()
 
         mock_service = AsyncMock()
         mock_service.get_latest_session.return_value = mock_session
@@ -134,15 +139,15 @@ class TestTelemetryRouter:
 
         # Assert
         assert response.status_code == 200
-        data = response.json()
+        data: dict[str, Any] = response.json()
         assert data["track_id"] == mock_session.track_id
         assert data["track_name"] == mock_session.track_name
         assert data["car_id"] == mock_session.car_id
 
-    async def test_get_latest_session_not_found(self):
+    async def test_get_latest_session_not_found(self) -> None:
         """Test retrieving latest session when none exists."""
         # Arrange
-        mock_service = AsyncMock()
+        mock_service: AsyncMock = AsyncMock()
         mock_service.get_latest_session.return_value = None
 
         async def mock_service_dep():

@@ -1,7 +1,9 @@
 """Pytest configuration and shared fixtures for racing-coach-server tests."""
 
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Generator
 from pathlib import Path
+from typing import TYPE_CHECKING
+from unittest.mock import AsyncMock
 
 import pytest
 import pytest_asyncio
@@ -30,6 +32,9 @@ from tests.factories import (
     TrackSessionFactory,
 )
 
+if TYPE_CHECKING:
+    from pytest_mock.plugin import MockType
+
 # Register factories to create pytest fixtures automatically
 register(TelemetryFrameFactory)
 register(SessionFrameFactory)
@@ -44,7 +49,7 @@ register(TelemetryFactory)
 
 
 @pytest.fixture(scope="session")
-def postgres_container():
+def postgres_container() -> Generator[PostgresContainer, None, None]:
     """
     Start a PostgreSQL container with TimescaleDB for the entire test session.
 
@@ -52,13 +57,18 @@ def postgres_container():
     - Starts one PostgreSQL container per test session (expensive operation)
     - Automatically handles container lifecycle (start/stop)
     - Uses timescale/timescaledb:latest-pg16 image which includes TimescaleDB extension
+
+    Yields:
+        PostgresContainer: The started PostgreSQL container instance.
     """
     with PostgresContainer("timescale/timescaledb:2.18.1-pg17") as postgres:
         yield postgres
 
 
 @pytest_asyncio.fixture(scope="session")
-async def db_engine(postgres_container: PostgresContainer):
+async def db_engine(
+    postgres_container: PostgresContainer,
+) -> AsyncGenerator[AsyncEngine, None]:
     """
     Create async SQLAlchemy engine with full schema from Alembic migrations.
 
@@ -71,6 +81,12 @@ async def db_engine(postgres_container: PostgresContainer):
 
     The database schema is created once per test session for performance.
     Individual tests get transaction isolation via the db_session fixture.
+
+    Args:
+        postgres_container: The PostgreSQL test container.
+
+    Yields:
+        AsyncEngine: Configured async database engine.
     """
     # Get synchronous connection URL from TestContainers
     sync_url = postgres_container.get_connection_url()
@@ -118,19 +134,25 @@ async def db_engine(postgres_container: PostgresContainer):
 
 
 @pytest_asyncio.fixture(scope="session")
-async def connection(db_engine: AsyncEngine):
+async def connection(db_engine: AsyncEngine) -> AsyncGenerator[AsyncConnection, None]:
     """
     Session-scoped database connection for transaction management.
 
     This connection is reused across all tests in the session.
     Individual test isolation is handled by the transaction fixture.
+
+    Args:
+        db_engine: The async database engine.
+
+    Yields:
+        AsyncConnection: Database connection for the test session.
     """
     async with db_engine.connect() as connection:
         yield connection
 
 
 @pytest_asyncio.fixture()
-async def transaction(connection: AsyncConnection):
+async def transaction(connection: AsyncConnection) -> AsyncGenerator[AsyncTransaction, None]:
     """
     Function-scoped transaction that rolls back after each test.
 
@@ -139,13 +161,21 @@ async def transaction(connection: AsyncConnection):
 
     Each test gets a fresh transaction that is automatically rolled back
     when the test completes, ensuring no test data persists.
+
+    Args:
+        connection: The database connection.
+
+    Yields:
+        AsyncTransaction: Transaction that will be rolled back after test.
     """
     async with connection.begin() as transaction:
         yield transaction
 
 
 @pytest_asyncio.fixture()
-async def db_session(connection: AsyncConnection, transaction: AsyncTransaction):
+async def db_session(
+    connection: AsyncConnection, transaction: AsyncTransaction
+) -> AsyncGenerator[AsyncSession, None]:
     """
     Provide isolated AsyncSession for each test with automatic rollback.
 
@@ -155,12 +185,21 @@ async def db_session(connection: AsyncConnection, transaction: AsyncTransaction)
     - Automatically rolls back all changes after test completes
     - Ensures complete test isolation without recreating database
 
-    Usage:
-        async def test_create_lap(db_session):
+    Args:
+        connection: The database connection.
+        transaction: The transaction for this test.
+
+    Yields:
+        AsyncSession: Isolated session for the test.
+
+    Example:
+        ```python
+        async def test_create_lap(db_session: AsyncSession) -> None:
             lap = Lap(lap_number=1, lap_time=90.5)
             db_session.add(lap)
             await db_session.commit()
             # Automatically rolled back after test
+        ```
     """
     session = AsyncSession(
         bind=connection,
@@ -181,7 +220,15 @@ async def db_session(connection: AsyncConnection, transaction: AsyncTransaction)
 
 @pytest.fixture
 def telemetry_service(db_session: AsyncSession) -> TelemetryService:
-    """Create a TelemetryService instance for testing."""
+    """
+    Create a TelemetryService instance for testing.
+
+    Args:
+        db_session: The database session to inject into the service.
+
+    Returns:
+        TelemetryService: Configured service instance for testing.
+    """
     return TelemetryService(db_session)
 
 
@@ -196,9 +243,15 @@ async def test_client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, N
     Create a test client for the FastAPI app with database dependency override.
 
     This allows integration tests to use the test database instead of the real one.
+
+    Args:
+        db_session: The test database session to override the app dependency.
+
+    Yields:
+        AsyncClient: Configured HTTP client for testing FastAPI endpoints.
     """
 
-    async def override_get_db():
+    async def override_get_db() -> AsyncGenerator[AsyncSession, None]:
         yield db_session
 
     app.dependency_overrides[get_async_session] = override_get_db
@@ -215,8 +268,19 @@ async def test_client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, N
 
 
 @pytest.fixture
-def mock_db_session(mocker: MockerFixture):
-    """Create a mock AsyncSession for unit tests."""
+def mock_db_session(mocker: MockerFixture) -> AsyncMock:
+    """
+    Create a mock AsyncSession for unit tests.
+
+    This fixture provides a fully mocked AsyncSession with all common methods
+    pre-configured as AsyncMocks or Mocks as appropriate.
+
+    Args:
+        mocker: The pytest-mock fixture for creating mocks.
+
+    Returns:
+        AsyncMock: Mocked AsyncSession with configured methods.
+    """
     mock_session = mocker.AsyncMock(spec=AsyncSession)
     mock_session.commit = mocker.AsyncMock()
     mock_session.rollback = mocker.AsyncMock()

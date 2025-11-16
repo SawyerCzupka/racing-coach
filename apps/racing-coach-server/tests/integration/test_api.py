@@ -1,13 +1,16 @@
 """Integration tests for API endpoints with real database."""
 
+from typing import Any
 from uuid import uuid4
 
 import pytest
-from httpx import AsyncClient
-from racing_coach_core.models.telemetry import LapTelemetry, SessionFrame
+from httpx import AsyncClient, Response
+from racing_coach_core.models.telemetry import LapTelemetry, SessionFrame, TelemetryFrame
 from racing_coach_server.telemetry.models import Lap, Telemetry, TrackSession
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from tests.factories import SessionFrameFactory, TelemetryFrameFactory, TrackSessionFactory
 
 
 @pytest.mark.integration
@@ -15,14 +18,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 class TestHealthEndpoint:
     """Integration tests for health check endpoint."""
 
-    async def test_health_check_with_database(self, test_client: AsyncClient):
+    async def test_health_check_with_database(self, test_client: AsyncClient) -> None:
         """Test health check endpoint returns healthy with real database."""
         # Act
-        response = await test_client.get("/api/v1/health")
+        response: Response = await test_client.get("/api/v1/health")
 
         # Assert
         assert response.status_code == 200
-        data = response.json()
+        data: dict[str, Any] = response.json()
         assert data["status"] == "healthy"
         assert data["database_status"] == "healthy"
         assert "successful" in data["database_message"].lower()
@@ -37,17 +40,18 @@ class TestTelemetryEndpoints:
         self,
         test_client: AsyncClient,
         db_session: AsyncSession,
-        telemetry_frame_factory,
-        session_frame_factory,
-    ):
+        telemetry_frame_factory: TelemetryFrameFactory,
+        session_frame_factory: SessionFrameFactory,
+    ) -> None:
         """Test uploading a lap creates session, lap, and telemetry data."""
         # Arrange
         session_frame: SessionFrame = session_frame_factory.build()
-        frames = [telemetry_frame_factory.build(lap_number=1) for _ in range(10)]
-        lap_telemetry = LapTelemetry(frames=frames, lap_time=90.5)
+        frames: list[TelemetryFrame] = [
+            telemetry_frame_factory.build(lap_number=1) for _ in range(10)
+        ]
 
         # Act
-        response = await test_client.post(
+        response: Response = await test_client.post(
             "/api/v1/telemetry/lap",
             json={
                 "lap": {
@@ -70,14 +74,14 @@ class TestTelemetryEndpoints:
 
         # Assert
         assert response.status_code == 200
-        data = response.json()
+        data: dict[str, Any] = response.json()
         assert data["status"] == "success"
         assert "lap_id" in data
 
         # Verify session was created
         stmt = select(TrackSession).where(TrackSession.id == session_frame.session_id)
         result = await db_session.execute(stmt)
-        track_session = result.scalar_one_or_none()
+        track_session: TrackSession | None = result.scalar_one_or_none()
         assert track_session is not None
         assert track_session.track_id == session_frame.track_id
         assert track_session.car_id == session_frame.car_id
@@ -85,23 +89,23 @@ class TestTelemetryEndpoints:
         # Verify lap was created
         stmt = select(Lap).where(Lap.track_session_id == session_frame.session_id)
         result = await db_session.execute(stmt)
-        lap = result.scalar_one_or_none()
+        lap: Lap | None = result.scalar_one_or_none()
         assert lap is not None
         assert lap.lap_number == 1
 
         # Verify telemetry was created
         stmt = select(Telemetry).where(Telemetry.lap_id == lap.id)
         result = await db_session.execute(stmt)
-        telemetry_records = result.scalars().all()
+        telemetry_records: list[Telemetry] = list(result.scalars().all())
         assert len(telemetry_records) == 10
 
     async def test_upload_lap_idempotent_session_creation(
         self,
         test_client: AsyncClient,
         db_session: AsyncSession,
-        telemetry_frame_factory,
-        session_frame_factory,
-    ):
+        telemetry_frame_factory: TelemetryFrameFactory,
+        session_frame_factory: SessionFrameFactory,
+    ) -> None:
         """Test uploading multiple laps for same session doesn't duplicate session."""
         # Arrange
         session_frame: SessionFrame = session_frame_factory.build()
@@ -163,8 +167,8 @@ class TestTelemetryEndpoints:
         self,
         test_client: AsyncClient,
         db_session: AsyncSession,
-        track_session_factory,
-    ):
+        track_session_factory: TrackSessionFactory,
+    ) -> None:
         """Test retrieving the latest session."""
         # Arrange - Create two sessions
         session1 = track_session_factory.build()
@@ -195,7 +199,7 @@ class TestTelemetryEndpoints:
     async def test_get_latest_session_not_found(
         self,
         test_client: AsyncClient,
-    ):
+    ) -> None:
         """Test retrieving latest session when none exists."""
         # Act
         response = await test_client.get("/api/v1/telemetry/sessions/latest")
@@ -214,9 +218,9 @@ class TestTransactionManagement:
         self,
         test_client: AsyncClient,
         db_session: AsyncSession,
-        telemetry_frame_factory,
-        session_frame_factory,
-    ):
+        telemetry_frame_factory: TelemetryFrameFactory,
+        session_frame_factory: SessionFrameFactory,
+    ) -> None:
         """Test that successful lap upload commits all changes."""
         # Arrange
         session_frame: SessionFrame = session_frame_factory.build()
@@ -283,12 +287,12 @@ class TestErrorHandling:
     async def test_upload_lap_validation_errors(
         self,
         test_client: AsyncClient,
-        invalid_payload,
-        expected_status,
-    ):
+        invalid_payload: dict[str, Any],
+        expected_status: int,
+    ) -> None:
         """Test that invalid payloads return appropriate error codes."""
         # Act
-        response = await test_client.post(
+        response: Response = await test_client.post(
             "/api/v1/telemetry/lap",
             json=invalid_payload,
         )
@@ -300,9 +304,9 @@ class TestErrorHandling:
         self,
         test_client: AsyncClient,
         db_session: AsyncSession,
-        telemetry_frame_factory,
-        session_frame_factory,
-    ):
+        telemetry_frame_factory: TelemetryFrameFactory,
+        session_frame_factory: SessionFrameFactory,
+    ) -> None:
         """Test that uploading same lap number twice fails."""
         # Arrange
         session_frame: SessionFrame = session_frame_factory.build()
