@@ -5,6 +5,7 @@ Revises:
 Create Date: 2025-11-15
 
 """
+
 from collections.abc import Sequence
 
 import sqlalchemy as sa
@@ -49,9 +50,7 @@ def upgrade() -> None:
         ),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index(
-        "idx_session_track_id", "track_session", ["track_id"], unique=False
-    )
+    op.create_index("idx_session_track_id", "track_session", ["track_id"], unique=False)
     op.create_index("idx_session_car_id", "track_session", ["car_id"], unique=False)
     op.create_index(
         "idx_session_track_id_car_id",
@@ -184,7 +183,7 @@ def upgrade() -> None:
             ["lap.id"],
             ondelete="CASCADE",
         ),
-        sa.PrimaryKeyConstraint("id"),
+        sa.PrimaryKeyConstraint("timestamp"),
     )
 
     # Create indexes on telemetry table
@@ -195,9 +194,7 @@ def upgrade() -> None:
         ["track_session_id"],
         unique=False,
     )
-    op.create_index(
-        "idx_telemetry_timestamp", "telemetry", ["timestamp"], unique=False
-    )
+    op.create_index("idx_telemetry_timestamp", "telemetry", ["timestamp"], unique=False)
     op.create_index("idx_session_time", "telemetry", ["session_time"], unique=False)
 
     # Convert telemetry table to TimescaleDB hypertable

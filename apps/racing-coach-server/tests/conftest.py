@@ -51,7 +51,7 @@ def postgres_container():
     - Automatically handles container lifecycle (start/stop)
     - Uses timescale/timescaledb:latest-pg16 image which includes TimescaleDB extension
     """
-    with PostgresContainer("timescale/timescaledb:latest-pg16") as postgres:
+    with PostgresContainer("timescale/timescaledb:2.18.1-pg17") as postgres:
         yield postgres
 
 
@@ -73,6 +73,8 @@ async def db_engine(postgres_container):
     # Get synchronous connection URL from TestContainers
     sync_url = postgres_container.get_connection_url()
 
+    print(f"Test database URL: {sync_url}")
+
     # Ensure TimescaleDB extension is installed
     import psycopg2
     from sqlalchemy.engine import make_url
@@ -80,7 +82,9 @@ async def db_engine(postgres_container):
     try:
         # Parse SQLAlchemy URL and convert to psycopg2 format
         url = make_url(sync_url)
-        psycopg2_url = f"postgresql://{url.username}:{url.password}@{url.host}:{url.port}/{url.database}"
+        psycopg2_url = (
+            f"postgresql://{url.username}:{url.password}@{url.host}:{url.port}/{url.database}"
+        )
         conn = psycopg2.connect(psycopg2_url)
         cursor = conn.cursor()
         cursor.execute("CREATE EXTENSION IF NOT EXISTS timescaledb")
@@ -197,9 +201,7 @@ async def test_client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, N
 
     app.dependency_overrides[get_async_session] = override_get_db
 
-    async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test"
-    ) as client:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         yield client
 
     app.dependency_overrides.clear()
