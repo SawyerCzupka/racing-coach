@@ -1,8 +1,6 @@
 """Pydantic schemas for telemetry feature request/response models."""
 
-from uuid import UUID
-
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from racing_coach_core.models.responses import LapUploadResponse
 from racing_coach_core.models.telemetry import LapTelemetry, SessionFrame
 

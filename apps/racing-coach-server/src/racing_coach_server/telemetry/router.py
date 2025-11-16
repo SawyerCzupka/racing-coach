@@ -5,7 +5,6 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException
 from racing_coach_core.models.responses import LapUploadResponse
 from racing_coach_core.models.telemetry import LapTelemetry, SessionFrame
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from racing_coach_server.database.engine import transactional_session
 from racing_coach_server.dependencies import get_telemetry_service
@@ -34,7 +33,7 @@ async def upload_lap(
     - If all operations succeed, changes are committed
     """
     try:
-        async with transactional_session(service.db) as txn:
+        async with transactional_session(service.db):
             # Get lap number from first frame
             lap_number = lap.frames[0].lap_number
 
@@ -61,7 +60,7 @@ async def upload_lap(
 
     except Exception as e:
         logger.error(f"Error uploading lap: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Server error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Server error: {str(e)}") from e
 
 
 @router.get("/sessions/latest", tags=["telemetry"])
@@ -83,4 +82,4 @@ async def get_latest_session(
         raise
     except Exception as e:
         logger.error(f"Error retrieving latest session: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Server error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Server error: {str(e)}") from e

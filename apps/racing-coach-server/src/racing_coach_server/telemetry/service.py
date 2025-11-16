@@ -7,7 +7,7 @@ eliminating the repository layer per the migration spec.
 import logging
 from uuid import UUID
 
-from racing_coach_core.models.telemetry import SessionFrame, TelemetryFrame, TelemetrySequence
+from racing_coach_core.models.telemetry import SessionFrame, TelemetrySequence
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -122,7 +122,7 @@ class TelemetryService:
             lap_id: The ID of the lap
             session_id: The ID of the session
         """
-        frames = []
+        frames: list[Telemetry] = []
         for frame in telemetry_sequence.frames:
             # Extract tire data from nested dictionaries
             tire_temps = frame.tire_temps
