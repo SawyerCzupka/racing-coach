@@ -9,7 +9,7 @@ from racing_coach_core.models.events import LapAndSession, TelemetryAndSession
 from racing_coach_client.collectors.factory import create_telemetry_source
 from racing_coach_client.collectors.iracing import TelemetryCollector
 from racing_coach_client.config import settings
-from racing_coach_client.handlers import LapHandler, LapUploadHandler
+from racing_coach_client.handlers import LapHandler, LapUploadHandler, MetricsHandler
 
 logger = logging.getLogger(__name__)
 
@@ -70,6 +70,15 @@ class RacingCoachClient:
             Handler[LapAndSession](
                 SystemEvents.LAP_TELEMETRY_SEQUENCE,
                 lap_upload_handler.handle_lap_complete_event,
+            )
+        )
+
+        # Metrics extraction handler
+        metrics_handler = MetricsHandler(self.event_bus)
+        handlers.append(
+            Handler[LapAndSession](
+                SystemEvents.LAP_TELEMETRY_SEQUENCE,
+                metrics_handler.handle_lap_telemetry,
             )
         )
 

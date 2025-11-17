@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 
+from ..algs.events import LapMetrics
 from .telemetry import LapTelemetry, SessionFrame, TelemetryFrame
 
 
@@ -13,4 +14,8 @@ class LapAndSession(BaseModel):
     SessionFrame: SessionFrame
 
 
-# test = LapAndSession()
+class MetricsAndSession(BaseModel):
+    """Event data for lap metrics extraction."""
+
+    LapMetrics: LapMetrics
+    SessionFrame: SessionFrame
