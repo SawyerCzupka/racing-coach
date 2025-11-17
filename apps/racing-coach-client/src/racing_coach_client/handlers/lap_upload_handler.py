@@ -11,9 +11,11 @@ logger = logging.getLogger(__name__)
 
 
 class LapUploadHandler:
-    def __init__(self, event_bus: EventBus):
+    def __init__(self, event_bus: EventBus, lap_id_cache: dict | None = None):
         self.event_bus = event_bus
         self.api_client = RacingCoachServerSDK(base_url=settings.SERVER_URL)
+        # Shared cache for storing lap_ids for metrics upload
+        self.lap_id_cache = lap_id_cache if lap_id_cache is not None else {}
 
     @method_handles(SystemEvents.LAP_TELEMETRY_SEQUENCE)
     def handle_lap_complete_event(self, context: HandlerContext[LapAndSession]):
@@ -30,6 +32,14 @@ class LapUploadHandler:
                 lap_telemetry=data.LapTelemetry, session=data.SessionFrame
             )
             logger.info(f"Lap telemetry uploaded successfully: {response}")
+
+            # Cache the lap_id for metrics upload
+            lap_number = data.LapTelemetry.frames[0].lap_number if data.LapTelemetry.frames else -1
+            if lap_number != -1:
+                cache_key = (str(data.SessionFrame.session_id), lap_number)
+                self.lap_id_cache[cache_key] = response.lap_id
+                logger.debug(f"Cached lap_id {response.lap_id} for lap {lap_number}")
+
         except Exception as e:
             logger.error(f"Failed to upload lap telemetry: {e}")
             return

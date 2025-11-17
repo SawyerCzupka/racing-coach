@@ -5,7 +5,8 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-from ..models.responses import HealthCheckResponse, LapUploadResponse
+from ..algs.events import LapMetrics
+from ..models.responses import HealthCheckResponse, LapUploadResponse, MetricsUploadResponse
 from ..models.telemetry import LapTelemetry, SessionFrame
 from .exceptions import RequestError, ServerError
 
@@ -133,6 +134,80 @@ class RacingCoachServerSDK:
             ServerError: If the server returns an error
         """
         return self._make_request("POST", "/telemetry", json=data)
+
+    def upload_lap_metrics(self, lap_metrics: LapMetrics, lap_id: str) -> MetricsUploadResponse:
+        """
+        Upload lap performance metrics to the server.
+
+        Args:
+            lap_metrics: Extracted lap metrics (braking, corners, etc.)
+            lap_id: The UUID of the lap these metrics are for
+
+        Returns:
+            Server response with upload confirmation
+
+        Raises:
+            RequestError: If the request fails
+            ServerError: If the server returns an error
+        """
+        # Convert dataclass to dict for JSON serialization
+        payload = {
+            "lap_metrics": {
+                "lap_number": lap_metrics.lap_number,
+                "lap_time": lap_metrics.lap_time,
+                "braking_zones": [
+                    {
+                        "braking_point_distance": b.braking_point_distance,
+                        "braking_point_speed": b.braking_point_speed,
+                        "end_distance": b.end_distance,
+                        "max_brake_pressure": b.max_brake_pressure,
+                        "braking_duration": b.braking_duration,
+                        "minimum_speed": b.minimum_speed,
+                        "initial_deceleration": b.initial_deceleration,
+                        "average_deceleration": b.average_deceleration,
+                        "braking_efficiency": b.braking_efficiency,
+                        "has_trail_braking": b.has_trail_braking,
+                        "trail_brake_distance": b.trail_brake_distance,
+                        "trail_brake_percentage": b.trail_brake_percentage,
+                    }
+                    for b in lap_metrics.braking_zones
+                ],
+                "corners": [
+                    {
+                        "turn_in_distance": c.turn_in_distance,
+                        "apex_distance": c.apex_distance,
+                        "exit_distance": c.exit_distance,
+                        "throttle_application_distance": c.throttle_application_distance,
+                        "turn_in_speed": c.turn_in_speed,
+                        "apex_speed": c.apex_speed,
+                        "exit_speed": c.exit_speed,
+                        "throttle_application_speed": c.throttle_application_speed,
+                        "max_lateral_g": c.max_lateral_g,
+                        "time_in_corner": c.time_in_corner,
+                        "corner_distance": c.corner_distance,
+                        "max_steering_angle": c.max_steering_angle,
+                        "speed_loss": c.speed_loss,
+                        "speed_gain": c.speed_gain,
+                    }
+                    for c in lap_metrics.corners
+                ],
+                "total_corners": lap_metrics.total_corners,
+                "total_braking_zones": lap_metrics.total_braking_zones,
+                "average_corner_speed": lap_metrics.average_corner_speed,
+                "max_speed": lap_metrics.max_speed,
+                "min_speed": lap_metrics.min_speed,
+            },
+            "lap_id": lap_id,
+        }
+
+        logger.info(
+            f"Uploading metrics for lap {lap_id}: {lap_metrics.total_corners} corners, {lap_metrics.total_braking_zones} braking zones"
+        )
+
+        response = self._make_request("POST", "/metrics/lap", json=payload)
+
+        logger.info(f"Successfully uploaded lap metrics: {response.get('message', 'No message')}")
+        return MetricsUploadResponse(**response)
 
     def _make_request(self, method: str, endpoint: str, **kwargs) -> dict[str, Any]:
         """
