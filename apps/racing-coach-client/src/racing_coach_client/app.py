@@ -9,7 +9,12 @@ from racing_coach_core.models.events import LapAndSession, TelemetryAndSession
 from racing_coach_client.collectors.factory import create_telemetry_source
 from racing_coach_client.collectors.iracing import TelemetryCollector
 from racing_coach_client.config import settings
-from racing_coach_client.handlers import LapHandler, LapUploadHandler
+from racing_coach_client.handlers import (
+    LapHandler,
+    LapUploadHandler,
+    MetricsHandler,
+    MetricsUploadHandler,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +62,9 @@ class RacingCoachClient:
     def initialize_handlers(self):
         handlers: list[Handler[Any]] = []
 
+        # Shared cache for lap_ids (used by upload handlers)
+        lap_id_cache: dict[tuple[str, int], str] = {}
+
         lap_handler = LapHandler(self.event_bus)
         handlers.append(
             Handler[TelemetryAndSession](
@@ -65,11 +73,29 @@ class RacingCoachClient:
             )
         )
 
-        lap_upload_handler = LapUploadHandler(self.event_bus)
+        lap_upload_handler = LapUploadHandler(self.event_bus, lap_id_cache=lap_id_cache)
         handlers.append(
             Handler[LapAndSession](
                 SystemEvents.LAP_TELEMETRY_SEQUENCE,
                 lap_upload_handler.handle_lap_complete_event,
+            )
+        )
+
+        # Metrics extraction handler
+        metrics_handler = MetricsHandler(self.event_bus)
+        handlers.append(
+            Handler[LapAndSession](
+                SystemEvents.LAP_TELEMETRY_SEQUENCE,
+                metrics_handler.handle_lap_telemetry,
+            )
+        )
+
+        # Metrics upload handler
+        metrics_upload_handler = MetricsUploadHandler(self.event_bus, lap_id_cache=lap_id_cache)
+        handlers.append(
+            Handler(
+                type=SystemEvents.LAP_METRICS_EXTRACTED,
+                fn=metrics_upload_handler.handle_metrics_extracted,
             )
         )
 

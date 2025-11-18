@@ -16,3 +16,11 @@ class LapUploadResponse(BaseModel):
     status: str
     message: str
     lap_id: str
+
+
+class MetricsUploadResponse(BaseModel):
+    """Response model for lap metrics upload."""
+
+    status: str
+    message: str
+    lap_metrics_id: str
