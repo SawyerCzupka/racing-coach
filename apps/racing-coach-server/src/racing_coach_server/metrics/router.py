@@ -3,11 +3,13 @@
 import logging
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from racing_coach_core.algs.events import BrakingMetrics, CornerMetrics
 
 from racing_coach_server.database.engine import transactional_session
 from racing_coach_server.dependencies import get_telemetry_service
+from racing_coach_server.metrics.comparison_schemas import LapComparisonResponse
+from racing_coach_server.metrics.comparison_service import LapComparisonService
 from racing_coach_server.metrics.schemas import (
     LapMetricsResponse,
     MetricsUploadRequest,
@@ -127,3 +129,50 @@ async def get_lap_metrics(
             for c in db_metrics.corners
         ],
     )
+
+
+@router.get("/compare", response_model=LapComparisonResponse, tags=["metrics"])
+async def compare_laps(
+    lap_id_1: str = Query(..., description="UUID of the baseline lap"),
+    lap_id_2: str = Query(..., description="UUID of the lap to compare against baseline"),
+    service: TelemetryService = Depends(get_telemetry_service),
+) -> LapComparisonResponse:
+    """
+    Compare two laps and return detailed performance deltas.
+
+    This endpoint compares metrics from two laps and returns:
+    - Summary statistics (lap time delta, speed deltas, etc.)
+    - Per-braking-zone comparisons with matched zones and deltas
+    - Per-corner comparisons with matched corners and deltas
+
+    Zones and corners are matched based on distance (closest match within threshold).
+    """
+    try:
+        uuid_lap_id_1 = UUID(lap_id_1)
+        uuid_lap_id_2 = UUID(lap_id_2)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid lap_id format")
+
+    # Get metrics for both laps
+    baseline_metrics = await service.get_lap_metrics(uuid_lap_id_1)
+    if not baseline_metrics:
+        raise HTTPException(
+            status_code=404, detail=f"Metrics not found for baseline lap {lap_id_1}"
+        )
+
+    comparison_metrics = await service.get_lap_metrics(uuid_lap_id_2)
+    if not comparison_metrics:
+        raise HTTPException(
+            status_code=404, detail=f"Metrics not found for comparison lap {lap_id_2}"
+        )
+
+    # Compare laps
+    comparison = LapComparisonService.compare_laps(baseline_metrics, comparison_metrics)
+
+    logger.info(
+        f"Compared laps {lap_id_1} vs {lap_id_2}: "
+        f"time delta = {comparison.summary.lap_time_delta:.3f}s, "
+        f"matched {comparison.summary.matched_corners}/{comparison.summary.total_corners_baseline} corners"
+    )
+
+    return comparison

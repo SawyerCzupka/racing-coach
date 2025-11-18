@@ -5,6 +5,7 @@ from typing import Any
 from uuid import uuid4
 
 from factory import Factory, Faker, LazyAttribute, LazyFunction, SubFactory
+from racing_coach_core.algs.events import BrakingMetrics, CornerMetrics, LapMetrics
 from racing_coach_core.models.events import LapAndSession, TelemetryAndSession
 from racing_coach_core.models.telemetry import (
     LapTelemetry,
@@ -149,3 +150,86 @@ class LapAndSessionFactory(Factory[LapAndSession]):
 
     LapTelemetry: LapTelemetry = SubFactory(LapTelemetryFactory)  # type: ignore[assignment]
     SessionFrame: SessionFrame = SubFactory(SessionFrameFactory)  # type: ignore[assignment]
+
+
+class BrakingMetricsFactory(Factory[BrakingMetrics]):
+    """Factory for creating BrakingMetrics instances."""
+
+    class Meta:
+        model = BrakingMetrics
+
+    # Location and timing
+    braking_point_distance = Faker("pyfloat", min_value=0, max_value=1)
+    braking_point_speed = Faker("pyfloat", min_value=30, max_value=80)
+    end_distance = Faker("pyfloat", min_value=0, max_value=1)
+
+    # Performance metrics
+    max_brake_pressure = Faker("pyfloat", min_value=0.5, max_value=1.0)
+    braking_duration = Faker("pyfloat", min_value=0.5, max_value=3.0)
+    minimum_speed = Faker("pyfloat", min_value=10, max_value=50)
+
+    # Advanced metrics
+    initial_deceleration = Faker("pyfloat", min_value=-15, max_value=-5)
+    average_deceleration = Faker("pyfloat", min_value=-12, max_value=-4)
+    braking_efficiency = Faker("pyfloat", min_value=5, max_value=15)
+
+    # Trail braking
+    has_trail_braking = Faker("pybool")
+    trail_brake_distance = Faker("pyfloat", min_value=0, max_value=0.05)
+    trail_brake_percentage = Faker("pyfloat", min_value=0, max_value=0.8)
+
+
+class CornerMetricsFactory(Factory[CornerMetrics]):
+    """Factory for creating CornerMetrics instances."""
+
+    class Meta:
+        model = CornerMetrics
+
+    # Key corner points (distances)
+    turn_in_distance = Faker("pyfloat", min_value=0, max_value=1)
+    apex_distance = Faker("pyfloat", min_value=0, max_value=1)
+    exit_distance = Faker("pyfloat", min_value=0, max_value=1)
+    throttle_application_distance = Faker("pyfloat", min_value=0, max_value=1)
+
+    # Speeds at key points
+    turn_in_speed = Faker("pyfloat", min_value=20, max_value=60)
+    apex_speed = Faker("pyfloat", min_value=15, max_value=50)
+    exit_speed = Faker("pyfloat", min_value=20, max_value=70)
+    throttle_application_speed = Faker("pyfloat", min_value=15, max_value=55)
+
+    # Performance metrics
+    max_lateral_g = Faker("pyfloat", min_value=0.5, max_value=3.0)
+    time_in_corner = Faker("pyfloat", min_value=1.0, max_value=5.0)
+    corner_distance = Faker("pyfloat", min_value=0.02, max_value=0.15)
+
+    # Steering metrics
+    max_steering_angle = Faker("pyfloat", min_value=0.2, max_value=1.5)
+
+    # Speed delta
+    speed_loss = Faker("pyfloat", min_value=5, max_value=30)
+    speed_gain = Faker("pyfloat", min_value=5, max_value=40)
+
+
+class LapMetricsFactory(Factory[LapMetrics]):
+    """Factory for creating LapMetrics instances."""
+
+    class Meta:
+        model = LapMetrics
+
+    lap_number = Faker("pyint", min_value=1, max_value=50)
+    lap_time = Faker("pyfloat", min_value=60, max_value=180)
+
+    # Collections of all events in the lap
+    braking_zones: list[BrakingMetrics] = LazyAttribute(
+        lambda _: [BrakingMetricsFactory.build() for _ in range(5)]
+    )
+    corners: list[CornerMetrics] = LazyAttribute(
+        lambda _: [CornerMetricsFactory.build() for _ in range(6)]
+    )
+
+    # Lap-wide statistics
+    total_corners = LazyAttribute(lambda obj: len(obj.corners))
+    total_braking_zones = LazyAttribute(lambda obj: len(obj.braking_zones))
+    average_corner_speed = Faker("pyfloat", min_value=25, max_value=45)
+    max_speed = Faker("pyfloat", min_value=70, max_value=100)
+    min_speed = Faker("pyfloat", min_value=15, max_value=30)

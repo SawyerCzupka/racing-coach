@@ -9,7 +9,10 @@ from pytest_factoryboy import register
 from racing_coach_core.events.base import Event, EventBus, EventType
 
 from tests.factories import (
+    BrakingMetricsFactory,
+    CornerMetricsFactory,
     LapAndSessionFactory,
+    LapMetricsFactory,
     LapTelemetryFactory,
     SessionFrameFactory,
     TelemetryAndSessionFactory,
@@ -22,6 +25,9 @@ register(SessionFrameFactory)
 register(LapTelemetryFactory)
 register(TelemetryAndSessionFactory)
 register(LapAndSessionFactory)
+register(BrakingMetricsFactory)
+register(CornerMetricsFactory)
+register(LapMetricsFactory)
 
 
 @pytest.fixture
