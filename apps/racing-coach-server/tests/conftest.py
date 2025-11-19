@@ -25,7 +25,10 @@ from sqlalchemy.ext.asyncio import (
 from testcontainers.postgres import PostgresContainer
 
 from tests.factories import (
+    BrakingMetricsDBFactory,
+    CornerMetricsDBFactory,
     LapFactory,
+    LapMetricsDBFactory,
     SessionFrameFactory,
     TelemetryFactory,
     TelemetryFrameFactory,
@@ -41,6 +44,9 @@ register(SessionFrameFactory)
 register(TrackSessionFactory)
 register(LapFactory)
 register(TelemetryFactory)
+register(LapMetricsDBFactory)
+register(BrakingMetricsDBFactory)
+register(CornerMetricsDBFactory)
 
 
 # ============================================================================

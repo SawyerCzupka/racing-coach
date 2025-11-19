@@ -7,7 +7,14 @@ from uuid import uuid4
 from factory import Factory, Faker, LazyAttribute, LazyFunction, post_generation
 from factory.builder import BuildStep
 from racing_coach_core.models.telemetry import SessionFrame, TelemetryFrame
-from racing_coach_server.telemetry.models import Lap, Telemetry, TrackSession
+from racing_coach_server.telemetry.models import (
+    BrakingMetricsDB,
+    CornerMetricsDB,
+    Lap,
+    LapMetricsDB,
+    Telemetry,
+    TrackSession,
+)
 
 # Type alias for tire temperature/wear data structure
 type TireData = dict[str, dict[str, float]]
@@ -296,3 +303,87 @@ class TelemetryFactory(Factory[Telemetry]):
     session_flags = Faker("pyint", min_value=0, max_value=65535)
     track_surface = Faker("pyint", min_value=0, max_value=3)
     on_pit_road = Faker("pybool")
+
+
+# ============================================================================
+# Metrics Database Model Factories
+# ============================================================================
+
+
+class LapMetricsDBFactory(Factory[LapMetricsDB]):
+    """Factory for creating LapMetricsDB database model instances."""
+
+    class Meta:
+        model = LapMetricsDB
+
+    lap_id = LazyFunction(uuid4)
+    lap_time = Faker("pyfloat", min_value=60, max_value=180)
+    total_corners = Faker("pyint", min_value=3, max_value=15)
+    total_braking_zones = Faker("pyint", min_value=3, max_value=15)
+    average_corner_speed = Faker("pyfloat", min_value=25, max_value=45)
+    max_speed = Faker("pyfloat", min_value=70, max_value=100)
+    min_speed = Faker("pyfloat", min_value=15, max_value=30)
+
+
+class BrakingMetricsDBFactory(Factory[BrakingMetricsDB]):
+    """Factory for creating BrakingMetricsDB database model instances."""
+
+    class Meta:
+        model = BrakingMetricsDB
+
+    lap_metrics_id = LazyFunction(uuid4)
+    zone_number = Faker("pyint", min_value=1, max_value=10)
+
+    # Location and timing
+    braking_point_distance = Faker("pyfloat", min_value=0, max_value=1)
+    braking_point_speed = Faker("pyfloat", min_value=30, max_value=80)
+    end_distance = Faker("pyfloat", min_value=0, max_value=1)
+
+    # Performance metrics
+    max_brake_pressure = Faker("pyfloat", min_value=0.5, max_value=1.0)
+    braking_duration = Faker("pyfloat", min_value=0.5, max_value=3.0)
+    minimum_speed = Faker("pyfloat", min_value=10, max_value=50)
+
+    # Advanced metrics
+    initial_deceleration = Faker("pyfloat", min_value=-15, max_value=-5)
+    average_deceleration = Faker("pyfloat", min_value=-12, max_value=-4)
+    braking_efficiency = Faker("pyfloat", min_value=5, max_value=15)
+
+    # Trail braking
+    has_trail_braking = Faker("pybool")
+    trail_brake_distance = Faker("pyfloat", min_value=0, max_value=0.05)
+    trail_brake_percentage = Faker("pyfloat", min_value=0, max_value=0.8)
+
+
+class CornerMetricsDBFactory(Factory[CornerMetricsDB]):
+    """Factory for creating CornerMetricsDB database model instances."""
+
+    class Meta:
+        model = CornerMetricsDB
+
+    lap_metrics_id = LazyFunction(uuid4)
+    corner_number = Faker("pyint", min_value=1, max_value=12)
+
+    # Key corner points (distances)
+    turn_in_distance = Faker("pyfloat", min_value=0, max_value=1)
+    apex_distance = Faker("pyfloat", min_value=0, max_value=1)
+    exit_distance = Faker("pyfloat", min_value=0, max_value=1)
+    throttle_application_distance = Faker("pyfloat", min_value=0, max_value=1)
+
+    # Speeds at key points
+    turn_in_speed = Faker("pyfloat", min_value=20, max_value=60)
+    apex_speed = Faker("pyfloat", min_value=15, max_value=50)
+    exit_speed = Faker("pyfloat", min_value=20, max_value=70)
+    throttle_application_speed = Faker("pyfloat", min_value=15, max_value=55)
+
+    # Performance metrics
+    max_lateral_g = Faker("pyfloat", min_value=0.5, max_value=3.0)
+    time_in_corner = Faker("pyfloat", min_value=1.0, max_value=5.0)
+    corner_distance = Faker("pyfloat", min_value=0.02, max_value=0.15)
+
+    # Steering metrics
+    max_steering_angle = Faker("pyfloat", min_value=0.2, max_value=1.5)
+
+    # Speed delta
+    speed_loss = Faker("pyfloat", min_value=5, max_value=30)
+    speed_gain = Faker("pyfloat", min_value=5, max_value=40)
