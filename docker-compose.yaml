@@ -7,9 +7,38 @@ services:
       POSTGRES_PASSWORD: postgres
     ports:
       - 5432:5432
-
     volumes:
       - ./data/timescaledb:/var/lib/postgresql/data
+    networks:
+      - racing-coach-network
+
+  racing-coach-server:
+    build:
+      context: ./apps/racing-coach-server
+      dockerfile: Dockerfile
+    container_name: racing-coach-server
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@timescaledb:5432/postgres
+    depends_on:
+      - timescaledb
+    restart: unless-stopped
+    networks:
+      - racing-coach-network
+
+  racing-coach-web:
+    build:
+      context: ./apps/racing-coach-web
+      dockerfile: Dockerfile
+    container_name: racing-coach-web
+    ports:
+      - "3000:80"
+    depends_on:
+      - racing-coach-server
+    restart: unless-stopped
+    networks:
+      - racing-coach-network
 
   pgadmin:
     image: dpage/pgadmin4:latest
@@ -22,3 +51,9 @@ services:
     depends_on:
       - timescaledb
     restart: unless-stopped
+    networks:
+      - racing-coach-network
+
+networks:
+  racing-coach-network:
+    driver: bridge

@@ -1,0 +1,33 @@
+@import "tailwindcss";
+
+/* Dark mode by default with custom colors for racing theme */
+@theme {
+  --color-racing-blue: oklch(0.55 0.25 250);
+  --color-racing-cyan: oklch(0.70 0.20 200);
+  --radius: 0.5rem;
+}
+
+/* Global styles */
+body {
+  font-feature-settings: "rlig" 1, "calt" 1;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Custom scrollbar for dark mode */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background-color: rgb(17 24 39); /* gray-900 */
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: rgb(55 65 81); /* gray-700 */
+  border-radius: 4px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background-color: rgb(75 85 99); /* gray-600 */
+}
