@@ -2,7 +2,6 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 
-// https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
   resolve: {
@@ -11,15 +10,14 @@ export default defineConfig({
     },
   },
   server: {
-    port: 3000,
+    host: '0.0.0.0',
+    watch: {
+      usePolling: true,
+    },
     proxy: {
       '/api': {
-        target: 'http://localhost:8000',
+        target: 'http://racing-coach-server:8000',
         changeOrigin: true,
-      },
-      '/ws': {
-        target: 'ws://localhost:8000',
-        ws: true,
       },
     },
   },

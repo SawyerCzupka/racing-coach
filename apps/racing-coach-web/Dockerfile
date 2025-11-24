@@ -1,22 +1,24 @@
 # Multi-stage build for Racing Coach Web Dashboard
-FROM node:20-alpine AS builder
-
+FROM node:20-alpine AS base
 WORKDIR /app
-
-# Copy package files
 COPY package*.json ./
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci
 
-# Install dependencies
-RUN npm ci
-
-# Copy source code
+# Development stage
+FROM base AS development
 COPY . .
+EXPOSE 5173
+CMD ["npm", "run", "dev", "--", "--host"]
 
-# Build the application
-RUN npm run build
+# Builder stage
+FROM base AS builder
+COPY . .
+RUN --mount=type=cache,target=/root/.npm \
+    npm run build
 
 # Production stage with nginx
-FROM nginx:alpine
+FROM nginx:alpine AS production
 
 # Copy custom nginx config
 COPY nginx.conf /etc/nginx/nginx.conf
@@ -26,6 +28,10 @@ COPY --from=builder /app/dist /usr/share/nginx/html
 
 # Expose port 80
 EXPOSE 80
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:80/ || exit 1
 
 # Start nginx
 CMD ["nginx", "-g", "daemon off;"]

@@ -1,0 +1,42 @@
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache
+.coverage
+htmlcov
+*.egg-info
+.ruff_cache
+.venv
+venv
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+*~
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Documentation
+!README.md
+# *.md
+
+# Testing
+.tox
+.hypothesis
+tests
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Misc
+.env
+.env.local
+*.log

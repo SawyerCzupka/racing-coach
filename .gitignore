@@ -56,3 +56,5 @@ data_out/
 /.pants.d
 /dist/
 .aider*
+
+node_modules/
