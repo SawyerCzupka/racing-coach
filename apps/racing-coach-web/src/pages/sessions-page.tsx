@@ -12,44 +12,23 @@ import {
 } from '@/components/ui/table';
 import { LoadingState, EmptyState, ErrorState } from '@/components/ui/loading-states';
 import { formatDateTime } from '@/lib/format';
-
-// Placeholder - will be replaced with real API hooks from Orval
-function useSessions() {
-  // Mock data for demonstration
-  const mockSessions = [
-    {
-      session_id: '550e8400-e29b-41d4-a716-446655440001',
-      track_name: 'Watkins Glen International',
-      track_config_name: 'Boot',
-      track_type: 'road',
-      car_name: 'Porsche 911 GT3 Cup',
-      series_id: 123,
-      created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
-      lap_count: 12,
-    },
-    {
-      session_id: '550e8400-e29b-41d4-a716-446655440002',
-      track_name: 'Brands Hatch Circuit',
-      track_config_name: 'Grand Prix',
-      track_type: 'road',
-      car_name: 'BMW M4 GT3',
-      series_id: 124,
-      created_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), // 1 day ago
-      lap_count: 18,
-    },
-  ];
-
-  return {
-    data: mockSessions,
-    isLoading: false,
-    error: null,
-  };
-}
+// import { useListSessionsApiV1SessionsGet } from '@/api/generated/sessions/sessions';
+import { useGetSessionsList } from '@/api/generated/sessions/sessions';
 
 export function SessionsPage() {
   const navigate = useNavigate();
-  const { data: sessions, isLoading, error } = useSessions();
+  const { data: response, isLoading, error } = useGetSessionsList();
   const [filter, setFilter] = useState('');
+
+  // Extract sessions from response
+  const sessions = response?.sessions;
+
+
+
+  if (error) {
+    console.log(error);
+    console.log(JSON.stringify(error))
+  }
 
   if (isLoading) {
     return (
@@ -73,7 +52,7 @@ export function SessionsPage() {
           <p className="text-gray-400">View and analyze your racing sessions</p>
         </div>
         <Card>
-          <ErrorState error={error} />
+          <ErrorState error={error instanceof Error ? error : new Error('Failed to load sessions')} />
         </Card>
       </div>
     );
@@ -88,6 +67,7 @@ export function SessionsPage() {
         </div>
         <Card>
           <EmptyState message="No sessions found. Start racing to see your data here!" />
+          <p>{JSON.stringify(response)}</p>
         </Card>
       </div>
     );

@@ -31,15 +31,19 @@ class LapUploadHandler:
             response = self.api_client.upload_lap_telemetry(
                 lap_telemetry=data.LapTelemetry, session=data.SessionFrame
             )
-            logger.info(f"Lap telemetry uploaded successfully: {response}")
+
+            lap_number = data.LapTelemetry.frames[0].lap_number if data.LapTelemetry.frames else -1
+            logger.info(
+                f"✓ Lap {lap_number} uploaded successfully (lap_id: {response.lap_id})"
+            )
 
             # Cache the lap_id for metrics upload
-            lap_number = data.LapTelemetry.frames[0].lap_number if data.LapTelemetry.frames else -1
             if lap_number != -1:
                 cache_key = (str(data.SessionFrame.session_id), lap_number)
                 self.lap_id_cache[cache_key] = response.lap_id
                 logger.debug(f"Cached lap_id {response.lap_id} for lap {lap_number}")
 
         except Exception as e:
-            logger.error(f"Failed to upload lap telemetry: {e}")
+            lap_number = data.LapTelemetry.frames[0].lap_number if data.LapTelemetry.frames else -1
+            logger.error(f"✗ Failed to upload lap {lap_number}: {e}")
             return

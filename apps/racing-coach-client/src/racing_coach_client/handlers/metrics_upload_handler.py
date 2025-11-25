@@ -68,9 +68,11 @@ class MetricsUploadHandler:
                 lap_id=lap_id,
             )
             logger.info(
-                f"Lap metrics uploaded successfully: {response.message} "
-                f"(lap_metrics_id: {response.lap_metrics_id})"
+                f"✓ Lap {lap_metrics.lap_number} metrics uploaded "
+                f"(id: {response.lap_metrics_id})"
             )
 
         except Exception as e:
-            logger.error(f"Failed to upload lap metrics: {e}", exc_info=True)
+            logger.error(
+                f"✗ Failed to upload metrics for lap {lap_metrics.lap_number}: {e}"
+            )

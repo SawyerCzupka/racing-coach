@@ -181,13 +181,20 @@ class Telemetry(Base):
     roll_rate: Mapped[float] = mapped_column(Float, nullable=False)
     pitch_rate: Mapped[float] = mapped_column(Float, nullable=False)
 
-    # Vehicle position/orientation
-    position_x: Mapped[float] = mapped_column(Float, nullable=False)
-    position_y: Mapped[float] = mapped_column(Float, nullable=False)
-    position_z: Mapped[float] = mapped_column(Float, nullable=False)
+    # Vehicle velocity
+    velocity_x: Mapped[float] = mapped_column(Float, nullable=False)
+    velocity_y: Mapped[float] = mapped_column(Float, nullable=False)
+    velocity_z: Mapped[float] = mapped_column(Float, nullable=False)
+
+    # Vehicle orientation
     yaw: Mapped[float] = mapped_column(Float, nullable=False)
     pitch: Mapped[float] = mapped_column(Float, nullable=False)
     roll: Mapped[float] = mapped_column(Float, nullable=False)
+
+    # GPS position
+    latitude: Mapped[float] = mapped_column(Float, nullable=False)
+    longitude: Mapped[float] = mapped_column(Float, nullable=False)
+    altitude: Mapped[float] = mapped_column(Float, nullable=False)
 
     # Tire data - flattened for better query performance
     # Left Front

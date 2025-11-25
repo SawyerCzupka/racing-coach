@@ -73,6 +73,7 @@ class ReplayTelemetrySource:
         self._last_freeze_time: float = 0.0
         self._current_buffer: dict[str, Any] = {}
         self._var_names: list[str] = []
+        self._end_of_file_logged: bool = False  # Flag to prevent log spam
 
     def startup(self) -> bool:
         """
@@ -115,6 +116,7 @@ class ReplayTelemetrySource:
             self.current_frame = 0
             self._connected = True
             self._last_freeze_time = time.time()
+            self._end_of_file_logged = False
 
             logger.info(
                 f"Opened IBT file: {self.file_path} "
@@ -188,16 +190,20 @@ class ReplayTelemetrySource:
         # Handle end of file
         if self.current_frame >= self.total_frames:
             if self.loop:
-                logger.debug(
-                    f"Reached end of IBT file, looping back to start "
-                    f"(frame {self.current_frame}/{self.total_frames})"
-                )
+                if not self._end_of_file_logged:
+                    logger.debug(
+                        f"Reached end of IBT file, looping back to start "
+                        f"(frame {self.current_frame}/{self.total_frames})"
+                    )
                 self.current_frame = 0
+                self._end_of_file_logged = False  # Reset for next loop
             else:
-                logger.info(
-                    f"Reached end of IBT file, stopping playback "
-                    f"(frame {self.current_frame}/{self.total_frames})"
-                )
+                if not self._end_of_file_logged:
+                    logger.info(
+                        f"Reached end of IBT file, stopping playback "
+                        f"(frame {self.current_frame}/{self.total_frames})"
+                    )
+                    self._end_of_file_logged = True
                 self.current_frame = self.total_frames - 1  # Stay on last frame
 
         # Cache all variables for this frame

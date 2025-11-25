@@ -9,13 +9,17 @@
 			"name": "Racing Coach Server",
 		},
 		{
+			"path": "apps/racing-coach-web",
+			"name": "Racing Coach Web"
+		},
+		{
 			"path": "libs/racing-coach-core",
 			"name": "Racing Coach Core Library",
 		},
-		// {
-		// 	"path": ".",
-		// 	"name": "Racing Coach Workspace",
-		// }
+		{
+			"path": ".",
+			"name": "Racing Coach Workspace",
+		}
 	],
 	"settings": {
 		"python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",

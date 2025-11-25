@@ -62,13 +62,20 @@ class TelemetryFrame(BaseModel):
     roll_rate: float = Field(description="Roll rate in rad/s")
     pitch_rate: float = Field(description="Pitch rate in rad/s")
 
-    # Vehicle Position/Orientation
-    position_x: float = Field(description="X velocity in m/s")
-    position_y: float = Field(description="Y velocity in m/s")
-    position_z: float = Field(description="Z velocity in m/s")
+    # Vehicle Velocity
+    velocity_x: float = Field(description="X velocity in m/s")
+    velocity_y: float = Field(description="Y velocity in m/s")
+    velocity_z: float = Field(description="Z velocity in m/s")
+
+    # Vehicle Orientation
     yaw: float = Field(description="Yaw orientation in radians")
     pitch: float = Field(description="Pitch orientation in radians")
     roll: float = Field(description="Roll orientation in radians")
+
+    # GPS Position
+    latitude: float = Field(description="Latitude in degrees")
+    longitude: float = Field(description="Longitude in degrees")
+    altitude: float = Field(description="Altitude in meters")
 
     # Tire Data
     tire_temps: dict[str, dict[str, float]] = Field(
@@ -110,6 +117,7 @@ class TelemetryFrame(BaseModel):
         Raises:
             KeyError: If required telemetry variables are missing.
         """
+
         return cls(
             timestamp=timestamp,
             session_time=source["SessionTime"],  # type: ignore
@@ -132,12 +140,15 @@ class TelemetryFrame(BaseModel):
             yaw_rate=source["YawRate"],  # type: ignore
             roll_rate=source["RollRate"],  # type: ignore
             pitch_rate=source["PitchRate"],  # type: ignore
-            position_x=source["VelocityX"],  # type: ignore
-            position_y=source["VelocityY"],  # type: ignore
-            position_z=source["VelocityZ"],  # type: ignore
+            velocity_x=source["VelocityX"],  # type: ignore
+            velocity_y=source["VelocityY"],  # type: ignore
+            velocity_z=source["VelocityZ"],  # type: ignore
             yaw=source["Yaw"],  # type: ignore
             pitch=source["Pitch"],  # type: ignore
             roll=source["Roll"],  # type: ignore
+            latitude=source["Lat"],  # type: ignore
+            longitude=source["Lon"],  # type: ignore
+            altitude=source["Alt"],  # type: ignore
             tire_temps={
                 "LF": {
                     "left": source["LFtempCL"],

@@ -6,7 +6,15 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 from ..algs.events import LapMetrics
-from ..models.responses import HealthCheckResponse, LapUploadResponse, MetricsUploadResponse
+from ..models.responses import (
+    HealthCheckResponse,
+    LapMetricsResponse,
+    LapTelemetryResponse,
+    LapUploadResponse,
+    MetricsUploadResponse,
+    SessionDetailResponse,
+    SessionListResponse,
+)
 from ..models.telemetry import LapTelemetry, SessionFrame
 from .exceptions import RequestError, ServerError
 
@@ -70,7 +78,7 @@ class RacingCoachServerSDK:
             RequestError: If the request fails
             ServerError: If the server returns an error
         """
-        response = self._make_request("GET", "/health")
+        response = self._make_request("GET", "/api/v1/health")
         return HealthCheckResponse(**response)
 
     def upload_lap_telemetry(
@@ -100,7 +108,7 @@ class RacingCoachServerSDK:
             f"with {len(lap_telemetry.frames)} telemetry frames"
         )
 
-        response = self._make_request("POST", "/telemetry/lap", json=payload)
+        response = self._make_request("POST", "/api/v1/telemetry/lap", json=payload)
 
         logger.info(f"Successfully uploaded lap telemetry: {response.get('message', 'No message')}")
         return LapUploadResponse(**response)
@@ -116,8 +124,76 @@ class RacingCoachServerSDK:
             RequestError: If the request fails
             ServerError: If the server returns an error
         """
-        response = self._make_request("GET", "/sessions/latest")
+        response = self._make_request("GET", "/api/v1/sessions/latest")
         return SessionFrame(**response)
+
+    def get_sessions(self) -> SessionListResponse:
+        """
+        Get all sessions from the server.
+
+        Returns:
+            List of session summaries
+
+        Raises:
+            RequestError: If the request fails
+            ServerError: If the server returns an error
+        """
+        response = self._make_request("GET", "/api/v1/sessions")
+        return SessionListResponse(**response)
+
+    def get_session(self, session_id: str) -> SessionDetailResponse:
+        """
+        Get details of a specific session including its laps.
+
+        Args:
+            session_id: The UUID of the session
+
+        Returns:
+            Session details with lap list
+
+        Raises:
+            RequestError: If the request fails
+            ServerError: If the server returns an error
+        """
+        response = self._make_request("GET", f"/api/v1/sessions/{session_id}")
+        return SessionDetailResponse(**response)
+
+    def get_lap_telemetry(self, session_id: str, lap_id: str) -> LapTelemetryResponse:
+        """
+        Get telemetry frames for a specific lap.
+
+        Args:
+            session_id: The UUID of the session
+            lap_id: The UUID of the lap
+
+        Returns:
+            Lap telemetry with all frames
+
+        Raises:
+            RequestError: If the request fails
+            ServerError: If the server returns an error
+        """
+        response = self._make_request(
+            "GET", f"/api/v1/sessions/{session_id}/laps/{lap_id}/telemetry"
+        )
+        return LapTelemetryResponse(**response)
+
+    def get_lap_metrics(self, lap_id: str) -> LapMetricsResponse:
+        """
+        Get extracted metrics for a specific lap.
+
+        Args:
+            lap_id: The UUID of the lap
+
+        Returns:
+            Lap metrics including braking zones and corners
+
+        Raises:
+            RequestError: If the request fails
+            ServerError: If the server returns an error
+        """
+        response = self._make_request("GET", f"/api/v1/metrics/lap/{lap_id}")
+        return LapMetricsResponse(**response)
 
     def send_telemetry_data(self, data: dict[str, Any]) -> dict[str, Any]:
         """
@@ -133,7 +209,7 @@ class RacingCoachServerSDK:
             RequestError: If the request fails
             ServerError: If the server returns an error
         """
-        return self._make_request("POST", "/telemetry", json=data)
+        return self._make_request("POST", "/api/v1/telemetry", json=data)
 
     def upload_lap_metrics(self, lap_metrics: LapMetrics, lap_id: str) -> MetricsUploadResponse:
         """
@@ -204,7 +280,7 @@ class RacingCoachServerSDK:
             f"Uploading metrics for lap {lap_id}: {lap_metrics.total_corners} corners, {lap_metrics.total_braking_zones} braking zones"
         )
 
-        response = self._make_request("POST", "/metrics/lap", json=payload)
+        response = self._make_request("POST", "/api/v1/metrics/lap", json=payload)
 
         logger.info(f"Successfully uploaded lap metrics: {response.get('message', 'No message')}")
         return MetricsUploadResponse(**response)

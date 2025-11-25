@@ -6,6 +6,7 @@ from alembic import context
 from racing_coach_server.config import settings
 from racing_coach_server.database.base import Base
 from sqlalchemy import engine_from_config, pool
+import os
 
 # from racing_coach_server.telemetry.models import Lap, Telemetry, TrackSession  # noqa: F401
 
@@ -13,10 +14,14 @@ from sqlalchemy import engine_from_config, pool
 # access to the values within the .ini file in use.
 config = context.config
 
+
+def get_url() -> str | None:
+    return os.getenv("DATABASE_URL")
+
+
 # Override sqlalchemy.url with our settings
-# print(f"Config DB URL before override: {config.get_main_option('sqlalchemy.url')}")
-if config.get_main_option("sqlalchemy.url") == "":
-    config.set_main_option("sqlalchemy.url", settings.database_url)
+if config.get_main_option("sqlalchemy.url") == "none":
+    config.set_main_option("sqlalchemy.url", settings.alembic_url)
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.

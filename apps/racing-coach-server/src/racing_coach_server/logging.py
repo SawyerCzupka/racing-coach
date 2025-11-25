@@ -18,6 +18,6 @@ def setup_logging() -> None:
         ],
     )
 
-    # Set uvicorn log level
-    logging.getLogger("uvicorn").setLevel(log_level)
-    logging.getLogger("uvicorn.access").setLevel(log_level)
+    # # Set uvicorn log level
+    # logging.getLogger("uvicorn").setLevel(log_level)
+    # logging.getLogger("uvicorn.access").setLevel(log_level)

@@ -1,32 +1,45 @@
+import Axios, { AxiosError, type AxiosRequestConfig } from "axios";
+
 /**
- * Custom fetch client for API requests
- * Adds base URL and common headers
+ * Custom Axios instance configured with the API base URL.
+ * Use this instance for any direct axios calls outside of generated hooks.
  */
-export const customFetch = async <T>(
-  url: string,
-  options?: RequestInit
+export const axiosInstance = Axios.create({
+  baseURL: import.meta.env.VITE_API_URL || "",
+});
+
+/**
+ * Custom instance function for Orval-generated API calls.
+ * This mutator unwraps the AxiosResponse so React Query hooks
+ * return the data directly (e.g., `data: Session[]` instead of `data: AxiosResponse<Session[]>`).
+ */
+export const customInstance = <T>(
+  config: AxiosRequestConfig,
+  options?: AxiosRequestConfig
 ): Promise<T> => {
-  const baseUrl = import.meta.env.VITE_API_URL || '/api/v1';
+  const controller = new AbortController();
 
-  const response = await fetch(`${baseUrl}${url}`, {
+  const promise = axiosInstance({
+    ...config,
     ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options?.headers,
-    },
-  });
+    signal: controller.signal,
+  }).then(({ data }) => data);
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({
-      detail: response.statusText,
-    }));
-    throw new Error(error.detail || 'An error occurred');
-  }
+  // @ts-expect-error - Adding cancel method for React Query
+  promise.cancel = () => {
+    controller.abort("Query was cancelled");
+  };
 
-  // Handle 204 No Content
-  if (response.status === 204) {
-    return undefined as T;
-  }
-
-  return response.json();
+  return promise;
 };
+
+/**
+ * Error type export for Orval to use in generated code.
+ * This ensures proper error typing in React Query hooks.
+ */
+export type ErrorType<Error> = AxiosError<Error>;
+
+/**
+ * Body type export for Orval mutations.
+ */
+export type BodyType<Body> = Body;

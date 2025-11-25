@@ -87,6 +87,100 @@ class TelemetryService:
 
         return session
 
+    async def get_all_sessions(self) -> list[TrackSession]:
+        """
+        Get all track sessions ordered by created_at descending.
+
+        Returns:
+            list[TrackSession]: All sessions with their lap counts
+        """
+        stmt = (
+            select(TrackSession)
+            .options(selectinload(TrackSession.laps))
+            .order_by(desc(TrackSession.created_at))
+        )
+        result = await self.db.execute(stmt)
+        sessions = result.scalars().all()
+
+        logger.debug(f"Found {len(sessions)} sessions")
+        return list(sessions)
+
+    async def get_session_by_id(self, session_id: UUID) -> TrackSession | None:
+        """
+        Get a specific session by ID with its laps.
+
+        Args:
+            session_id: The ID of the session
+
+        Returns:
+            TrackSession | None: The session or None if not found
+        """
+        stmt = (
+            select(TrackSession)
+            .where(TrackSession.id == session_id)
+            .options(selectinload(TrackSession.laps))
+        )
+        result = await self.db.execute(stmt)
+        session = result.scalar_one_or_none()
+
+        if session:
+            logger.debug(f"Found session with ID {session_id}")
+        else:
+            logger.debug(f"No session found with ID {session_id}")
+
+        return session
+
+    async def get_laps_for_session(self, session_id: UUID) -> list[Lap]:
+        """
+        Get all laps for a session ordered by lap number.
+
+        Args:
+            session_id: The ID of the session
+
+        Returns:
+            list[Lap]: The laps for the session
+        """
+        stmt = (
+            select(Lap)
+            .where(Lap.track_session_id == session_id)
+            .options(selectinload(Lap.metrics))
+            .order_by(Lap.lap_number)
+        )
+        result = await self.db.execute(stmt)
+        laps = result.scalars().all()
+
+        logger.debug(f"Found {len(laps)} laps for session {session_id}")
+        return list(laps)
+
+    async def get_lap_by_id(self, lap_id: UUID) -> Lap | None:
+        """
+        Get a specific lap by ID with its metrics.
+
+        Args:
+            lap_id: The ID of the lap
+
+        Returns:
+            Lap | None: The lap or None if not found
+        """
+        stmt = (
+            select(Lap)
+            .where(Lap.id == lap_id)
+            .options(
+                selectinload(Lap.metrics).selectinload(LapMetricsDB.braking_zones),
+                selectinload(Lap.metrics).selectinload(LapMetricsDB.corners),
+                selectinload(Lap.track_session),
+            )
+        )
+        result = await self.db.execute(stmt)
+        lap = result.scalar_one_or_none()
+
+        if lap:
+            logger.debug(f"Found lap with ID {lap_id}")
+        else:
+            logger.debug(f"No lap found with ID {lap_id}")
+
+        return lap
+
     async def add_lap(
         self,
         track_session_id: UUID,
@@ -162,12 +256,15 @@ class TelemetryService:
                 yaw_rate=frame.yaw_rate,
                 roll_rate=frame.roll_rate,
                 pitch_rate=frame.pitch_rate,
-                position_x=frame.position_x,
-                position_y=frame.position_y,
-                position_z=frame.position_z,
+                velocity_x=frame.velocity_x,
+                velocity_y=frame.velocity_y,
+                velocity_z=frame.velocity_z,
                 yaw=frame.yaw,
                 pitch=frame.pitch,
                 roll=frame.roll,
+                latitude=frame.latitude,
+                longitude=frame.longitude,
+                altitude=frame.altitude,
                 track_temp=frame.track_temp,
                 track_wetness=frame.track_wetness,
                 air_temp=frame.air_temp,
@@ -337,3 +434,24 @@ class TelemetryService:
             logger.debug(f"No metrics found for lap {lap_id}")
 
         return metrics
+
+    async def get_telemetry_for_lap(self, lap_id: UUID) -> list[Telemetry]:
+        """
+        Get all telemetry frames for a specific lap, ordered by session time.
+
+        Args:
+            lap_id: The ID of the lap
+
+        Returns:
+            list[Telemetry]: The telemetry frames for the lap
+        """
+        stmt = (
+            select(Telemetry)
+            .where(Telemetry.lap_id == lap_id)
+            .order_by(Telemetry.session_time)
+        )
+        result = await self.db.execute(stmt)
+        frames = result.scalars().all()
+
+        logger.debug(f"Found {len(frames)} telemetry frames for lap {lap_id}")
+        return list(frames)

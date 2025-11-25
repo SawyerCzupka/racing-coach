@@ -58,3 +58,5 @@ data_out/
 .aider*
 
 node_modules/
+
+.dockerdata/

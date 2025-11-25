@@ -1,9 +1,9 @@
 # Multi-stage build for Racing Coach Web Dashboard
-FROM node:20-alpine AS base
+FROM node:lts-trixie AS base
 WORKDIR /app
 COPY package*.json ./
 RUN --mount=type=cache,target=/root/.npm \
-    npm ci
+  npm ci
 
 # Development stage
 FROM base AS development
@@ -15,10 +15,10 @@ CMD ["npm", "run", "dev", "--", "--host"]
 FROM base AS builder
 COPY . .
 RUN --mount=type=cache,target=/root/.npm \
-    npm run build
+  npm run build
 
 # Production stage with nginx
-FROM nginx:alpine AS production
+FROM nginx:lts-alpine AS production
 
 # Copy custom nginx config
 COPY nginx.conf /etc/nginx/nginx.conf

@@ -5,6 +5,7 @@ performance metrics including braking points, corner analysis, and lap statistic
 """
 
 import logging
+import time
 
 from racing_coach_core.algs.metrics import extract_lap_metrics
 from racing_coach_core.events import (
@@ -43,16 +44,19 @@ class MetricsHandler:
 
         try:
             # Extract comprehensive metrics from the lap
+            start_time = time.time()
             lap_metrics = extract_lap_metrics(
                 sequence=lap_telemetry,
                 lap_number=lap_telemetry.frames[0].lap_number if lap_telemetry.frames else None,
             )
+            extraction_time = time.time() - start_time
 
             logger.info(
                 f"Extracted metrics for lap {lap_metrics.lap_number}: "
                 f"{lap_metrics.total_braking_zones} braking zones, "
                 f"{lap_metrics.total_corners} corners, "
-                f"avg corner speed: {lap_metrics.average_corner_speed:.1f} m/s"
+                f"avg corner speed: {lap_metrics.average_corner_speed:.1f} m/s "
+                f"({extraction_time*1000:.1f}ms)"
             )
 
             # Log detailed braking metrics

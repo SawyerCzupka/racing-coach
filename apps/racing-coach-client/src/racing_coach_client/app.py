@@ -15,6 +15,7 @@ from racing_coach_client.handlers import (
     MetricsHandler,
     MetricsUploadHandler,
 )
+from racing_coach_client.logging_config import setup_logging
 
 logger = logging.getLogger(__name__)
 
@@ -152,5 +153,10 @@ def main():
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+    # Configure logging based on settings
+    setup_logging(
+        level=settings.LOG_LEVEL,
+        use_color=settings.LOG_COLOR,
+        show_module=settings.LOG_SHOW_MODULE,
+    )
     main()
