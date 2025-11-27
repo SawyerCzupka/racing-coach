@@ -1,6 +1,6 @@
 services:
   timescaledb:
-    image: timescale/timescaledb:2.18.1-pg17
+    image: timescale/timescaledb:latest-pg17
     container_name: timescaledb
     environment:
       POSTGRES_USER: postgres
@@ -54,7 +54,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
-      start_period: 5s
+      start_period: 15s
     networks:
       - racing-coach-network
     command: sh -c "cd apps/racing-coach-server && uv sync && uv run alembic upgrade head && uv run fastapi dev src/racing_coach_server/app.py --host 0.0.0.0 --port 8000"
