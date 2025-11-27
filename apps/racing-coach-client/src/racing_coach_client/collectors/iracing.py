@@ -10,8 +10,8 @@ import threading
 import time
 from datetime import datetime
 
-from racing_coach_core.events import Event, EventBus, SystemEvents
-from racing_coach_core.models.events import TelemetryAndSession
+from racing_coach_core.events import Event, EventBus, SessionRegistry, SystemEvents
+from racing_coach_core.models.events import SessionEnd, SessionStart
 from racing_coach_core.models.telemetry import SessionFrame, TelemetryFrame
 
 from .sources import TelemetrySource
@@ -40,16 +40,20 @@ class TelemetryCollector:
         current_session: Current session metadata.
     """
 
-    def __init__(self, event_bus: EventBus, source: TelemetrySource) -> None:
+    def __init__(
+        self, event_bus: EventBus, source: TelemetrySource, session_registry: SessionRegistry
+    ) -> None:
         """
         Initialize the telemetry collector.
 
         Args:
             event_bus: Event bus for publishing telemetry events.
             source: Telemetry source to collect data from.
+            session_registry: Registry for tracking current session state.
         """
         self.source = source
         self.event_bus = event_bus
+        self.session_registry = session_registry
 
         self._running: bool = False
         self._collection_thread: threading.Thread | None = None
@@ -93,6 +97,14 @@ class TelemetryCollector:
         # Collect the initial session frame
         try:
             self.current_session = self.collect_session_frame()
+            # Register session and publish SESSION_START
+            self.session_registry.start_session(self.current_session)
+            self.event_bus.thread_safe_publish(
+                Event(
+                    type=SystemEvents.SESSION_START,
+                    data=SessionStart(SessionFrame=self.current_session),
+                )
+            )
         except Exception as e:
             logger.error(f"Failed to collect initial session frame: {e}")
             self._running = False
@@ -113,7 +125,15 @@ class TelemetryCollector:
                             time.sleep(1)
                             continue
                     else:
-                        # ReplayTelemetrySource doesn't reconnect
+                        # ReplayTelemetrySource doesn't reconnect - emit SESSION_END
+                        if self.current_session is not None:
+                            self.event_bus.thread_safe_publish(
+                                Event(
+                                    type=SystemEvents.SESSION_END,
+                                    data=SessionEnd(session_id=self.current_session.session_id),
+                                )
+                            )
+                            self.session_registry.end_session(self.current_session.session_id)
                         logger.error("Telemetry source disconnected")
                         break
 
@@ -131,6 +151,15 @@ class TelemetryCollector:
             logger.error(f"Unexpected error in collection loop: {e}", exc_info=True)
         finally:
             self._running = False
+            # Publish SESSION_END before shutdown
+            if self.current_session is not None:
+                self.event_bus.thread_safe_publish(
+                    Event(
+                        type=SystemEvents.SESSION_END,
+                        data=SessionEnd(session_id=self.current_session.session_id),
+                    )
+                )
+                self.session_registry.end_session(self.current_session.session_id)
             self.source.shutdown()
             logger.info("Telemetry collection loop stopped")
 
@@ -149,7 +178,8 @@ class TelemetryCollector:
         Collect a single frame of telemetry data and publish it to the event bus.
 
         This method freezes the current telemetry buffer, creates a TelemetryFrame,
-        and publishes it along with the session metadata.
+        and publishes it to the event bus. Session information is available via
+        the SessionRegistry.
 
         Raises:
             RuntimeError: If no session frame has been collected yet.
@@ -163,14 +193,11 @@ class TelemetryCollector:
         # Create telemetry frame from the source
         telemetry_frame = TelemetryFrame.from_irsdk(self.source, datetime.now())
 
-        # Publish to event bus
+        # Publish to event bus (TelemetryFrame only, no session)
         self.event_bus.thread_safe_publish(
             Event(
                 type=SystemEvents.TELEMETRY_FRAME,
-                data=TelemetryAndSession(
-                    TelemetryFrame=telemetry_frame,
-                    SessionFrame=self.current_session,
-                ),
+                data=telemetry_frame,
             )
         )
 

@@ -6,7 +6,8 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
 
-from ..models.events import LapAndSession, MetricsAndSession, TelemetryAndSession
+from ..models.events import LapAndSession, MetricsAndSession, SessionEnd, SessionStart
+from ..models.telemetry import TelemetryFrame
 
 logger = logging.getLogger(__name__)
 
@@ -23,8 +24,10 @@ class EventType[T]:
 
 class SystemEvents:
     LAP_TELEMETRY_SEQUENCE: EventType[LapAndSession] = EventType("LAP_TELEMETRY_SEQUENCE")
-    TELEMETRY_FRAME: EventType[TelemetryAndSession] = EventType("TELEMETRY_FRAME")
+    TELEMETRY_FRAME: EventType[TelemetryFrame] = EventType("TELEMETRY_FRAME")
     LAP_METRICS_EXTRACTED: EventType[MetricsAndSession] = EventType("LAP_METRICS_EXTRACTED")
+    SESSION_START: EventType[SessionStart] = EventType("SESSION_START")
+    SESSION_END: EventType[SessionEnd] = EventType("SESSION_END")
 
 
 @dataclass(frozen=True)

@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from uuid import uuid4
 
 from factory import Factory, Faker, LazyAttribute, LazyFunction, SubFactory
-from racing_coach_core.models.events import LapAndSession, TelemetryAndSession
+from racing_coach_core.models.events import LapAndSession
 from racing_coach_core.models.telemetry import (
     LapTelemetry,
     SessionFrame,
@@ -49,13 +49,20 @@ class TelemetryFrameFactory(Factory[TelemetryFrame]):
     roll_rate = Faker("pyfloat", min_value=-1, max_value=1)
     pitch_rate = Faker("pyfloat", min_value=-1, max_value=1)
 
-    # Vehicle Position/Orientation
-    position_x = Faker("pyfloat", min_value=-100, max_value=100)
-    position_y = Faker("pyfloat", min_value=-100, max_value=100)
-    position_z = Faker("pyfloat", min_value=-100, max_value=100)
+    # Vehicle Velocity
+    velocity_x = Faker("pyfloat", min_value=-100, max_value=100)
+    velocity_y = Faker("pyfloat", min_value=-100, max_value=100)
+    velocity_z = Faker("pyfloat", min_value=-100, max_value=100)
+
+    # Vehicle Orientation
     yaw = Faker("pyfloat", min_value=-3.14, max_value=3.14)
     pitch = Faker("pyfloat", min_value=-3.14, max_value=3.14)
     roll = Faker("pyfloat", min_value=-3.14, max_value=3.14)
+
+    # GPS Position
+    latitude = Faker("pyfloat", min_value=-90, max_value=90)
+    longitude = Faker("pyfloat", min_value=-180, max_value=180)
+    altitude = Faker("pyfloat", min_value=0, max_value=5000)
 
     # Tire Data
     tire_temps: dict[str, dict[str, float]] = LazyAttribute(
@@ -128,16 +135,6 @@ class LapTelemetryFactory(Factory[LapTelemetry]):
         lambda _: [TelemetryFrameFactory.create() for _ in range(100)]
     )
     lap_time = Faker("pyfloat", min_value=60, max_value=180)
-
-
-class TelemetryAndSessionFactory(Factory[TelemetryAndSession]):
-    """Factory for creating TelemetryAndSession instances."""
-
-    class Meta:
-        model = TelemetryAndSession
-
-    TelemetryFrame: TelemetryFrame = SubFactory(TelemetryFrameFactory)  # type: ignore[assignment]
-    SessionFrame: SessionFrame = SubFactory(SessionFrameFactory)  # type: ignore[assignment]
 
 
 class LapAndSessionFactory(Factory[LapAndSession]):

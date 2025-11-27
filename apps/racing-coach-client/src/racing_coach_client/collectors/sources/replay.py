@@ -204,6 +204,7 @@ class ReplayTelemetrySource:
                         f"(frame {self.current_frame}/{self.total_frames})"
                     )
                     self._end_of_file_logged = True
+                    self._connected = False  # Triggers SESSION_END via disconnect handling
                 self.current_frame = self.total_frames - 1  # Stay on last frame
 
         # Cache all variables for this frame

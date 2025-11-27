@@ -18,14 +18,14 @@ from racing_coach_core.events.base import (
     HandlerContext,
     SystemEvents,
 )
-from racing_coach_core.models.events import LapAndSession, TelemetryAndSession
+from racing_coach_core.events.session_registry import SessionRegistry
+from racing_coach_core.models.events import LapAndSession
 from racing_coach_core.models.telemetry import SessionFrame, TelemetryFrame
 
 from tests.factories import (
     LapAndSessionFactory,
     LapTelemetryFactory,
     SessionFrameFactory,
-    TelemetryAndSessionFactory,
     TelemetryFrameFactory,
 )
 
@@ -33,7 +33,6 @@ from tests.factories import (
 register(TelemetryFrameFactory)
 register(SessionFrameFactory)
 register(LapTelemetryFactory)
-register(TelemetryAndSessionFactory)
 register(LapAndSessionFactory)
 
 
@@ -47,18 +46,29 @@ def ibt_file_path() -> Path:
     """
     Get the path to an IBT file for testing.
 
-    Reads from REPLAY_FILE_PATH environment variable.
-    If not set, tests requiring this fixture will be skipped.
+    Resolution order:
+    1. REPLAY_FILE_PATH environment variable
+    2. REPLAY_FILE_PATH from client config.py settings
+    3. Skip test if neither is set or file doesn't exist
 
     Returns:
         Path to IBT file if configured.
 
     Raises:
-        pytest.skip: If REPLAY_FILE_PATH is not set or file doesn't exist.
+        pytest.skip: If no valid IBT file path is found.
     """
+    # Try environment variable first
     file_path: str | None = os.getenv("REPLAY_FILE_PATH")
+
+    # Fall back to config.py settings
     if not file_path:
-        pytest.skip("REPLAY_FILE_PATH not set - skipping IBT file tests")
+        from racing_coach_client.config import settings
+
+        file_path = settings.REPLAY_FILE_PATH
+
+    # Skip if no path configured
+    if not file_path:
+        pytest.skip("REPLAY_FILE_PATH not set in environment or config - skipping IBT file tests")
 
     path: Path = Path(file_path)
     if not path.exists():
@@ -76,6 +86,12 @@ def ibt_file_path() -> Path:
 def event_bus() -> EventBus:
     """Create a fresh EventBus instance for testing."""
     return EventBus(max_queue_size=100, max_workers=2)
+
+
+@pytest.fixture
+def session_registry() -> SessionRegistry:
+    """Create a fresh SessionRegistry instance for testing."""
+    return SessionRegistry()
 
 
 @pytest.fixture
@@ -170,7 +186,7 @@ def telemetry_frame_collector(
 
     This fixture requires a running event bus.
     """
-    handler: Handler[TelemetryAndSession] = Handler(
+    handler: Handler[TelemetryFrame] = Handler(
         type=SystemEvents.TELEMETRY_FRAME,
         fn=event_collector.collect,
     )
@@ -240,12 +256,15 @@ def mock_telemetry_source(
             "YawRate": telemetry_data.yaw_rate,
             "RollRate": telemetry_data.roll_rate,
             "PitchRate": telemetry_data.pitch_rate,
-            "VelocityX": telemetry_data.position_x,
-            "VelocityY": telemetry_data.position_y,
-            "VelocityZ": telemetry_data.position_z,
+            "VelocityX": telemetry_data.velocity_x,
+            "VelocityY": telemetry_data.velocity_y,
+            "VelocityZ": telemetry_data.velocity_z,
             "Yaw": telemetry_data.yaw,
             "Pitch": telemetry_data.pitch,
             "Roll": telemetry_data.roll,
+            "Lat": telemetry_data.latitude,
+            "Lon": telemetry_data.longitude,
+            "Alt": telemetry_data.altitude,
             "TrackTempCrew": telemetry_data.track_temp,
             "TrackWetness": telemetry_data.track_wetness,
             "AirTemp": telemetry_data.air_temp,

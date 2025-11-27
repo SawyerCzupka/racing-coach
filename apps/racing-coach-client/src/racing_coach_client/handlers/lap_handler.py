@@ -8,14 +8,17 @@ but rather only the lap events. This way, I can reduce the amount of data sent t
 
 import logging
 
+from uuid import UUID
+
 from racing_coach_core.events import (
     Event,
     EventBus,
     HandlerContext,
+    SessionRegistry,
     SystemEvents,
 )
 from racing_coach_core.events.checking import method_handles
-from racing_coach_core.models.events import LapAndSession, TelemetryAndSession
+from racing_coach_core.models.events import LapAndSession, SessionStart
 from racing_coach_core.models.telemetry import (
     LapTelemetry,
     SessionFrame,
@@ -28,22 +31,35 @@ logger = logging.getLogger(__name__)
 
 
 class LapHandler:
-    def __init__(self, event_bus: EventBus):
+    def __init__(self, event_bus: EventBus, session_registry: SessionRegistry):
         self.event_bus = event_bus
+        self.session_registry = session_registry
 
         self.current_lap: int = -1
         self.telemetry_buffer: list[TelemetryFrame] = []
 
-        self.current_session: SessionFrame | None = None
+        self.last_session_id: UUID | None = None
+
+    @method_handles(SystemEvents.SESSION_START)
+    def handle_session_start(self, context: HandlerContext[SessionStart]):
+        """Handle session start events and flush buffer if session changed."""
+        new_session = context.event.data.SessionFrame
+        if self.last_session_id is not None and new_session.session_id != self.last_session_id:
+            if len(self.telemetry_buffer) > 0:
+                logger.info("New session detected, flushing incomplete lap buffer")
+                self.publish_lap_and_flush_buffer()
+        self.last_session_id = new_session.session_id
+        self.current_lap = -1
 
     @method_handles(SystemEvents.TELEMETRY_FRAME)
-    def handle_telemetry_frame(self, context: HandlerContext[TelemetryAndSession]):
-        data = context.event.data
+    def handle_telemetry_frame(self, context: HandlerContext[TelemetryFrame]):
+        telemetry_frame: TelemetryFrame = context.event.data
 
-        telemetry_frame: TelemetryFrame = data.TelemetryFrame
-
-        if self.current_session is None:
-            self.current_session = data.SessionFrame
+        # Get session from registry
+        current_session = self.session_registry.get_current_session()
+        if current_session is None:
+            logger.warning("Received telemetry frame but no active session")
+            return
 
         # If old lap is finished, publish the telemetry and clear the buffer
         if telemetry_frame.lap_number != self.current_lap:
@@ -86,7 +102,8 @@ class LapHandler:
             logger.warning("Telemetry buffer is empty while trying to publish lap telemetry.")
             return
 
-        if self.current_session is None:
+        current_session = self.session_registry.get_current_session()
+        if current_session is None:
             logger.warning("Current session is None while trying to publish lap telemetry.")
             return
 
@@ -95,7 +112,7 @@ class LapHandler:
         self.event_bus.thread_safe_publish(
             Event(
                 type=SystemEvents.LAP_TELEMETRY_SEQUENCE,
-                data=LapAndSession(LapTelemetry=lap_telemetry, SessionFrame=self.current_session),
+                data=LapAndSession(LapTelemetry=lap_telemetry, SessionFrame=current_session),
             )
         )
 

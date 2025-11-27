@@ -2,9 +2,16 @@ import logging
 import time
 from typing import Any
 
-from racing_coach_core.events import EventBus, Handler, HandlerContext, SystemEvents
+from racing_coach_core.events import (
+    EventBus,
+    Handler,
+    HandlerContext,
+    SystemEvents,
+)
 from racing_coach_core.events.checking import func_handles
-from racing_coach_core.models.events import LapAndSession, TelemetryAndSession
+from racing_coach_core.events.session_registry import SessionRegistry
+from racing_coach_core.models.events import LapAndSession, SessionStart
+from racing_coach_core.models.telemetry import TelemetryFrame
 
 from racing_coach_client.collectors.factory import create_telemetry_source
 from racing_coach_client.collectors.iracing import TelemetryCollector
@@ -44,12 +51,15 @@ class RacingCoachClient:
         # Create event bus
         self.event_bus = EventBus()
 
+        # Create session registry
+        self.session_registry = SessionRegistry()
+
         # Create telemetry source based on configuration
         logger.info(f"Initializing telemetry source (mode: {settings.TELEMETRY_MODE})")
         telemetry_source = create_telemetry_source(settings)
 
         # Create telemetry collector with the source
-        self.collector = TelemetryCollector(self.event_bus, telemetry_source)
+        self.collector = TelemetryCollector(self.event_bus, telemetry_source, self.session_registry)
 
         # Start event bus
         self.event_bus.start()
@@ -66,9 +76,15 @@ class RacingCoachClient:
         # Shared cache for lap_ids (used by upload handlers)
         lap_id_cache: dict[tuple[str, int], str] = {}
 
-        lap_handler = LapHandler(self.event_bus)
+        lap_handler = LapHandler(self.event_bus, self.session_registry)
         handlers.append(
-            Handler[TelemetryAndSession](
+            Handler[SessionStart](
+                SystemEvents.SESSION_START,
+                lap_handler.handle_session_start,
+            )
+        )
+        handlers.append(
+            Handler[TelemetryFrame](
                 SystemEvents.TELEMETRY_FRAME,
                 lap_handler.handle_telemetry_frame,
             )

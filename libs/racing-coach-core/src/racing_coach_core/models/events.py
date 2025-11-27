@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from pydantic import BaseModel
 
 from ..algs.events import LapMetrics
@@ -19,3 +21,15 @@ class MetricsAndSession(BaseModel):
 
     LapMetrics: LapMetrics
     SessionFrame: SessionFrame
+
+
+class SessionStart(BaseModel):
+    """Event data for session start."""
+
+    SessionFrame: SessionFrame
+
+
+class SessionEnd(BaseModel):
+    """Event data for session end."""
+
+    session_id: UUID
