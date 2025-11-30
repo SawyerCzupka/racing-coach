@@ -18,7 +18,7 @@ services:
       - racing-coach-network
 
   racing-coach-server:
-    image: ghcr.io/astral-sh/uv:python3.13-trixie-slim
+    image: ghcr.io/astral-sh/uv:python3.13-trixie
     # build:
     #   context: .
     #   dockerfile: apps/racing-coach-server/Dockerfile
@@ -34,7 +34,7 @@ services:
     volumes:
       - ./apps/racing-coach-server:/app/apps/racing-coach-server
       - ./libs:/app/libs
-      - ./.dockerdata:/.dockerdata
+      - ./.dockerdata/server:/.dockerdata
       - /app/apps/racing-coach-server/.venv
     depends_on:
       timescaledb:

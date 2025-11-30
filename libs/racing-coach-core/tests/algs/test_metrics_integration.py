@@ -5,7 +5,6 @@ from pathlib import Path
 
 import irsdk
 import pytest
-
 from racing_coach_core.algs.metrics import extract_lap_metrics
 from racing_coach_core.models.telemetry import LapTelemetry, TelemetryFrame
 
@@ -199,8 +198,7 @@ class TestMetricsWithRealTelemetry:
 
         # Create lap telemetry
         lap_telemetry = LapTelemetry(
-            frames=frames,
-            lap_time=frames[-1].current_lap_time if frames else None
+            frames=frames, lap_time=frames[-1].current_lap_time if frames else None
         )
 
         # Extract metrics
@@ -225,28 +223,36 @@ class TestMetricsWithRealTelemetry:
         # Detailed braking zones
         print(f"\n  Braking Zones:")
         for i, zone in enumerate(metrics.braking_zones[:5]):  # First 5
-            print(f"    Zone {i+1}: distance={zone.braking_point_distance:.3f}, "
-                  f"speed={zone.braking_point_speed:.1f} m/s, "
-                  f"pressure={zone.max_brake_pressure:.2f}, "
-                  f"trail_braking={zone.has_trail_braking}")
+            print(
+                f"    Zone {i + 1}: distance={zone.braking_point_distance:.3f}, "
+                f"speed={zone.braking_point_speed:.1f} m/s, "
+                f"pressure={zone.max_brake_pressure:.2f}, "
+                f"trail_braking={zone.has_trail_braking}"
+            )
 
         # Detailed corners
         print(f"\n  Corners:")
         for i, corner in enumerate(metrics.corners[:5]):  # First 5
-            print(f"    Corner {i+1}: apex={corner.apex_distance:.3f}, "
-                  f"apex_speed={corner.apex_speed:.1f} m/s, "
-                  f"max_lateral_g={corner.max_lateral_g:.2f}")
+            print(
+                f"    Corner {i + 1}: apex={corner.apex_distance:.3f}, "
+                f"apex_speed={corner.apex_speed:.1f} m/s, "
+                f"max_lateral_g={corner.max_lateral_g:.2f}"
+            )
 
     @pytest.mark.slow
     def test_braking_zones_detected_correctly(self, ibt_file_path: Path) -> None:
         """Test that braking zones are detected in real telemetry."""
         frames = collect_lap_telemetry(ibt_file_path, target_lap=2)
 
-        lap_telemetry = LapTelemetry(frames=frames, lap_time=frames[-1].current_lap_time if frames else None)
+        lap_telemetry = LapTelemetry(
+            frames=frames, lap_time=frames[-1].current_lap_time if frames else None
+        )
         metrics = extract_lap_metrics(lap_telemetry)
 
         # Bathurst should have many braking zones
-        assert metrics.total_braking_zones >= 5, f"Expected at least 5 braking zones at Bathurst, got {metrics.total_braking_zones}"
+        assert metrics.total_braking_zones >= 5, (
+            f"Expected at least 5 braking zones at Bathurst, got {metrics.total_braking_zones}"
+        )
 
         # All braking zones should have valid data
         for zone in metrics.braking_zones:
@@ -259,15 +265,22 @@ class TestMetricsWithRealTelemetry:
         """Test that corners are detected in real telemetry."""
         frames = collect_lap_telemetry(ibt_file_path, target_lap=2)
 
-        lap_telemetry = LapTelemetry(frames=frames, lap_time=frames[-1].current_lap_time if frames else None)
+        lap_telemetry = LapTelemetry(
+            frames=frames, lap_time=frames[-1].current_lap_time if frames else None
+        )
         metrics = extract_lap_metrics(lap_telemetry)
 
         # Bathurst should have many corners
-        assert metrics.total_corners >= 10, f"Expected at least 10 corners at Bathurst, got {metrics.total_corners}"
+        assert metrics.total_corners >= 10, (
+            f"Expected at least 10 corners at Bathurst, got {metrics.total_corners}"
+        )
 
         # All corners should have valid data
         for corner in metrics.corners:
-            assert corner.turn_in_distance < corner.exit_distance or corner.exit_distance < corner.turn_in_distance, "Corner should have entry and exit"
+            assert (
+                corner.turn_in_distance < corner.exit_distance
+                or corner.exit_distance < corner.turn_in_distance
+            ), "Corner should have entry and exit"
             assert corner.apex_speed > 0, "Apex speed should be positive"
             assert corner.max_lateral_g >= 0, "Lateral G should be non-negative"
             assert corner.time_in_corner > 0, "Time in corner should be positive"
@@ -285,14 +298,20 @@ class TestMetricsWithRealTelemetry:
 
         # Skip if lap 3 is incomplete (less than 50% of lap 2 frames indicates incomplete lap)
         if len(frames_lap3) < len(frames_lap2) * 0.5:
-            pytest.skip(f"Lap 3 appears incomplete ({len(frames_lap3)} frames vs {len(frames_lap2)} for lap 2)")
+            pytest.skip(
+                f"Lap 3 appears incomplete ({len(frames_lap3)} frames vs {len(frames_lap2)} for lap 2)"
+            )
 
         metrics_lap2 = extract_lap_metrics(LapTelemetry(frames=frames_lap2, lap_time=None))
         metrics_lap3 = extract_lap_metrics(LapTelemetry(frames=frames_lap3, lap_time=None))
 
         # Print metrics for debugging
-        print(f"\nLap 2: {len(frames_lap2)} frames, {metrics_lap2.total_corners} corners, {metrics_lap2.total_braking_zones} braking zones")
-        print(f"Lap 3: {len(frames_lap3)} frames, {metrics_lap3.total_corners} corners, {metrics_lap3.total_braking_zones} braking zones")
+        print(
+            f"\nLap 2: {len(frames_lap2)} frames, {metrics_lap2.total_corners} corners, {metrics_lap2.total_braking_zones} braking zones"
+        )
+        print(
+            f"Lap 3: {len(frames_lap3)} frames, {metrics_lap3.total_corners} corners, {metrics_lap3.total_braking_zones} braking zones"
+        )
 
         # Corner count should be similar (within 20% variance)
         corner_variance = abs(metrics_lap2.total_corners - metrics_lap3.total_corners)
@@ -302,8 +321,13 @@ class TestMetricsWithRealTelemetry:
         # Braking zone count should be similar
         braking_variance = abs(metrics_lap2.total_braking_zones - metrics_lap3.total_braking_zones)
         avg_braking = (metrics_lap2.total_braking_zones + metrics_lap3.total_braking_zones) / 2
-        assert braking_variance / avg_braking < 0.2, "Braking zone count should be consistent across laps"
+        assert braking_variance / avg_braking < 0.2, (
+            "Braking zone count should be consistent across laps"
+        )
 
-        print(f"\nLap 2: {metrics_lap2.total_corners} corners, {metrics_lap2.total_braking_zones} braking zones")
-        print(f"Lap 3: {metrics_lap3.total_corners} corners, {metrics_lap3.total_braking_zones} braking zones")
-
+        print(
+            f"\nLap 2: {metrics_lap2.total_corners} corners, {metrics_lap2.total_braking_zones} braking zones"
+        )
+        print(
+            f"Lap 3: {metrics_lap3.total_corners} corners, {metrics_lap3.total_braking_zones} braking zones"
+        )

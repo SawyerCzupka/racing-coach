@@ -5,10 +5,9 @@ from uuid import uuid4
 import pytest
 from httpx import AsyncClient
 from racing_coach_core.algs.events import BrakingMetrics, CornerMetrics, LapMetrics
+from racing_coach_server.telemetry.models import Lap, LapMetricsDB, TrackSession
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-
-from racing_coach_server.telemetry.models import Lap, LapMetricsDB, TrackSession
 
 
 @pytest.mark.integration

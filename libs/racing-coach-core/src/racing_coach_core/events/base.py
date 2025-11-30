@@ -6,7 +6,13 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
 
-from ..models.events import LapAndSession, MetricsAndSession, SessionEnd, SessionStart
+from ..models.events import (
+    LapAndSession,
+    MetricsAndSession,
+    SessionEnd,
+    SessionStart,
+    TelemetryAndSessionId,
+)
 from ..models.telemetry import TelemetryFrame
 
 logger = logging.getLogger(__name__)
@@ -25,6 +31,7 @@ class EventType[T]:
 class SystemEvents:
     LAP_TELEMETRY_SEQUENCE: EventType[LapAndSession] = EventType("LAP_TELEMETRY_SEQUENCE")
     TELEMETRY_FRAME: EventType[TelemetryFrame] = EventType("TELEMETRY_FRAME")
+    TELEMETRY_EVENT: EventType[TelemetryAndSessionId] = EventType("TELEMETRY_EVENT")
     LAP_METRICS_EXTRACTED: EventType[MetricsAndSession] = EventType("LAP_METRICS_EXTRACTED")
     SESSION_START: EventType[SessionStart] = EventType("SESSION_START")
     SESSION_END: EventType[SessionEnd] = EventType("SESSION_END")
@@ -104,6 +111,10 @@ class EventBus:
             self._handlers[event_type].remove(handler)
             logger.info(f"Removed handler {handler} for event {event_type}")
 
+    def check_size_and_log(self):
+        if self._queue.qsize() >= self._max_queue_size - 1:
+            logger.warning("Attempting to add event to almost full queue.")
+
     async def publish(self, event: Event[Any]) -> None:
         """Publish an event to the bus.
 
@@ -112,6 +123,8 @@ class EventBus:
         """
         if not self._running or self._loop is None or self._queue is None:
             raise RuntimeError("Event bus not running")
+
+        self.check_size_and_log()
 
         # Check if we're in the EventBus's event loop
         try:
@@ -142,6 +155,8 @@ class EventBus:
         """Called from non-async code or different threads to publish events."""
         if not self._running or self._loop is None or self._queue is None:
             raise RuntimeError("Event bus not running")
+
+        self.check_size_and_log()
 
         async def _put_event():
             await self._queue.put(event)  # type: ignore[union-attr]

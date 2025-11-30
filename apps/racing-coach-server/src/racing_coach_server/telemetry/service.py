@@ -187,6 +187,7 @@ class TelemetryService:
         lap_number: int,
         lap_time: float | None = None,
         is_valid: bool = False,
+        lap_id: UUID | None = None,
     ) -> Lap:
         """
         Create a lap record for a session.
@@ -196,19 +197,30 @@ class TelemetryService:
             lap_number: The lap number
             lap_time: Optional lap time (nullable)
             is_valid: Whether the lap is valid
+            lap_id: Optional client-provided UUID. If not provided, server generates one.
 
         Returns:
             Lap: The created lap record
         """
-        lap = Lap(
-            track_session_id=track_session_id,
-            lap_number=lap_number,
-            lap_time=lap_time,
-            is_valid=is_valid,
-        )
+        # Use client-provided lap_id if available, otherwise let the model generate one
+        lap_kwargs: dict = {
+            "track_session_id": track_session_id,
+            "lap_number": lap_number,
+            "lap_time": lap_time,
+            "is_valid": is_valid,
+        }
+        if lap_id is not None:
+            lap_kwargs["id"] = lap_id
+
+        lap = Lap(**lap_kwargs)
+
+        logger.info(f"Lap Id: {lap.id} | Lap_id: {lap_id}")
         self.db.add(lap)
         await self.db.flush()  # Flush to get the ID
-        logger.info(f"Created lap {lap_number} for session {track_session_id}")
+        logger.info(f"Created lap {lap_number} for session {track_session_id} with ID {lap.id}")
+
+        if lap.id != lap_id:
+            logger.warning("Actual lap ID does not match provided lap id.")
         return lap
 
     async def add_telemetry_sequence(
@@ -445,11 +457,7 @@ class TelemetryService:
         Returns:
             list[Telemetry]: The telemetry frames for the lap
         """
-        stmt = (
-            select(Telemetry)
-            .where(Telemetry.lap_id == lap_id)
-            .order_by(Telemetry.session_time)
-        )
+        stmt = select(Telemetry).where(Telemetry.lap_id == lap_id).order_by(Telemetry.session_time)
         result = await self.db.execute(stmt)
         frames = result.scalars().all()
 

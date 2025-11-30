@@ -1,12 +1,12 @@
 """Tests for ReplayTelemetrySource."""
 
-from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
 from racing_coach_client.collectors.sources.replay import ReplayTelemetrySource
+from racing_coach_core.models.telemetry import SessionFrame, TelemetryFrame
 
 
 @pytest.mark.unit
@@ -16,10 +16,10 @@ class TestReplayTelemetrySourceUnit:
     @patch("racing_coach_client.collectors.sources.replay.irsdk.IRSDK")
     @patch("racing_coach_client.collectors.sources.replay.irsdk.IBT")
     @patch("pathlib.Path.exists")
-    def test_startup(
+    def test_start(
         self, mock_exists: MagicMock, mock_ibt_class: MagicMock, mock_irsdk_class: MagicMock
     ) -> None:
-        """Test startup opens IBT file and determines frame count."""
+        """Test start opens IBT file and determines frame count."""
         # Setup mocks
         mock_exists.return_value = True
 
@@ -43,7 +43,7 @@ class TestReplayTelemetrySourceUnit:
 
         # Test
         source: ReplayTelemetrySource = ReplayTelemetrySource(file_path=Path("/fake/path.ibt"))
-        source.startup()
+        source.start()
 
         # Verify
         mock_ibt.open.assert_called_once_with("/fake/path.ibt")
@@ -54,10 +54,10 @@ class TestReplayTelemetrySourceUnit:
     @patch("racing_coach_client.collectors.sources.replay.irsdk.IRSDK")
     @patch("racing_coach_client.collectors.sources.replay.irsdk.IBT")
     @patch("pathlib.Path.exists")
-    def test_shutdown(
+    def test_stop(
         self, mock_exists: MagicMock, mock_ibt_class: MagicMock, mock_irsdk_class: MagicMock
     ) -> None:
-        """Test shutdown closes IBT file."""
+        """Test stop closes IBT file."""
         # Setup mocks
         mock_exists.return_value = True
 
@@ -73,10 +73,10 @@ class TestReplayTelemetrySourceUnit:
         mock_irsdk_class.return_value = mock_ir
 
         source: ReplayTelemetrySource = ReplayTelemetrySource(file_path=Path("/fake/path.ibt"))
-        source.startup()
+        source.start()
 
         # Test
-        source.shutdown()
+        source.stop()
 
         # Verify
         mock_ibt.close.assert_called_once()
@@ -85,10 +85,10 @@ class TestReplayTelemetrySourceUnit:
     @patch("racing_coach_client.collectors.sources.replay.irsdk.IRSDK")
     @patch("racing_coach_client.collectors.sources.replay.irsdk.IBT")
     @patch("pathlib.Path.exists")
-    def test_freeze_var_buffer_latest(
+    def test_advance_frame_increments_current_frame(
         self, mock_exists: MagicMock, mock_ibt_class: MagicMock, mock_irsdk_class: MagicMock
     ) -> None:
-        """Test freeze_var_buffer_latest advances to next frame."""
+        """Test _advance_frame increments current_frame."""
         # Setup mocks
         mock_exists.return_value = True
 
@@ -110,24 +110,25 @@ class TestReplayTelemetrySourceUnit:
 
         # Test
         source: ReplayTelemetrySource = ReplayTelemetrySource(
-            file_path=Path("/fake/path.ibt"), speed_multiplier=1.0
+            file_path=Path("/fake/path.ibt"),
+            speed_multiplier=1000.0,  # Fast for testing
         )
-        source.startup()
+        source.start()
 
         initial_frame: int = source.current_frame
-        source.freeze_var_buffer_latest()
+        assert initial_frame == 0
 
-        # Verify
-        assert source.current_frame == initial_frame + 1
-        mock_ibt.get.assert_called()
+        # Directly call _advance_frame to test frame advancement
+        source._advance_frame()
+        assert source.current_frame == 1
 
     @patch("racing_coach_client.collectors.sources.replay.irsdk.IRSDK")
     @patch("racing_coach_client.collectors.sources.replay.irsdk.IBT")
     @patch("pathlib.Path.exists")
-    def test_getitem_returns_cached_value(
+    def test_get_telemetry_data_returns_dict(
         self, mock_exists: MagicMock, mock_ibt_class: MagicMock, mock_irsdk_class: MagicMock
     ) -> None:
-        """Test __getitem__ returns cached telemetry values."""
+        """Test get_telemetry_data returns cached telemetry values as dict."""
         # Setup mocks
         mock_exists.return_value = True
 
@@ -153,28 +154,27 @@ class TestReplayTelemetrySourceUnit:
 
         # Test
         source: ReplayTelemetrySource = ReplayTelemetrySource(file_path=Path("/fake/path.ibt"))
-        source.startup()
-        source.freeze_var_buffer_latest()
+        source.start()
 
-        speed: float = source["Speed"]
-        rpm: float = source["RPM"]
+        data = source.get_telemetry_data()
 
-        # Verify
-        assert speed == 50.0
-        assert rpm == 5000.0
+        # Verify it's a dict with expected values
+        assert isinstance(data, dict)
+        assert data["Speed"] == 50.0
+        assert data["RPM"] == 5000.0
 
     @patch("racing_coach_client.collectors.sources.replay.irsdk.IRSDK")
     @patch("racing_coach_client.collectors.sources.replay.irsdk.IBT")
     @patch("pathlib.Path.exists")
     @patch("racing_coach_client.collectors.sources.replay.time")
-    def test_playback_speed_affects_frame_advance(
+    def test_playback_timing_respects_speed_multiplier(
         self,
         mock_time: MagicMock,
         mock_exists: MagicMock,
         mock_ibt_class: MagicMock,
         mock_irsdk_class: MagicMock,
     ) -> None:
-        """Test that speed_multiplier affects sleep timing between frames."""
+        """Test that speed_multiplier affects sleep timing calculation."""
         # Setup mocks
         mock_exists.return_value = True
 
@@ -191,21 +191,21 @@ class TestReplayTelemetrySourceUnit:
         mock_irsdk_class.return_value = mock_ir
 
         # Mock time to simulate immediate succession
-        mock_time.time.side_effect = [0.0, 0.0, 0.001]  # Fast successive calls
+        mock_time.time.side_effect = [0.0, 0.0, 0.0, 0.001, 0.002]  # Fast successive calls
 
         # Test with 2x speed
         source: ReplayTelemetrySource = ReplayTelemetrySource(
             file_path=Path("/fake/path.ibt"), speed_multiplier=2.0
         )
-        source.startup()
+        source.start()
 
         initial_frame: int = source.current_frame
-        source.freeze_var_buffer_latest()
 
-        # Verify - should still advance by 1 frame per call (speed affects timing, not frame count)
+        # Call internal _advance_frame to test frame progression
+        source._advance_frame()
+
+        # Verify - should advance by 1 frame per call
         assert source.current_frame == initial_frame + 1
-        # With 2x speed, sleep time should be halved (or skipped in fast succession)
-        # The speed_multiplier affects the target_frame_time calculation
 
     @patch("racing_coach_client.collectors.sources.replay.irsdk.IRSDK")
     @patch("racing_coach_client.collectors.sources.replay.irsdk.IBT")
@@ -231,17 +231,20 @@ class TestReplayTelemetrySourceUnit:
 
         # Test
         source: ReplayTelemetrySource = ReplayTelemetrySource(
-            file_path=Path("/fake/path.ibt"), loop=True
+            file_path=Path("/fake/path.ibt"), loop=True, speed_multiplier=1000.0
         )
-        source.startup()
+        source.start()
 
         # Advance to near the end
-        source.current_frame = 9
+        source.current_frame = 8
+        source._cache_current_frame()
 
-        # Advance one more time
-        source.freeze_var_buffer_latest()
+        # Advance to frame 9
+        source._advance_frame()
+        assert source.current_frame == 9
 
-        # Verify - should wrap to beginning
+        # Advance again - should wrap to 0
+        source._advance_frame()
         assert source.current_frame == 0
 
     @patch("racing_coach_client.collectors.sources.replay.irsdk.IRSDK")
@@ -250,7 +253,7 @@ class TestReplayTelemetrySourceUnit:
     def test_loop_disabled_stops_at_end(
         self, mock_exists: MagicMock, mock_ibt_class: MagicMock, mock_irsdk_class: MagicMock
     ) -> None:
-        """Test that loop=False stops at the end."""
+        """Test that loop=False stops at the end and sets exhausted."""
         # Setup mocks
         mock_exists.return_value = True
 
@@ -268,18 +271,23 @@ class TestReplayTelemetrySourceUnit:
 
         # Test
         source: ReplayTelemetrySource = ReplayTelemetrySource(
-            file_path=Path("/fake/path.ibt"), loop=False
+            file_path=Path("/fake/path.ibt"), loop=False, speed_multiplier=1000.0
         )
-        source.startup()
+        source.start()
 
-        # Advance to the end
-        source.current_frame = 9
+        # Advance to near the end
+        source.current_frame = 8
+        source._cache_current_frame()
 
-        # Try to advance beyond end
-        source.freeze_var_buffer_latest()
-
-        # Verify - should stay at last frame
+        # Advance to frame 9
+        source._advance_frame()
         assert source.current_frame == 9
+        assert source.is_connected  # Still connected
+
+        # Advance again - should become exhausted
+        source._advance_frame()
+        assert source.current_frame == 9  # Stays at last frame
+        assert not source.is_connected  # Now disconnected (exhausted)
 
     @patch("racing_coach_client.collectors.sources.replay.irsdk.IRSDK")
     @patch("racing_coach_client.collectors.sources.replay.irsdk.IBT")
@@ -304,7 +312,7 @@ class TestReplayTelemetrySourceUnit:
 
         # Test
         source: ReplayTelemetrySource = ReplayTelemetrySource(file_path=Path("/fake/path.ibt"))
-        source.startup()
+        source.start()
 
         # At beginning
         assert source.get_playback_progress() == 0.0
@@ -325,46 +333,53 @@ class TestReplayTelemetrySourceIntegration:
 
     def test_open_and_read_ibt_file(self, ibt_file_path: Path) -> None:
         """Test opening and reading a real IBT file."""
-        source: ReplayTelemetrySource = ReplayTelemetrySource(file_path=ibt_file_path)
+        source: ReplayTelemetrySource = ReplayTelemetrySource(
+            file_path=ibt_file_path, speed_multiplier=1000.0
+        )
 
-        # Test startup
-        source.startup()
+        # Test start
+        source.start()
         assert source.total_frames > 0
         assert source.current_frame == 0
+        assert source.is_connected
 
-        # Test reading a frame
-        source.freeze_var_buffer_latest()
+        # Test collecting a frame
+        frame = source.collect_telemetry_frame()
+        assert isinstance(frame, TelemetryFrame)
         assert source.current_frame == 1
 
         # Verify we can read telemetry values
-        speed: Any = source["Speed"]
-        assert speed is not None
-        assert isinstance(speed, (int, float))
+        data = source.get_telemetry_data()
+        assert "Speed" in data
+        assert data["Speed"] is not None
 
-        # Test shutdown
-        source.shutdown()
+        # Test stop
+        source.stop()
 
     def test_playback_progression(self, ibt_file_path: Path) -> None:
         """Test that playback progresses through frames correctly."""
         source: ReplayTelemetrySource = ReplayTelemetrySource(
-            file_path=ibt_file_path, speed_multiplier=1.0
+            file_path=ibt_file_path, speed_multiplier=1000.0
         )
-        source.startup()
+        source.start()
 
         initial_frame: int = source.current_frame
         for i in range(5):
-            source.freeze_var_buffer_latest()
+            source.collect_telemetry_frame()
             assert source.current_frame == initial_frame + i + 1
 
-        source.shutdown()
+        source.stop()
 
     def test_read_multiple_telemetry_fields(self, ibt_file_path: Path) -> None:
         """Test reading various telemetry fields from a real IBT file."""
-        source: ReplayTelemetrySource = ReplayTelemetrySource(file_path=ibt_file_path)
-        source.startup()
-        source.freeze_var_buffer_latest()
+        source: ReplayTelemetrySource = ReplayTelemetrySource(
+            file_path=ibt_file_path, speed_multiplier=1000.0
+        )
+        source.start()
+        source.collect_telemetry_frame()
 
-        # Test reading common telemetry fields
+        # Test reading common telemetry fields via get_telemetry_data()
+        data = source.get_telemetry_data()
         fields_to_test: list[str] = [
             "Speed",
             "RPM",
@@ -376,13 +391,10 @@ class TestReplayTelemetrySourceIntegration:
         ]
 
         for field in fields_to_test:
-            try:
-                value: Any = source[field]
-                assert value is not None
-            except KeyError:
-                pytest.skip(f"Field {field} not available in this IBT file")
+            if field in data:
+                assert data[field] is not None
 
-        source.shutdown()
+        source.stop()
 
     def test_playback_speed_double(self, ibt_file_path: Path) -> None:
         """Test that 2x playback speed processes frames twice as fast as 1x speed."""
@@ -392,25 +404,25 @@ class TestReplayTelemetrySourceIntegration:
         source_1x: ReplayTelemetrySource = ReplayTelemetrySource(
             file_path=ibt_file_path, speed_multiplier=1.0
         )
-        source_1x.startup()
+        source_1x.start()
 
         start_1x: float = time.time()
         for _ in range(10):
-            source_1x.freeze_var_buffer_latest()
+            source_1x.collect_telemetry_frame()
         elapsed_1x: float = time.time() - start_1x
-        source_1x.shutdown()
+        source_1x.stop()
 
         # Test 2x speed
         source_2x: ReplayTelemetrySource = ReplayTelemetrySource(
             file_path=ibt_file_path, speed_multiplier=2.0
         )
-        source_2x.startup()
+        source_2x.start()
 
         start_2x: float = time.time()
         for _ in range(10):
-            source_2x.freeze_var_buffer_latest()
+            source_2x.collect_telemetry_frame()
         elapsed_2x: float = time.time() - start_2x
-        source_2x.shutdown()
+        source_2x.stop()
 
         # 2x speed should take roughly half the time (with tolerance for timing variance)
         speedup_ratio: float = elapsed_1x / elapsed_2x
@@ -421,16 +433,21 @@ class TestReplayTelemetrySourceIntegration:
 
     def test_loop_wraps_playback(self, ibt_file_path: Path) -> None:
         """Test that loop=True wraps playback to the beginning."""
-        source: ReplayTelemetrySource = ReplayTelemetrySource(file_path=ibt_file_path, loop=True)
-        source.startup()
+        source: ReplayTelemetrySource = ReplayTelemetrySource(
+            file_path=ibt_file_path, loop=True, speed_multiplier=1000.0
+        )
+        source.start()
 
         # Jump to near the end
-        source.current_frame = source.total_frames - 1
+        source.current_frame = source.total_frames - 2
+        source._cache_current_frame()
 
-        # Advance past the end
-        source.freeze_var_buffer_latest()
+        # Advance to last frame
+        source.collect_telemetry_frame()
+        assert source.current_frame == source.total_frames - 1
 
-        # Should wrap to beginning
+        # Advance past the end - should wrap to beginning
+        source.collect_telemetry_frame()
         assert source.current_frame == 0
 
-        source.shutdown()
+        source.stop()

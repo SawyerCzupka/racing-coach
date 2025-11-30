@@ -14,7 +14,7 @@ from .styles import (
 )
 
 if TYPE_CHECKING:
-    from ..models.responses import (
+    from racing_coach_server_client.models import (
         LapMetricsResponse,
         LapTelemetryResponse,
     )
@@ -133,7 +133,12 @@ def create_track_map(
     fig.update_layout(
         **get_chart_layout(
             "Track Map",
-            legend={"x": 0, "y": 1, "bgcolor": "rgba(0,0,0,0.5)", "font": {"color": COLORS["text"]}},
+            legend={
+                "x": 0,
+                "y": 1,
+                "bgcolor": "rgba(0,0,0,0.5)",
+                "font": {"color": COLORS["text"]},
+            },
         ),
         xaxis=get_xaxis(title="", showticklabels=False, showgrid=False),
         yaxis=get_yaxis(title="", showticklabels=False, showgrid=False, scaleanchor="x"),
@@ -274,7 +279,13 @@ def create_inputs_chart(
     fig.update_layout(
         **get_chart_layout(
             "Inputs",
-            legend={"x": 1, "y": 1, "xanchor": "right", "bgcolor": "rgba(0,0,0,0.5)", "font": {"color": COLORS["text"]}},
+            legend={
+                "x": 1,
+                "y": 1,
+                "xanchor": "right",
+                "bgcolor": "rgba(0,0,0,0.5)",
+                "font": {"color": COLORS["text"]},
+            },
         ),
         xaxis=get_xaxis("Distance (m)"),
         yaxis=get_yaxis("Input (%)", range=[0, 105]),
@@ -404,7 +415,13 @@ def create_gforce_chart(
     fig.update_layout(
         **get_chart_layout(
             "G-Forces",
-            legend={"x": 1, "y": 1, "xanchor": "right", "bgcolor": "rgba(0,0,0,0.5)", "font": {"color": COLORS["text"]}},
+            legend={
+                "x": 1,
+                "y": 1,
+                "xanchor": "right",
+                "bgcolor": "rgba(0,0,0,0.5)",
+                "font": {"color": COLORS["text"]},
+            },
         ),
         xaxis=get_xaxis("Distance (m)"),
         yaxis=get_yaxis("G-Force"),

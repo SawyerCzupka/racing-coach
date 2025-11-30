@@ -5,11 +5,15 @@ to the Racing Coach server.
 """
 
 import logging
+from dataclasses import asdict
 
-from racing_coach_core.client import RacingCoachServerSDK
 from racing_coach_core.events import EventBus, HandlerContext, SystemEvents
 from racing_coach_core.events.checking import method_handles
 from racing_coach_core.models.events import MetricsAndSession
+from racing_coach_server_client import Client
+from racing_coach_server_client.api.metrics import upload_lap_metrics_api_v1_metrics_lap_post
+from racing_coach_server_client.models import LapMetrics as ApiLapMetrics
+from racing_coach_server_client.models import MetricsUploadRequest, MetricsUploadResponse
 
 from racing_coach_client.config import settings
 
@@ -19,17 +23,14 @@ logger = logging.getLogger(__name__)
 class MetricsUploadHandler:
     """Handler for uploading lap metrics to the server."""
 
-    def __init__(self, event_bus: EventBus, lap_id_cache: dict | None = None):
+    def __init__(self, event_bus: EventBus):
         """Initialize the metrics upload handler.
 
         Args:
             event_bus: The event bus for subscribing to events
-            lap_id_cache: Shared cache for lap IDs (shared with LapUploadHandler)
         """
         self.event_bus = event_bus
-        self.api_client = RacingCoachServerSDK(base_url=settings.SERVER_URL)
-        # Shared cache for lap_ids (populated by LapUploadHandler)
-        self.lap_id_cache = lap_id_cache if lap_id_cache is not None else {}
+        self.api_client = Client(base_url=settings.SERVER_URL)
 
     @method_handles(SystemEvents.LAP_METRICS_EXTRACTED)
     def handle_metrics_extracted(self, context: HandlerContext[MetricsAndSession]):
@@ -41,38 +42,32 @@ class MetricsUploadHandler:
         data = context.event.data
         lap_metrics = data.LapMetrics
         session_frame = data.SessionFrame
+        lap_id = data.lap_id  # Guaranteed to exist from client-side generation
 
         if not lap_metrics or not session_frame:
             logger.error("Lap metrics or session frame is missing.")
             return
 
         try:
-            # Get lap_id from shared cache (populated by LapUploadHandler)
-            cache_key = (str(session_frame.session_id), lap_metrics.lap_number)
-
-            if cache_key in self.lap_id_cache:
-                lap_id = self.lap_id_cache[cache_key]
-                logger.debug(f"Using cached lap_id {lap_id} for lap {lap_metrics.lap_number}")
-            else:
-                # We don't have the lap_id cached yet
-                # This can happen if metrics extraction completes before lap upload
-                logger.warning(
-                    f"No lap_id cached for session {session_frame.session_id}, "
-                    f"lap {lap_metrics.lap_number}. Skipping metrics upload."
-                )
-                return
+            # Convert dataclass to API model
+            api_lap_metrics = ApiLapMetrics.from_dict(asdict(lap_metrics))
+            body = MetricsUploadRequest(
+                lap_metrics=api_lap_metrics,
+                lap_id=str(lap_id),
+            )
 
             # Upload the lap metrics to the server
-            response = self.api_client.upload_lap_metrics(
-                lap_metrics=lap_metrics,
-                lap_id=lap_id,
-            )
-            logger.info(
-                f"✓ Lap {lap_metrics.lap_number} metrics uploaded "
-                f"(id: {response.lap_metrics_id})"
+            response = upload_lap_metrics_api_v1_metrics_lap_post.sync(
+                client=self.api_client,
+                body=body,
             )
 
+            if isinstance(response, MetricsUploadResponse):
+                logger.info(
+                    f"✓ Lap {lap_metrics.lap_number} metrics uploaded (id: {response.lap_metrics_id})"
+                )
+            else:
+                logger.error(f"✗ Failed to upload metrics for lap {lap_metrics.lap_number}: {response}")
+
         except Exception as e:
-            logger.error(
-                f"✗ Failed to upload metrics for lap {lap_metrics.lap_number}: {e}"
-            )
+            logger.error(f"✗ Failed to upload metrics for lap {lap_metrics.lap_number}: {e}")

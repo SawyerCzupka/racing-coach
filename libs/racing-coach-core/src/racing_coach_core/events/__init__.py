@@ -1,2 +1,2 @@
 from .base import *
-from .session_registry import SessionRegistry
+from .session_registry import SessionRegistry as SessionRegistry

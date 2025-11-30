@@ -1,12 +1,14 @@
 """Pytest configuration and shared fixtures for racing-coach-client tests."""
 
 import asyncio
+import logging
 import os
+import sys
 import threading
 from collections.abc import AsyncGenerator, Callable
 from pathlib import Path
 from typing import Any
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, PropertyMock
 
 import pytest
 from pytest_factoryboy import register
@@ -19,8 +21,19 @@ from racing_coach_core.events.base import (
     SystemEvents,
 )
 from racing_coach_core.events.session_registry import SessionRegistry
-from racing_coach_core.models.events import LapAndSession
+from racing_coach_core.models.events import LapAndSession, TelemetryAndSessionId
 from racing_coach_core.models.telemetry import SessionFrame, TelemetryFrame
+
+# Import load test utilities from racing-coach-core
+# Add the core tests path to enable importing load_test_utils
+_core_tests_path = Path(__file__).parent.parent.parent.parent / "libs" / "racing-coach-core" / "tests"
+if str(_core_tests_path) not in sys.path:
+    sys.path.insert(0, str(_core_tests_path))
+
+from load_test_utils import (  # noqa: E402
+    LatencyTrackingCollector,
+    LoadTestConfig,
+)
 
 from tests.factories import (
     LapAndSessionFactory,
@@ -28,6 +41,8 @@ from tests.factories import (
     SessionFrameFactory,
     TelemetryFrameFactory,
 )
+
+logger = logging.getLogger(__name__)
 
 # Register factories to create pytest fixtures automatically
 register(TelemetryFrameFactory)
@@ -123,14 +138,19 @@ class EventCollector:
         self.events: list[Event[Any]] = []
         self._lock: threading.Lock = threading.Lock()
 
+        self.count: int = 0
+
     def collect(self, context: HandlerContext[Any]) -> None:
         """Handler function to collect events (sync handler for thread pool execution)."""
+        logger.info(f"Event Collector Collect. Count: {self.count}")
+        self.count += 1
         with self._lock:
             self.events.append(context.event)
 
     def get_events_of_type[T](self, event_type: EventType[T]) -> list[Event[T]]:
         """Get all collected events of a specific type."""
-        return [e for e in self.events if e.type == event_type]  # type: ignore[return-value]
+        with self._lock:
+            return [e for e in self.events if e.type == event_type]  # type: ignore[return-value]
 
     async def wait_for_event[T](
         self,
@@ -161,7 +181,7 @@ class EventCollector:
             if asyncio.get_event_loop().time() - start_time > timeout:
                 raise TimeoutError(
                     f"Timeout waiting for {count} {event_type.name} events. "
-                    f"Got {len(events)} events."
+                    f"Got {len(events)} events. Elapsed: {asyncio.get_event_loop().time() - start_time}"
                 )
 
             await asyncio.sleep(0.01)
@@ -182,12 +202,12 @@ def telemetry_frame_collector(
     event_collector: EventCollector, running_event_bus: EventBus
 ) -> EventCollector:
     """
-    Create an event collector that's registered to collect TELEMETRY_FRAME events.
+    Create an event collector that's registered to collect TELEMETRY_EVENT events.
 
     This fixture requires a running event bus.
     """
-    handler: Handler[TelemetryFrame] = Handler(
-        type=SystemEvents.TELEMETRY_FRAME,
+    handler: Handler[TelemetryAndSessionId] = Handler(
+        type=SystemEvents.TELEMETRY_EVENT,
         fn=event_collector.collect,
     )
     running_event_bus.register_handlers([handler])
@@ -216,15 +236,117 @@ def lap_sequence_collector(
 # ============================================================================
 
 
+def _create_telemetry_data_dict(telemetry_data: TelemetryFrame) -> dict[str, Any]:
+    """Create a dictionary of telemetry data matching iRacing field names."""
+    return {
+        "SessionTime": telemetry_data.session_time,
+        "Lap": telemetry_data.lap_number,
+        "LapDistPct": telemetry_data.lap_distance_pct,
+        "LapDist": telemetry_data.lap_distance,
+        "LapCurrentLapTime": telemetry_data.current_lap_time,
+        "LapLastLapTime": telemetry_data.last_lap_time,
+        "LapBestLapTime": telemetry_data.best_lap_time,
+        "Speed": telemetry_data.speed,
+        "RPM": telemetry_data.rpm,
+        "Gear": telemetry_data.gear,
+        "Throttle": telemetry_data.throttle,
+        "Brake": telemetry_data.brake,
+        "Clutch": telemetry_data.clutch,
+        "SteeringWheelAngle": telemetry_data.steering_angle,
+        "LatAccel": telemetry_data.lateral_acceleration,
+        "LongAccel": telemetry_data.longitudinal_acceleration,
+        "VertAccel": telemetry_data.vertical_acceleration,
+        "YawRate": telemetry_data.yaw_rate,
+        "RollRate": telemetry_data.roll_rate,
+        "PitchRate": telemetry_data.pitch_rate,
+        "VelocityX": telemetry_data.velocity_x,
+        "VelocityY": telemetry_data.velocity_y,
+        "VelocityZ": telemetry_data.velocity_z,
+        "Yaw": telemetry_data.yaw,
+        "Pitch": telemetry_data.pitch,
+        "Roll": telemetry_data.roll,
+        "Lat": telemetry_data.latitude,
+        "Lon": telemetry_data.longitude,
+        "Alt": telemetry_data.altitude,
+        "TrackTempCrew": telemetry_data.track_temp,
+        "TrackWetness": telemetry_data.track_wetness,
+        "AirTemp": telemetry_data.air_temp,
+        "SessionFlags": telemetry_data.session_flags,
+        "PlayerTrackSurface": telemetry_data.track_surface,
+        "OnPitRoad": telemetry_data.on_pit_road,
+        # Tire temps
+        "LFtempCL": telemetry_data.tire_temps["LF"]["left"],
+        "LFtempCM": telemetry_data.tire_temps["LF"]["middle"],
+        "LFtempCR": telemetry_data.tire_temps["LF"]["right"],
+        "RFtempCL": telemetry_data.tire_temps["RF"]["left"],
+        "RFtempCM": telemetry_data.tire_temps["RF"]["middle"],
+        "RFtempCR": telemetry_data.tire_temps["RF"]["right"],
+        "LRtempCL": telemetry_data.tire_temps["LR"]["left"],
+        "LRtempCM": telemetry_data.tire_temps["LR"]["middle"],
+        "LRtempCR": telemetry_data.tire_temps["LR"]["right"],
+        "RRtempCL": telemetry_data.tire_temps["RR"]["left"],
+        "RRtempCM": telemetry_data.tire_temps["RR"]["middle"],
+        "RRtempCR": telemetry_data.tire_temps["RR"]["right"],
+        # Tire wear
+        "LFwearL": telemetry_data.tire_wear["LF"]["left"],
+        "LFwearM": telemetry_data.tire_wear["LF"]["middle"],
+        "LFwearR": telemetry_data.tire_wear["LF"]["right"],
+        "RFwearL": telemetry_data.tire_wear["RF"]["left"],
+        "RFwearM": telemetry_data.tire_wear["RF"]["middle"],
+        "RFwearR": telemetry_data.tire_wear["RF"]["right"],
+        "LRwearL": telemetry_data.tire_wear["LR"]["left"],
+        "LRwearM": telemetry_data.tire_wear["LR"]["middle"],
+        "LRwearR": telemetry_data.tire_wear["LR"]["right"],
+        "RRwearL": telemetry_data.tire_wear["RR"]["left"],
+        "RRwearM": telemetry_data.tire_wear["RR"]["middle"],
+        "RRwearR": telemetry_data.tire_wear["RR"]["right"],
+        # Brake pressure
+        "LFbrakeLinePress": telemetry_data.brake_line_pressure["LF"],
+        "RFbrakeLinePress": telemetry_data.brake_line_pressure["RF"],
+        "LRbrakeLinePress": telemetry_data.brake_line_pressure["LR"],
+        "RRbrakeLinePress": telemetry_data.brake_line_pressure["RR"],
+    }
+
+
+def _create_session_data_dict(session_data: SessionFrame) -> dict[str, Any]:
+    """Create a dictionary of session data matching iRacing field names."""
+    return {
+        "WeekendInfo": {
+            "TrackID": session_data.track_id,
+            "TrackName": session_data.track_name,
+            "TrackConfigName": session_data.track_config_name,
+            "TrackType": session_data.track_type,
+            "SeriesID": session_data.series_id,
+        },
+        "DriverInfo": {
+            "DriverCarIdx": 0,
+            "Drivers": [
+                {
+                    "CarID": session_data.car_id,
+                    "CarScreenName": session_data.car_name,
+                    "CarClassID": session_data.car_class_id,
+                }
+            ],
+        },
+    }
+
+
 @pytest.fixture
 def mock_telemetry_source(
     telemetry_frame_factory: Callable[..., TelemetryFrame],
     session_frame_factory: Callable[..., SessionFrame],
 ) -> MagicMock:
     """
-    Create a mock telemetry source that returns realistic test data.
+    Create a mock telemetry source that implements the TelemetrySource protocol.
 
-    The mock implements the TelemetryDataSource protocol.
+    The mock provides:
+    - is_connected property (returns True by default)
+    - start() -> bool (returns True by default)
+    - stop() -> None
+    - collect_session_frame() -> SessionFrame
+    - collect_telemetry_frame() -> TelemetryFrame
+    - get_telemetry_data() -> dict[str, Any]
+    - get_session_data() -> dict[str, Any]
     """
     mock: MagicMock = MagicMock()
 
@@ -232,104 +354,69 @@ def mock_telemetry_source(
     telemetry_data: TelemetryFrame = telemetry_frame_factory.build()  # type: ignore[attr-defined]
     session_data: SessionFrame = session_frame_factory.build()  # type: ignore[attr-defined]
 
-    # Configure the mock to return data via __getitem__
-    def getitem_side_effect(key: str) -> Any:
-        # Map iRacing field names to our model field names
-        field_mapping: dict[str, Any] = {
-            "SessionTime": telemetry_data.session_time,
-            "Lap": telemetry_data.lap_number,
-            "LapDistPct": telemetry_data.lap_distance_pct,
-            "LapDist": telemetry_data.lap_distance,
-            "LapCurrentLapTime": telemetry_data.current_lap_time,
-            "LapLastLapTime": telemetry_data.last_lap_time,
-            "LapBestLapTime": telemetry_data.best_lap_time,
-            "Speed": telemetry_data.speed,
-            "RPM": telemetry_data.rpm,
-            "Gear": telemetry_data.gear,
-            "Throttle": telemetry_data.throttle,
-            "Brake": telemetry_data.brake,
-            "Clutch": telemetry_data.clutch,
-            "SteeringWheelAngle": telemetry_data.steering_angle,
-            "LatAccel": telemetry_data.lateral_acceleration,
-            "LongAccel": telemetry_data.longitudinal_acceleration,
-            "VertAccel": telemetry_data.vertical_acceleration,
-            "YawRate": telemetry_data.yaw_rate,
-            "RollRate": telemetry_data.roll_rate,
-            "PitchRate": telemetry_data.pitch_rate,
-            "VelocityX": telemetry_data.velocity_x,
-            "VelocityY": telemetry_data.velocity_y,
-            "VelocityZ": telemetry_data.velocity_z,
-            "Yaw": telemetry_data.yaw,
-            "Pitch": telemetry_data.pitch,
-            "Roll": telemetry_data.roll,
-            "Lat": telemetry_data.latitude,
-            "Lon": telemetry_data.longitude,
-            "Alt": telemetry_data.altitude,
-            "TrackTempCrew": telemetry_data.track_temp,
-            "TrackWetness": telemetry_data.track_wetness,
-            "AirTemp": telemetry_data.air_temp,
-            "SessionFlags": telemetry_data.session_flags,
-            "PlayerTrackSurface": telemetry_data.track_surface,
-            "OnPitRoad": telemetry_data.on_pit_road,
-            # Tire temps
-            "LFtempCL": telemetry_data.tire_temps["LF"]["left"],
-            "LFtempCM": telemetry_data.tire_temps["LF"]["middle"],
-            "LFtempCR": telemetry_data.tire_temps["LF"]["right"],
-            "RFtempCL": telemetry_data.tire_temps["RF"]["left"],
-            "RFtempCM": telemetry_data.tire_temps["RF"]["middle"],
-            "RFtempCR": telemetry_data.tire_temps["RF"]["right"],
-            "LRtempCL": telemetry_data.tire_temps["LR"]["left"],
-            "LRtempCM": telemetry_data.tire_temps["LR"]["middle"],
-            "LRtempCR": telemetry_data.tire_temps["LR"]["right"],
-            "RRtempCL": telemetry_data.tire_temps["RR"]["left"],
-            "RRtempCM": telemetry_data.tire_temps["RR"]["middle"],
-            "RRtempCR": telemetry_data.tire_temps["RR"]["right"],
-            # Tire wear
-            "LFwearL": telemetry_data.tire_wear["LF"]["left"],
-            "LFwearM": telemetry_data.tire_wear["LF"]["middle"],
-            "LFwearR": telemetry_data.tire_wear["LF"]["right"],
-            "RFwearL": telemetry_data.tire_wear["RF"]["left"],
-            "RFwearM": telemetry_data.tire_wear["RF"]["middle"],
-            "RFwearR": telemetry_data.tire_wear["RF"]["right"],
-            "LRwearL": telemetry_data.tire_wear["LR"]["left"],
-            "LRwearM": telemetry_data.tire_wear["LR"]["middle"],
-            "LRwearR": telemetry_data.tire_wear["LR"]["right"],
-            "RRwearL": telemetry_data.tire_wear["RR"]["left"],
-            "RRwearM": telemetry_data.tire_wear["RR"]["middle"],
-            "RRwearR": telemetry_data.tire_wear["RR"]["right"],
-            # Brake pressure
-            "LFbrakeLinePress": telemetry_data.brake_line_pressure["LF"],
-            "RFbrakeLinePress": telemetry_data.brake_line_pressure["RF"],
-            "LRbrakeLinePress": telemetry_data.brake_line_pressure["LR"],
-            "RRbrakeLinePress": telemetry_data.brake_line_pressure["RR"],
-        }
+    # Create data dictionaries
+    telemetry_dict = _create_telemetry_data_dict(telemetry_data)
+    session_dict = _create_session_data_dict(session_data)
 
-        # Check telemetry fields first
-        if key in field_mapping:
-            return field_mapping[key]
+    # Configure is_connected as a property (default True)
+    type(mock).is_connected = PropertyMock(return_value=True)
 
-        # Handle session fields
-        if key == "WeekendInfo":
-            return {
-                "TrackID": session_data.track_id,
-                "TrackName": session_data.track_name,
-                "TrackConfigName": session_data.track_config_name,
-                "TrackType": session_data.track_type,
-                "SeriesID": session_data.series_id,
-            }
-        elif key == "DriverInfo":
-            return {
-                "DriverCarIdx": 0,
-                "Drivers": [
-                    {
-                        "CarID": session_data.car_id,
-                        "CarScreenName": session_data.car_name,
-                        "CarClassID": session_data.car_class_id,
-                    }
-                ],
-            }
+    # Configure start() to return True by default
+    mock.start.return_value = True
 
-        raise KeyError(f"Unknown telemetry key: {key}")
+    # Configure stop() - no return value needed
+    mock.stop.return_value = None
 
-    mock.__getitem__ = MagicMock(side_effect=getitem_side_effect)
+    # Configure collect_session_frame() to return a SessionFrame
+    mock.collect_session_frame.return_value = session_data
+
+    # Configure collect_telemetry_frame() to return a TelemetryFrame
+    mock.collect_telemetry_frame.return_value = telemetry_data
+
+    # Configure get_telemetry_data() to return a dict
+    mock.get_telemetry_data.return_value = telemetry_dict
+
+    # Configure get_session_data() to return a dict
+    mock.get_session_data.return_value = session_dict
+
     return mock
+
+
+# ============================================================================
+# Load Test Fixtures
+# ============================================================================
+
+
+@pytest.fixture
+def load_test_config() -> LoadTestConfig:
+    """Default configuration for load tests."""
+    return LoadTestConfig(
+        frequency_hz=60.0,
+        duration_seconds=5.0,
+        max_latency_threshold_ms=100.0,
+        max_memory_growth_mb=50.0,
+        max_dropped_event_pct=0.01,
+    )
+
+
+@pytest.fixture
+def latency_collector() -> LatencyTrackingCollector:
+    """Create a latency-tracking event collector."""
+    return LatencyTrackingCollector()
+
+
+@pytest.fixture
+def high_capacity_event_bus() -> EventBus:
+    """Create an EventBus with higher capacity for load testing."""
+    return EventBus(max_queue_size=10000, max_workers=4)
+
+
+@pytest.fixture
+async def running_high_capacity_bus() -> AsyncGenerator[EventBus, None]:
+    """Create and start a high-capacity EventBus for load testing."""
+    bus = EventBus(max_queue_size=10000, max_workers=4)
+    bus.start()
+    await asyncio.sleep(0.1)
+    yield bus
+    bus.stop()
+    await asyncio.sleep(0.1)

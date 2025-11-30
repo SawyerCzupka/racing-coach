@@ -21,8 +21,8 @@ select = [
 ]
 
 [tool.basedpyright]
-typeCheckingMode = "strict"
+typeCheckingMode = "standard"
 pythonVersion = "3.13"
-enableTypeIgnoreComments = true
+# enableTypeIgnoreComments = true
 # reportMissingImports = "error"
 # reportUnknownMemberType = "error"

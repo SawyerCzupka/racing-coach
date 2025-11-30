@@ -16,7 +16,7 @@ from .charts import (
 from .styles import COLORS
 
 if TYPE_CHECKING:
-    from ..models.responses import (
+    from racing_coach_server_client.models import (
         LapMetricsResponse,
         LapTelemetryResponse,
         SessionDetailResponse,

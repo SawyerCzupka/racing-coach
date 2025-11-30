@@ -8,7 +8,7 @@ import pytest
 from racing_coach_client.handlers.lap_handler import LapHandler
 from racing_coach_core.events.base import Event, EventBus, Handler, HandlerContext, SystemEvents
 from racing_coach_core.events.session_registry import SessionRegistry
-from racing_coach_core.models.events import LapAndSession, SessionStart
+from racing_coach_core.models.events import LapAndSession, SessionStart, TelemetryAndSessionId
 from racing_coach_core.models.telemetry import SessionFrame, TelemetryFrame
 
 from tests.conftest import EventCollector
@@ -18,9 +18,7 @@ from tests.conftest import EventCollector
 class TestLapHandlerUnit:
     """Unit tests for LapHandler."""
 
-    def test_initialization(
-        self, event_bus: EventBus, session_registry: SessionRegistry
-    ) -> None:
+    def test_initialization(self, event_bus: EventBus, session_registry: SessionRegistry) -> None:
         """Test LapHandler initializes correctly."""
         handler: LapHandler = LapHandler(event_bus, session_registry)
 
@@ -48,12 +46,12 @@ class TestLapHandlerUnit:
         session_registry.start_session(session)
 
         # Handle event
-        event: Event[TelemetryFrame] = Event(
-            type=SystemEvents.TELEMETRY_FRAME,
-            data=telem,
+        event: Event[TelemetryAndSessionId] = Event(
+            type=SystemEvents.TELEMETRY_EVENT,
+            data=TelemetryAndSessionId(telemetry=telem, session_id=session.session_id),
         )
 
-        context: HandlerContext[TelemetryFrame] = HandlerContext(
+        context: HandlerContext[TelemetryAndSessionId] = HandlerContext(
             event_bus=running_event_bus, event=event
         )
         handler.handle_telemetry_frame(context)
@@ -80,12 +78,12 @@ class TestLapHandlerUnit:
             telem: TelemetryFrame = telemetry_frame_factory.build(  # type: ignore[attr-defined]
                 lap_number=1, lap_distance_pct=i * 0.2
             )
-            event: Event[TelemetryFrame] = Event(
-                type=SystemEvents.TELEMETRY_FRAME,
-                data=telem,
+            event: Event[TelemetryAndSessionId] = Event(
+                type=SystemEvents.TELEMETRY_EVENT,
+                data=TelemetryAndSessionId(telemetry=telem, session_id=session.session_id),
             )
 
-            context: HandlerContext[TelemetryFrame] = HandlerContext(
+            context: HandlerContext[TelemetryAndSessionId] = HandlerContext(
                 event_bus=running_event_bus, event=event
             )
             handler.handle_telemetry_frame(context)
@@ -120,12 +118,12 @@ class TestLapHandlerUnit:
         telem_outlap: TelemetryFrame = telemetry_frame_factory.build(  # type: ignore[attr-defined]
             lap_number=0, lap_distance_pct=0.5
         )
-        event: Event[TelemetryFrame] = Event(
-            type=SystemEvents.TELEMETRY_FRAME,
-            data=telem_outlap,
+        event: Event[TelemetryAndSessionId] = Event(
+            type=SystemEvents.TELEMETRY_EVENT,
+            data=TelemetryAndSessionId(telemetry=telem_outlap, session_id=session.session_id),
         )
 
-        context: HandlerContext[TelemetryFrame] = HandlerContext(
+        context: HandlerContext[TelemetryAndSessionId] = HandlerContext(
             event_bus=running_event_bus, event=event
         )
         handler.handle_telemetry_frame(context)
@@ -136,8 +134,8 @@ class TestLapHandlerUnit:
                 lap_number=1, lap_distance_pct=i * 0.2
             )
             event = Event(
-                type=SystemEvents.TELEMETRY_FRAME,
-                data=telem,
+                type=SystemEvents.TELEMETRY_EVENT,
+                data=TelemetryAndSessionId(telemetry=telem, session_id=session.session_id),
             )
             context = HandlerContext(event_bus=running_event_bus, event=event)
             handler.handle_telemetry_frame(context)
@@ -147,8 +145,8 @@ class TestLapHandlerUnit:
             lap_number=2, lap_distance_pct=0.01
         )
         event = Event(
-            type=SystemEvents.TELEMETRY_FRAME,
-            data=telem_lap2,
+            type=SystemEvents.TELEMETRY_EVENT,
+            data=TelemetryAndSessionId(telemetry=telem_lap2, session_id=session.session_id),
         )
         context = HandlerContext(event_bus=running_event_bus, event=event)
         handler.handle_telemetry_frame(context)
@@ -186,12 +184,12 @@ class TestLapHandlerUnit:
         telem_outlap: TelemetryFrame = telemetry_frame_factory.build(  # type: ignore[attr-defined]
             lap_number=0, lap_distance_pct=0.5
         )
-        event: Event[TelemetryFrame] = Event(
-            type=SystemEvents.TELEMETRY_FRAME,
-            data=telem_outlap,
+        event: Event[TelemetryAndSessionId] = Event(
+            type=SystemEvents.TELEMETRY_EVENT,
+            data=TelemetryAndSessionId(telemetry=telem_outlap, session_id=session.session_id),
         )
 
-        context: HandlerContext[TelemetryFrame] = HandlerContext(
+        context: HandlerContext[TelemetryAndSessionId] = HandlerContext(
             event_bus=running_event_bus, event=event
         )
         handler.handle_telemetry_frame(context)
@@ -201,8 +199,8 @@ class TestLapHandlerUnit:
             lap_number=1, lap_distance_pct=0.01
         )
         event = Event(
-            type=SystemEvents.TELEMETRY_FRAME,
-            data=telem_lap1,
+            type=SystemEvents.TELEMETRY_EVENT,
+            data=TelemetryAndSessionId(telemetry=telem_lap1, session_id=session.session_id),
         )
         context = HandlerContext(event_bus=running_event_bus, event=event)
         handler.handle_telemetry_frame(context)
@@ -237,12 +235,12 @@ class TestLapHandlerUnit:
         telem_lap1: TelemetryFrame = telemetry_frame_factory.build(  # type: ignore[attr-defined]
             lap_number=1, lap_distance_pct=0.5
         )
-        event: Event[TelemetryFrame] = Event(
-            type=SystemEvents.TELEMETRY_FRAME,
-            data=telem_lap1,
+        event: Event[TelemetryAndSessionId] = Event(
+            type=SystemEvents.TELEMETRY_EVENT,
+            data=TelemetryAndSessionId(telemetry=telem_lap1, session_id=session.session_id),
         )
 
-        context: HandlerContext[TelemetryFrame] = HandlerContext(
+        context: HandlerContext[TelemetryAndSessionId] = HandlerContext(
             event_bus=running_event_bus, event=event
         )
         handler.handle_telemetry_frame(context)
@@ -253,8 +251,8 @@ class TestLapHandlerUnit:
                 lap_number=1, lap_distance_pct=0.5 + i * 0.1
             )
             event = Event(
-                type=SystemEvents.TELEMETRY_FRAME,
-                data=telem,
+                type=SystemEvents.TELEMETRY_EVENT,
+                data=TelemetryAndSessionId(telemetry=telem, session_id=session.session_id),
             )
             context = HandlerContext(event_bus=running_event_bus, event=event)
             handler.handle_telemetry_frame(context)
@@ -265,8 +263,8 @@ class TestLapHandlerUnit:
             lap_distance_pct=0.2,  # < LAP_COMPLETION_THRESHOLD
         )
         event = Event(
-            type=SystemEvents.TELEMETRY_FRAME,
-            data=telem_lap0,
+            type=SystemEvents.TELEMETRY_EVENT,
+            data=TelemetryAndSessionId(telemetry=telem_lap0, session_id=session.session_id),
         )
         context = HandlerContext(event_bus=running_event_bus, event=event)
         handler.handle_telemetry_frame(context)
@@ -361,11 +359,11 @@ class TestLapHandlerUnit:
             telem: TelemetryFrame = telemetry_frame_factory.build(  # type: ignore[attr-defined]
                 lap_number=1, lap_distance_pct=i * 0.2
             )
-            event: Event[TelemetryFrame] = Event(
-                type=SystemEvents.TELEMETRY_FRAME,
-                data=telem,
+            event: Event[TelemetryAndSessionId] = Event(
+                type=SystemEvents.TELEMETRY_EVENT,
+                data=TelemetryAndSessionId(telemetry=telem, session_id=session1.session_id),
             )
-            ctx: HandlerContext[TelemetryFrame] = HandlerContext(
+            ctx: HandlerContext[TelemetryAndSessionId] = HandlerContext(
                 event_bus=running_event_bus, event=event
             )
             handler.handle_telemetry_frame(ctx)
@@ -436,11 +434,11 @@ class TestLapHandlerIntegration:
                     lap_distance_pct=i * 0.1,
                     session_time=lap_num * 100 + i,
                 )
-                event: Event[TelemetryFrame] = Event(
-                    type=SystemEvents.TELEMETRY_FRAME,
-                    data=telem,
+                event: Event[TelemetryAndSessionId] = Event(
+                    type=SystemEvents.TELEMETRY_EVENT,
+                    data=TelemetryAndSessionId(telemetry=telem, session_id=session.session_id),
                 )
-                context: HandlerContext[TelemetryFrame] = HandlerContext(
+                context: HandlerContext[TelemetryAndSessionId] = HandlerContext(
                     event_bus=running_event_bus, event=event
                 )
                 handler.handle_telemetry_frame(context)

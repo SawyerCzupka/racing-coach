@@ -7,8 +7,7 @@ but rather only the lap events. This way, I can reduce the amount of data sent t
 """  # noqa: E501
 
 import logging
-
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from racing_coach_core.events import (
     Event,
@@ -18,12 +17,13 @@ from racing_coach_core.events import (
     SystemEvents,
 )
 from racing_coach_core.events.checking import method_handles
-from racing_coach_core.models.events import LapAndSession, SessionStart
-from racing_coach_core.models.telemetry import (
-    LapTelemetry,
-    SessionFrame,
-    TelemetryFrame,
+from racing_coach_core.models.events import (
+    LapAndSession,
+    SessionEnd,
+    SessionStart,
+    TelemetryAndSessionId,
 )
+from racing_coach_core.models.telemetry import LapTelemetry, TelemetryFrame
 
 from racing_coach_client.config import settings
 
@@ -40,23 +40,31 @@ class LapHandler:
 
         self.last_session_id: UUID | None = None
 
+        self.num_telemetry_events: int = 0
+
     @method_handles(SystemEvents.SESSION_START)
     def handle_session_start(self, context: HandlerContext[SessionStart]):
         """Handle session start events and flush buffer if session changed."""
         new_session = context.event.data.SessionFrame
         if self.last_session_id is not None and new_session.session_id != self.last_session_id:
-            if len(self.telemetry_buffer) > 0:
-                logger.info("New session detected, flushing incomplete lap buffer")
-                self.publish_lap_and_flush_buffer()
+            # if len(self.telemetry_buffer) > 0:
+            logger.info("New session detected, flushing incomplete lap buffer")
+            self.publish_lap_and_flush_buffer()
         self.last_session_id = new_session.session_id
         self.current_lap = -1
 
-    @method_handles(SystemEvents.TELEMETRY_FRAME)
-    def handle_telemetry_frame(self, context: HandlerContext[TelemetryFrame]):
-        telemetry_frame: TelemetryFrame = context.event.data
+    @method_handles(SystemEvents.SESSION_END)
+    def handle_session_end(self, context: HandlerContext[SessionEnd]):
+        logger.info(f"Session complete. Collected {self.num_telemetry_events} telemetry events!")
+
+    @method_handles(SystemEvents.TELEMETRY_EVENT)
+    def handle_telemetry_frame(self, context: HandlerContext[TelemetryAndSessionId]):
+        telemetry_frame: TelemetryFrame = context.event.data.telemetry
+
+        self.num_telemetry_events += 1
 
         # Get session from registry
-        current_session = self.session_registry.get_current_session()
+        current_session = self.session_registry.get_session(context.event.data.session_id)
         if current_session is None:
             logger.warning("Received telemetry frame but no active session")
             return
@@ -109,10 +117,17 @@ class LapHandler:
 
         lap_telemetry = LapTelemetry(frames=self.telemetry_buffer, lap_time=None)
 
+        # Generate lap_id client-side so all handlers have immediate access
+        lap_id = uuid4()
+
         self.event_bus.thread_safe_publish(
             Event(
                 type=SystemEvents.LAP_TELEMETRY_SEQUENCE,
-                data=LapAndSession(LapTelemetry=lap_telemetry, SessionFrame=current_session),
+                data=LapAndSession(
+                    LapTelemetry=lap_telemetry,
+                    SessionFrame=current_session,
+                    lap_id=lap_id,
+                ),
             )
         )
 

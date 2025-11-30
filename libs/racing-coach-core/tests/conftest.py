@@ -8,6 +8,11 @@ import pytest
 from pytest_factoryboy import register
 from racing_coach_core.events.base import Event, EventBus, EventType
 
+from tests.load_test_utils import (
+    LatencyTrackingCollector,
+    LoadTestConfig,
+)
+
 from tests.factories import (
     BrakingMetricsFactory,
     CornerMetricsFactory,
@@ -65,3 +70,43 @@ async def running_event_bus() -> AsyncGenerator[EventBus, None]:
 def event_collector() -> dict[str, list[Any]]:
     """Create a dictionary to collect events during tests."""
     return {"events": []}
+
+
+# ============================================================================
+# Load Test Fixtures
+# ============================================================================
+
+
+@pytest.fixture
+def load_test_config() -> LoadTestConfig:
+    """Default configuration for load tests."""
+    return LoadTestConfig(
+        frequency_hz=60.0,
+        duration_seconds=5.0,
+        max_latency_threshold_ms=100.0,
+        max_memory_growth_mb=50.0,
+        max_dropped_event_pct=0.01,
+    )
+
+
+@pytest.fixture
+def latency_collector() -> LatencyTrackingCollector:
+    """Create a latency-tracking event collector."""
+    return LatencyTrackingCollector()
+
+
+@pytest.fixture
+def high_capacity_event_bus() -> EventBus:
+    """Create an EventBus with higher capacity for load testing."""
+    return EventBus(max_queue_size=10000, max_workers=4)
+
+
+@pytest.fixture
+async def running_high_capacity_bus() -> AsyncGenerator[EventBus, None]:
+    """Create and start a high-capacity EventBus for load testing."""
+    bus = EventBus(max_queue_size=10000, max_workers=4)
+    bus.start()
+    await asyncio.sleep(0.1)
+    yield bus
+    bus.stop()
+    await asyncio.sleep(0.1)

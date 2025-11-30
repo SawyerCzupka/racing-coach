@@ -6,13 +6,18 @@ instance and streams real-time telemetry data.
 """
 
 import logging
+from datetime import datetime
 from typing import Any
 
 import irsdk
+from racing_coach_core.models.telemetry import SessionFrame, TelemetryFrame
 
-from .base import TelemetryConnectionError, TelemetrySource
+from .base import TelemetryConnectionError
 
 logger = logging.getLogger(__name__)
+
+# Session metadata keys that should be included in get_session_data()
+SESSION_DATA_KEYS = ["WeekendInfo", "DriverInfo", "SessionInfo", "QualifyResultsInfo", "CarSetup"]
 
 
 class LiveTelemetrySource:
@@ -25,41 +30,16 @@ class LiveTelemetrySource:
     Attributes:
         ir: The iRacing SDK instance.
         _connected: Flag indicating current connection status.
+        _started: Flag indicating if start() has been called.
     """
 
     def __init__(self) -> None:
         """Initialize the live telemetry source."""
         self.ir: irsdk.IRSDK | None = None
         self._connected: bool = False
+        self._started: bool = False
 
-    def startup(self) -> bool:
-        """
-        Initialize connection to iRacing SDK.
-
-        Returns:
-            bool: True if connection established, False otherwise.
-
-        Raises:
-            TelemetryConnectionError: If connection fails critically.
-        """
-        try:
-            self.ir = irsdk.IRSDK()
-            return self._check_connection()
-        except Exception as e:
-            logger.error(f"Failed to initialize iRacing SDK: {e}")
-            raise TelemetryConnectionError(f"SDK initialization failed: {e}") from e
-
-    def shutdown(self) -> None:
-        """
-        Disconnect from iRacing SDK and clean up resources.
-        """
-        if self.ir:
-            self.ir.shutdown()
-            logger.info("iRacing SDK shutdown")
-
-        self._connected = False
-        self.ir = None
-
+    @property
     def is_connected(self) -> bool:
         """
         Check if currently connected to iRacing.
@@ -69,84 +49,158 @@ class LiveTelemetrySource:
         """
         return self._connected and self.ir is not None
 
-    def ensure_connected(self) -> bool:
+    def start(self) -> bool:
         """
-        Ensure connection is active, attempt to reconnect if needed.
+        Initialize connection to iRacing SDK.
 
-        This method checks the current connection status and attempts to
-        reconnect if the connection has been lost.
+        Returns:
+            bool: True if connection established, False otherwise.
+
+        Raises:
+            TelemetryConnectionError: If connection fails critically.
+        """
+        if self._started:
+            logger.warning("LiveTelemetrySource already started")
+            return self.is_connected
+
+        try:
+            self.ir = irsdk.IRSDK()
+            self._started = True
+            return self._ensure_connected()
+        except Exception as e:
+            logger.error(f"Failed to initialize iRacing SDK: {e}")
+            raise TelemetryConnectionError(f"SDK initialization failed: {e}") from e
+
+    def stop(self) -> None:
+        """
+        Disconnect from iRacing SDK and clean up resources.
+        """
+        if self.ir:
+            self.ir.shutdown()
+            logger.info("iRacing SDK shutdown")
+
+        self._connected = False
+        self._started = False
+        self.ir = None
+
+    def collect_session_frame(self) -> SessionFrame:
+        """
+        Collect current session metadata from iRacing.
+
+        Returns:
+            SessionFrame containing track, car, and series information.
+
+        Raises:
+            RuntimeError: If called while not connected.
+        """
+        if not self._ensure_connected():
+            raise RuntimeError("Cannot collect session frame: not connected to iRacing")
+
+        assert self.ir is not None
+        self.ir.freeze_var_buffer_latest()
+        data = self.get_session_data()
+        return SessionFrame.from_irsdk(data, datetime.now())
+
+    def collect_telemetry_frame(self) -> TelemetryFrame:
+        """
+        Collect the latest telemetry frame from iRacing.
+
+        Returns:
+            TelemetryFrame containing current telemetry data.
+
+        Raises:
+            RuntimeError: If called while not connected.
+        """
+        if not self._ensure_connected():
+            raise RuntimeError("Cannot collect telemetry frame: not connected to iRacing")
+
+        assert self.ir is not None
+        self.ir.freeze_var_buffer_latest()
+        data = self.get_telemetry_data()
+        return TelemetryFrame.from_irsdk(data, datetime.now())
+
+    def get_telemetry_data(self) -> dict[str, Any]:
+        """
+        Return a frozen snapshot of telemetry variables.
+
+        Note: This returns a wrapper that provides dict-like access to the
+        frozen iRacing SDK buffer. Call freeze_var_buffer_latest() on the SDK
+        before calling this method for consistent data.
+
+        Returns:
+            dict[str, Any]: Dictionary-like access to telemetry variables.
+
+        Raises:
+            RuntimeError: If called while not connected.
+        """
+        if not self.is_connected or not self.ir:
+            raise RuntimeError("get_telemetry_data() called while not connected to iRacing")
+
+        # Return a dict-like wrapper around the frozen SDK buffer
+        # The SDK already implements __getitem__, so we wrap it
+        return _IRSDKDataWrapper(self.ir)
+
+    def get_session_data(self) -> dict[str, Any]:
+        """
+        Return session metadata from iRacing.
+
+        Returns:
+            dict[str, Any]: Dictionary with session metadata (WeekendInfo, DriverInfo, etc.).
+
+        Raises:
+            RuntimeError: If called while not connected.
+        """
+        if not self.is_connected or not self.ir:
+            raise RuntimeError("get_session_data() called while not connected to iRacing")
+
+        # Return a dict-like wrapper for session data
+        return _IRSDKDataWrapper(self.ir)
+
+    def _ensure_connected(self) -> bool:
+        """
+        Internal method to ensure connection, with automatic reconnection.
+
+        This handles the case where iRacing was restarted or connection dropped.
 
         Returns:
             bool: True if connected (or successfully reconnected), False otherwise.
         """
-        if not self.is_connected():
-            return self.startup()
-
-        return self._check_connection()
-
-    def freeze_var_buffer_latest(self) -> None:
-        """
-        Freeze the variable buffer to the latest available data.
-
-        This ensures all subsequent variable reads come from the same
-        telemetry snapshot, preventing inconsistent data.
-
-        Raises:
-            RuntimeError: If called while not connected.
-        """
-        if not self.is_connected() or not self.ir:
-            raise RuntimeError("freeze_var_buffer_latest() called while not connected to iRacing")
-
-        self.ir.freeze_var_buffer_latest()
-
-    def __getitem__(self, key: str) -> Any:
-        """
-        Get a telemetry variable value.
-
-        Args:
-            key: The name of the telemetry variable.
-
-        Returns:
-            The value of the requested variable.
-
-        Raises:
-            RuntimeError: If called while not connected.
-            KeyError: If the variable name is not found.
-        """
-        if not self.is_connected() or not self.ir:
-            raise RuntimeError("__getitem__() called while not connected to iRacing")
-
-        return self.ir[key]
-
-    def _check_connection(self) -> bool:
-        """
-        Internal method to check and update connection status.
-
-        This method verifies the iRacing SDK connection state and updates
-        the internal connection flag accordingly.
-
-        Returns:
-            bool: True if connected, False otherwise.
-        """
-        if not self.ir:
+        if not self._started or not self.ir:
             return False
 
-        # Check if we were connected but lost connection
+        # Check if we lost connection
         if self._connected and not (self.ir.is_initialized and self.ir.is_connected):
             self._connected = False
             self.ir.shutdown()
-            logger.info("iRacing SDK disconnected")
-            return False
+            logger.info("iRacing connection lost, will attempt reconnect")
+            # Re-initialize for reconnection attempt
+            self.ir = irsdk.IRSDK()
 
-        # Check if we're not connected but iRacing is available
-        if (
-            not self._connected
-            and self.ir.startup()
-            and self.ir.is_initialized
-            and self.ir.is_connected
-        ):
-            self._connected = True
-            logger.info("iRacing SDK connected")
-            return True
+        # Attempt to connect if not connected
+        if not self._connected:
+            if self.ir.startup() and self.ir.is_initialized and self.ir.is_connected:
+                self._connected = True
+                logger.info("iRacing SDK connected")
 
         return self._connected
+
+
+class _IRSDKDataWrapper:
+    """
+    Wrapper that provides dict-like access to iRacing SDK data.
+
+    This allows the SDK instance to be used with TelemetryFrame.from_irsdk()
+    and SessionFrame.from_irsdk() which expect __getitem__ access.
+    """
+
+    def __init__(self, ir: irsdk.IRSDK) -> None:
+        self._ir = ir
+
+    def __getitem__(self, key: str) -> Any:
+        return self._ir[key]
+
+    def get(self, key: str, default: Any = None) -> Any:
+        try:
+            return self._ir[key]
+        except (KeyError, TypeError):
+            return default

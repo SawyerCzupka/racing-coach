@@ -8,19 +8,14 @@ any TelemetrySource implementation (live or replay).
 import logging
 import threading
 import time
-from datetime import datetime
 
 from racing_coach_core.events import Event, EventBus, SessionRegistry, SystemEvents
-from racing_coach_core.models.events import SessionEnd, SessionStart
-from racing_coach_core.models.telemetry import SessionFrame, TelemetryFrame
+from racing_coach_core.models.events import SessionEnd, SessionStart, TelemetryAndSessionId
+from racing_coach_core.models.telemetry import SessionFrame
 
 from .sources import TelemetrySource
 
 logger = logging.getLogger(__name__)
-
-# Target telemetry collection rate (Hz)
-COLLECTION_RATE_HZ = 60
-FRAME_TIME_SECONDS = 1.0 / COLLECTION_RATE_HZ
 
 
 class TelemetryCollector:
@@ -31,8 +26,8 @@ class TelemetryCollector:
     any TelemetrySource implementation and publishes it to the event bus
     for processing by handlers.
 
-    The collector runs in a separate thread and maintains the configured
-    collection rate.
+    The collector runs in a separate thread. Frame construction, timing,
+    and reconnection logic are handled by the source implementations.
 
     Attributes:
         source: The telemetry data source (live or replay).
@@ -61,6 +56,8 @@ class TelemetryCollector:
         # Current session metadata with unique UUID
         self.current_session: SessionFrame | None = None
 
+        self._num_published_events: int = 0
+
     def start(self) -> None:
         """
         Start the telemetry collector thread.
@@ -80,24 +77,32 @@ class TelemetryCollector:
         self._collection_thread.start()
         logger.info("Telemetry collector thread started")
 
+    def stop(self) -> None:
+        """
+        Stop the telemetry collector.
+
+        Signals the collection thread to stop and shuts down the telemetry source.
+        """
+        logger.info("Stopping telemetry collector")
+        self._running = False
+        self.source.stop()
+
     def _collection_loop(self) -> None:
         """
         Main loop for collecting telemetry data.
 
         This method runs in a separate thread and continuously collects telemetry
-        data from the source until stopped. It maintains the configured collection
-        rate and handles connection failures gracefully.
+        data from the source until stopped or the source disconnects.
         """
         # Initialize the telemetry source
-        if not self.source.startup():
+        if not self.source.start():
             logger.error("Failed to start telemetry source")
             self._running = False
             return
 
         # Collect the initial session frame
         try:
-            self.current_session = self.collect_session_frame()
-            # Register session and publish SESSION_START
+            self.current_session = self.source.collect_session_frame()
             self.session_registry.start_session(self.current_session)
             self.event_bus.thread_safe_publish(
                 Event(
@@ -108,7 +113,7 @@ class TelemetryCollector:
         except Exception as e:
             logger.error(f"Failed to collect initial session frame: {e}")
             self._running = False
-            self.source.shutdown()
+            self.source.stop()
             return
 
         logger.info("Telemetry collection loop started")
@@ -116,100 +121,51 @@ class TelemetryCollector:
         try:
             while self._running:
                 # Check if the source is still connected
-                if not self.source.is_connected():
-                    logger.warning("Telemetry source disconnected, attempting to reconnect...")
-                    if hasattr(self.source, "ensure_connected"):
-                        # LiveTelemetrySource has ensure_connected method
-                        if not self.source.ensure_connected():  # type: ignore
-                            logger.error("Failed to reconnect, waiting before retry")
-                            time.sleep(1)
-                            continue
-                    else:
-                        # ReplayTelemetrySource doesn't reconnect - emit SESSION_END
-                        if self.current_session is not None:
-                            self.event_bus.thread_safe_publish(
-                                Event(
-                                    type=SystemEvents.SESSION_END,
-                                    data=SessionEnd(session_id=self.current_session.session_id),
-                                )
-                            )
-                            self.session_registry.end_session(self.current_session.session_id)
-                        logger.error("Telemetry source disconnected")
-                        break
+                if not self.source.is_connected:
+                    logger.warning("Telemetry source disconnected")
+                    logger.info(f"Published {self._num_published_events} events before disconnect.")
+                    break
 
                 # Collect and publish the next frame
                 try:
-                    self.collect_and_publish_telemetry_frame()
+                    frame = self.source.collect_telemetry_frame()
+                    event = Event[TelemetryAndSessionId](
+                        type=SystemEvents.TELEMETRY_EVENT,
+                        data=TelemetryAndSessionId(
+                            telemetry=frame, session_id=self.current_session.session_id
+                        ),
+                    )
+
+                    self.event_bus.thread_safe_publish(event)
+                    self._num_published_events += 1
+
+                except RuntimeError as e:
+                    # Source became disconnected during collection
+                    logger.warning(f"Collection failed: {e}")
+                    break
                 except Exception as e:
                     logger.error(f"Error collecting telemetry frame: {e}", exc_info=True)
-                    # Continue collecting even if one frame fails
-                    time.sleep(0.1)
+                    # time.sleep(0.1)
 
         except KeyboardInterrupt:
             logger.info("Telemetry collection interrupted by user")
         except Exception as e:
             logger.error(f"Unexpected error in collection loop: {e}", exc_info=True)
         finally:
-            self._running = False
-            # Publish SESSION_END before shutdown
-            if self.current_session is not None:
-                self.event_bus.thread_safe_publish(
-                    Event(
-                        type=SystemEvents.SESSION_END,
-                        data=SessionEnd(session_id=self.current_session.session_id),
-                    )
-                )
-                self.session_registry.end_session(self.current_session.session_id)
-            self.source.shutdown()
-            logger.info("Telemetry collection loop stopped")
+            self._cleanup()
 
-    def stop(self) -> None:
-        """
-        Stop the telemetry collector.
-
-        Signals the collection thread to stop and shuts down the telemetry source.
-        """
-        logger.info("Stopping telemetry collector")
+    def _cleanup(self) -> None:
+        """Clean up after collection loop ends."""
         self._running = False
-        self.source.shutdown()
 
-    def collect_and_publish_telemetry_frame(self) -> None:
-        """
-        Collect a single frame of telemetry data and publish it to the event bus.
-
-        This method freezes the current telemetry buffer, creates a TelemetryFrame,
-        and publishes it to the event bus. Session information is available via
-        the SessionRegistry.
-
-        Raises:
-            RuntimeError: If no session frame has been collected yet.
-        """
-        if self.current_session is None:
-            raise RuntimeError("Cannot collect telemetry: no session frame available")
-
-        # Freeze the buffer to get a consistent snapshot
-        self.source.freeze_var_buffer_latest()
-
-        # Create telemetry frame from the source
-        telemetry_frame = TelemetryFrame.from_irsdk(self.source, datetime.now())
-
-        # Publish to event bus (TelemetryFrame only, no session)
-        self.event_bus.thread_safe_publish(
-            Event(
-                type=SystemEvents.TELEMETRY_FRAME,
-                data=telemetry_frame,
+        if self.current_session is not None:
+            self.event_bus.thread_safe_publish(
+                Event(
+                    type=SystemEvents.SESSION_END,
+                    data=SessionEnd(session_id=self.current_session.session_id),
+                )
             )
-        )
+            self.session_registry.end_session(self.current_session.session_id)
 
-    def collect_session_frame(self) -> SessionFrame:
-        """
-        Collect the current session metadata.
-
-        This method freezes the telemetry buffer and extracts session information
-        like track, car, and series details.
-
-        Returns:
-            SessionFrame: The collected session metadata.
-        """
-        self.source.freeze_var_buffer_latest()
-        return SessionFrame.from_irsdk(self.source, datetime.now())
+        self.source.stop()
+        logger.info("Telemetry collection loop stopped")

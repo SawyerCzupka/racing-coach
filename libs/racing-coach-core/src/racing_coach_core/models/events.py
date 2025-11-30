@@ -11,9 +11,15 @@ class TelemetryAndSession(BaseModel):
     SessionFrame: SessionFrame
 
 
+class TelemetryAndSessionId(BaseModel):
+    telemetry: TelemetryFrame
+    session_id: UUID
+
+
 class LapAndSession(BaseModel):
     LapTelemetry: LapTelemetry
     SessionFrame: SessionFrame
+    lap_id: UUID  # Client-generated UUID for this lap
 
 
 class MetricsAndSession(BaseModel):
@@ -21,6 +27,7 @@ class MetricsAndSession(BaseModel):
 
     LapMetrics: LapMetrics
     SessionFrame: SessionFrame
+    lap_id: UUID  # Passed through from LapAndSession
 
 
 class SessionStart(BaseModel):

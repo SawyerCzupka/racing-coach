@@ -21,7 +21,9 @@ class SessionRegistry:
     """
 
     def __init__(self) -> None:
+        # self._current_session_id: UUID | None = None
         self._current_session: SessionFrame | None = None
+        self._sessions: dict[UUID, SessionFrame] = {}
         self._lock = threading.RLock()
 
     def start_session(self, session: SessionFrame) -> None:
@@ -33,6 +35,7 @@ class SessionRegistry:
                     f"session {self._current_session.session_id} is still active"
                 )
             self._current_session = session
+            self._sessions[session.session_id] = session
             logger.info(f"Session started: {session.session_id}")
 
     def end_session(self, session_id: UUID) -> None:
@@ -54,6 +57,9 @@ class SessionRegistry:
         """Get the current active session, or None if no session is active."""
         with self._lock:
             return self._current_session
+
+    def get_session(self, session_id: UUID) -> SessionFrame | None:
+        return self._sessions.get(session_id, None)
 
     @property
     def has_active_session(self) -> bool:

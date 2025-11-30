@@ -1,18 +1,14 @@
 """Tests for TelemetryCollector."""
 
 import asyncio
-import time
-from collections.abc import Callable
-from datetime import datetime
 from pathlib import Path
-from typing import Any
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
 from racing_coach_client.collectors.iracing import TelemetryCollector
 from racing_coach_core.events.base import Event, EventBus, Handler, SystemEvents
 from racing_coach_core.events.session_registry import SessionRegistry
-from racing_coach_core.models.events import SessionEnd, SessionStart
+from racing_coach_core.models.events import SessionEnd, SessionStart, TelemetryAndSessionId
 from racing_coach_core.models.telemetry import SessionFrame, TelemetryFrame
 
 from tests.conftest import EventCollector
@@ -38,73 +34,6 @@ class TestTelemetryCollectorUnit:
         assert collector.session_registry is session_registry
         assert collector.current_session is None
         assert not collector._running
-
-    def test_collect_session_frame(
-        self,
-        event_bus: EventBus,
-        session_registry: SessionRegistry,
-        mock_telemetry_source: MagicMock,
-    ) -> None:
-        """Test collecting session metadata."""
-        collector: TelemetryCollector = TelemetryCollector(
-            event_bus, mock_telemetry_source, session_registry
-        )
-
-        session: SessionFrame = collector.collect_session_frame()
-
-        assert session is not None
-        assert session.track_name is not None
-        assert session.car_name is not None
-        mock_telemetry_source.freeze_var_buffer_latest.assert_called_once()
-
-    def test_collect_and_publish_telemetry_frame_without_session(
-        self,
-        event_bus: EventBus,
-        session_registry: SessionRegistry,
-        mock_telemetry_source: MagicMock,
-    ) -> None:
-        """Test that collect_and_publish raises error without session."""
-        collector: TelemetryCollector = TelemetryCollector(
-            event_bus, mock_telemetry_source, session_registry
-        )
-
-        with pytest.raises(RuntimeError, match="no session frame available"):
-            collector.collect_and_publish_telemetry_frame()
-
-    async def test_collect_and_publish_telemetry_frame(
-        self,
-        running_event_bus: EventBus,
-        session_registry: SessionRegistry,
-        mock_telemetry_source: MagicMock,
-        event_collector: EventCollector,
-    ) -> None:
-        """Test collecting and publishing a telemetry frame."""
-        # Register collector
-        handler: Handler[TelemetryFrame] = Handler(
-            type=SystemEvents.TELEMETRY_FRAME,
-            fn=event_collector.collect,
-        )
-        running_event_bus.register_handlers([handler])
-
-        # Create collector and set session
-        collector: TelemetryCollector = TelemetryCollector(
-            running_event_bus, mock_telemetry_source, session_registry
-        )
-        collector.current_session = collector.collect_session_frame()
-
-        # Collect and publish
-        collector.collect_and_publish_telemetry_frame()
-
-        # Wait for event to be processed
-        events: list[Event[TelemetryFrame]] = await event_collector.wait_for_event(
-            SystemEvents.TELEMETRY_FRAME, timeout=2.0, count=1
-        )
-
-        assert len(events) == 1
-        event: Event[TelemetryFrame] = events[0]
-        assert event.type == SystemEvents.TELEMETRY_FRAME
-        assert isinstance(event.data, TelemetryFrame)
-        assert event.data is not None
 
     def test_start_when_already_running(
         self,
@@ -137,7 +66,7 @@ class TestTelemetryCollectorUnit:
         collector.stop()
 
         assert not collector._running
-        mock_telemetry_source.shutdown.assert_called_once()
+        mock_telemetry_source.stop.assert_called_once()
 
     def test_collection_loop_handles_startup_failure(
         self,
@@ -146,7 +75,7 @@ class TestTelemetryCollectorUnit:
         mock_telemetry_source: MagicMock,
     ) -> None:
         """Test that collection loop handles source startup failure."""
-        mock_telemetry_source.startup.return_value = False
+        mock_telemetry_source.start.return_value = False
 
         collector: TelemetryCollector = TelemetryCollector(
             event_bus, mock_telemetry_source, session_registry
@@ -154,7 +83,7 @@ class TestTelemetryCollectorUnit:
         collector._collection_loop()
 
         assert not collector._running
-        mock_telemetry_source.startup.assert_called_once()
+        mock_telemetry_source.start.assert_called_once()
 
     def test_collection_loop_handles_session_collection_failure(
         self,
@@ -163,8 +92,8 @@ class TestTelemetryCollectorUnit:
         mock_telemetry_source: MagicMock,
     ) -> None:
         """Test that collection loop handles session collection failure."""
-        mock_telemetry_source.startup.return_value = True
-        mock_telemetry_source.__getitem__.side_effect = KeyError("Missing data")
+        mock_telemetry_source.start.return_value = True
+        mock_telemetry_source.collect_session_frame.side_effect = KeyError("Missing data")
 
         collector: TelemetryCollector = TelemetryCollector(
             event_bus, mock_telemetry_source, session_registry
@@ -172,7 +101,7 @@ class TestTelemetryCollectorUnit:
         collector._collection_loop()
 
         assert not collector._running
-        mock_telemetry_source.shutdown.assert_called_once()
+        mock_telemetry_source.stop.assert_called()
 
 
 @pytest.mark.integration
@@ -186,8 +115,9 @@ class TestTelemetryCollectorIntegration:
         mock_telemetry_source: MagicMock,
     ) -> None:
         """Test starting and stopping the collector thread."""
-        mock_telemetry_source.startup.return_value = True
-        mock_telemetry_source.is_connected.return_value = False  # Exit loop immediately
+        mock_telemetry_source.start.return_value = True
+        # Configure is_connected to return False to exit loop immediately
+        type(mock_telemetry_source).is_connected = PropertyMock(return_value=False)
 
         collector: TelemetryCollector = TelemetryCollector(
             running_event_bus, mock_telemetry_source, session_registry
@@ -221,12 +151,14 @@ class TestTelemetryCollectorIntegration:
             call_count += 1
             return call_count <= 5  # Return True for first 5 calls
 
-        mock_telemetry_source.startup.return_value = True
-        mock_telemetry_source.is_connected.side_effect = is_connected_side_effect
+        mock_telemetry_source.start.return_value = True
+        type(mock_telemetry_source).is_connected = PropertyMock(
+            side_effect=is_connected_side_effect
+        )
 
         # Register event collector
-        handler: Handler[TelemetryFrame] = Handler(
-            type=SystemEvents.TELEMETRY_FRAME,
+        handler: Handler[TelemetryAndSessionId] = Handler(
+            type=SystemEvents.TELEMETRY_EVENT,
             fn=event_collector.collect,
         )
         running_event_bus.register_handlers([handler])
@@ -245,8 +177,8 @@ class TestTelemetryCollectorIntegration:
         await asyncio.sleep(0.2)
 
         # Verify events were published
-        events: list[Event[TelemetryFrame]] = event_collector.get_events_of_type(
-            SystemEvents.TELEMETRY_FRAME
+        events: list[Event[TelemetryAndSessionId]] = event_collector.get_events_of_type(
+            SystemEvents.TELEMETRY_EVENT
         )
         assert len(events) > 0
 
@@ -266,8 +198,10 @@ class TestTelemetryCollectorIntegration:
             call_count += 1
             return call_count <= 3  # Return True for first 3 calls
 
-        mock_telemetry_source.startup.return_value = True
-        mock_telemetry_source.is_connected.side_effect = is_connected_side_effect
+        mock_telemetry_source.start.return_value = True
+        type(mock_telemetry_source).is_connected = PropertyMock(
+            side_effect=is_connected_side_effect
+        )
 
         # Register event collectors for session events
         session_start_handler: Handler[SessionStart] = Handler(
@@ -333,8 +267,8 @@ class TestTelemetryCollectorWithRealIBT:
         )
 
         # Register event collector
-        handler: Handler[TelemetryFrame] = Handler(
-            type=SystemEvents.TELEMETRY_FRAME,
+        handler: Handler[TelemetryAndSessionId] = Handler(
+            type=SystemEvents.TELEMETRY_EVENT,
             fn=event_collector.collect,
         )
         running_event_bus.register_handlers([handler])
@@ -347,18 +281,18 @@ class TestTelemetryCollectorWithRealIBT:
 
         # Wait for some events to be collected
         try:
-            events: list[Event[TelemetryFrame]] = await event_collector.wait_for_event(
-                SystemEvents.TELEMETRY_FRAME, timeout=20.0, count=10
+            events: list[Event[TelemetryAndSessionId]] = await event_collector.wait_for_event(
+                SystemEvents.TELEMETRY_EVENT, timeout=20.0, count=10
             )
             assert len(events) >= 10
 
             # Verify event data
             for event in events:
-                assert event.type == SystemEvents.TELEMETRY_FRAME
-                assert isinstance(event.data, TelemetryFrame)
+                assert event.type == SystemEvents.TELEMETRY_EVENT
+                assert isinstance(event.data, TelemetryAndSessionId)
 
                 # Verify telemetry data has reasonable values
-                telem: TelemetryFrame = event.data
+                telem: TelemetryFrame = event.data.telemetry
                 assert telem.speed >= 0
                 assert telem.rpm >= 0
                 assert 0 <= telem.throttle <= 1

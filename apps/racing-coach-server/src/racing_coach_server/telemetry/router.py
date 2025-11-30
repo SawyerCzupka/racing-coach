@@ -1,6 +1,7 @@
 """FastAPI route handlers for the telemetry feature."""
 
 import logging
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
 from racing_coach_core.models.responses import LapUploadResponse
@@ -23,15 +24,24 @@ router = APIRouter()
 async def upload_lap(
     lap: LapTelemetry,
     session: SessionFrame,
+    lap_id: UUID | None = None,
     service: TelemetryService = Depends(get_telemetry_service),
 ) -> LapUploadResponse:
     """
     Upload a lap with telemetry data.
 
+    Args:
+        lap: The lap telemetry data
+        session: The session frame with track/car info
+        lap_id: Optional client-provided UUID for the lap. If not provided, server generates one.
+
     The transaction is managed by the transactional_session context manager:
     - If any operation fails, the transaction is automatically rolled back
     - If all operations succeed, changes are committed
     """
+
+    logger.info(f"Router lap_id: {lap_id}")
+
     try:
         async with transactional_session(service.db):
             # Get lap number from first frame
@@ -40,9 +50,11 @@ async def upload_lap(
             # Get or create session
             db_track_session = await service.add_or_get_session(session)
 
-            # Add lap to the db to get the lap id
+            # Add lap to the db (use client-provided lap_id if available)
             db_lap = await service.add_lap(
-                track_session_id=db_track_session.id, lap_number=lap_number
+                track_session_id=db_track_session.id,
+                lap_number=lap_number,
+                lap_id=lap_id,
             )
 
             # Add telemetry sequence

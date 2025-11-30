@@ -9,6 +9,7 @@ from pytest import LogCaptureFixture
 from racing_coach_client.handlers.log_handler import LogHandler
 from racing_coach_core.events.base import Event, EventBus, HandlerContext, SystemEvents
 from racing_coach_core.events.session_registry import SessionRegistry
+from racing_coach_core.models.events import TelemetryAndSessionId
 from racing_coach_core.models.telemetry import SessionFrame, TelemetryFrame
 
 
@@ -16,16 +17,14 @@ from racing_coach_core.models.telemetry import SessionFrame, TelemetryFrame
 class TestLogHandlerUnit:
     """Unit tests for LogHandler."""
 
-    def test_initialization(
-        self, event_bus: EventBus, session_registry: SessionRegistry
-    ) -> None:
+    def test_initialization(self, event_bus: EventBus, session_registry: SessionRegistry) -> None:
         """Test LogHandler initializes correctly."""
         handler: LogHandler = LogHandler(event_bus, session_registry, log_frequency=60)
 
         assert handler.event_bus is event_bus
         assert handler.session_registry is session_registry
         assert handler.log_frequency == 60
-        assert handler.frame_count == -1
+        assert handler.frame_count == 0
 
     def test_initialization_with_custom_frequency(
         self, event_bus: EventBus, session_registry: SessionRegistry
@@ -52,16 +51,16 @@ class TestLogHandlerUnit:
         # Send multiple frames
         for i in range(5):
             telem: TelemetryFrame = telemetry_frame_factory.build()  # type: ignore[attr-defined]
-            event: Event[TelemetryFrame] = Event(
-                type=SystemEvents.TELEMETRY_FRAME,
-                data=telem,
+            event: Event[TelemetryAndSessionId] = Event(
+                type=SystemEvents.TELEMETRY_EVENT,
+                data=TelemetryAndSessionId(telemetry=telem, session_id=session.session_id),
             )
-            context: HandlerContext[TelemetryFrame] = HandlerContext(
+            context: HandlerContext[TelemetryAndSessionId] = HandlerContext(
                 event_bus=running_event_bus, event=event
             )
             handler.handle_telemetry_frame(context)
 
-        assert handler.frame_count == 4  # Started at -1, incremented 5 times
+        assert handler.frame_count == 5  # Started at -1, incremented 5 times
 
     def test_logs_at_correct_frequency(
         self,
@@ -82,11 +81,11 @@ class TestLogHandlerUnit:
             # Send 10 frames
             for i in range(10):
                 telem: TelemetryFrame = telemetry_frame_factory.build()  # type: ignore[attr-defined]
-                event: Event[TelemetryFrame] = Event(
-                    type=SystemEvents.TELEMETRY_FRAME,
-                    data=telem,
+                event: Event[TelemetryAndSessionId] = Event(
+                    type=SystemEvents.TELEMETRY_EVENT,
+                    data=TelemetryAndSessionId(telemetry=telem, session_id=session.session_id),
                 )
-                context: HandlerContext[TelemetryFrame] = HandlerContext(
+                context: HandlerContext[TelemetryAndSessionId] = HandlerContext(
                     event_bus=running_event_bus, event=event
                 )
                 handler.handle_telemetry_frame(context)
@@ -121,11 +120,11 @@ class TestLogHandlerUnit:
         session_registry.start_session(session)
 
         with caplog.at_level(logging.INFO):
-            event: Event[TelemetryFrame] = Event(
-                type=SystemEvents.TELEMETRY_FRAME,
-                data=telem,
+            event: Event[TelemetryAndSessionId] = Event(
+                type=SystemEvents.TELEMETRY_EVENT,
+                data=TelemetryAndSessionId(telemetry=telem, session_id=session.session_id),
             )
-            context: HandlerContext[TelemetryFrame] = HandlerContext(
+            context: HandlerContext[TelemetryAndSessionId] = HandlerContext(
                 event_bus=running_event_bus, event=event
             )
             handler.handle_telemetry_frame(context)
@@ -164,9 +163,9 @@ class TestLogHandlerIntegration:
         with caplog.at_level(logging.INFO):
             for i in range(6):
                 telem: TelemetryFrame = telemetry_frame_factory.build()  # type: ignore[attr-defined]
-                event: Event[TelemetryFrame] = Event(
-                    type=SystemEvents.TELEMETRY_FRAME,
-                    data=telem,
+                event: Event[TelemetryAndSessionId] = Event(
+                    type=SystemEvents.TELEMETRY_EVENT,
+                    data=TelemetryAndSessionId(telemetry=telem, session_id=session.session_id),
                 )
                 running_event_bus.thread_safe_publish(event)
 

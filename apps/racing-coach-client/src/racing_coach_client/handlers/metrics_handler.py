@@ -56,7 +56,7 @@ class MetricsHandler:
                 f"{lap_metrics.total_braking_zones} braking zones, "
                 f"{lap_metrics.total_corners} corners, "
                 f"avg corner speed: {lap_metrics.average_corner_speed:.1f} m/s "
-                f"({extraction_time*1000:.1f}ms)"
+                f"({extraction_time * 1000:.1f}ms)"
             )
 
             # Log detailed braking metrics
@@ -80,13 +80,14 @@ class MetricsHandler:
                     f"max_lateral_g={corner.max_lateral_g:.2f}"
                 )
 
-            # Publish the extracted metrics
+            # Publish the extracted metrics with lap_id passed through from input event
             self.event_bus.thread_safe_publish(
                 Event(
                     type=SystemEvents.LAP_METRICS_EXTRACTED,
                     data=MetricsAndSession(
                         LapMetrics=lap_metrics,
                         SessionFrame=session_frame,
+                        lap_id=data.lap_id,
                     ),
                 )
             )

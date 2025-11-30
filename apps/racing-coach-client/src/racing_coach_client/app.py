@@ -10,8 +10,12 @@ from racing_coach_core.events import (
 )
 from racing_coach_core.events.checking import func_handles
 from racing_coach_core.events.session_registry import SessionRegistry
-from racing_coach_core.models.events import LapAndSession, SessionStart
-from racing_coach_core.models.telemetry import TelemetryFrame
+from racing_coach_core.models.events import (
+    LapAndSession,
+    SessionEnd,
+    SessionStart,
+    TelemetryAndSessionId,
+)
 
 from racing_coach_client.collectors.factory import create_telemetry_source
 from racing_coach_client.collectors.iracing import TelemetryCollector
@@ -19,17 +23,13 @@ from racing_coach_client.config import settings
 from racing_coach_client.handlers import (
     LapHandler,
     LapUploadHandler,
+    LogHandler,
     MetricsHandler,
     MetricsUploadHandler,
 )
 from racing_coach_client.logging_config import setup_logging
 
 logger = logging.getLogger(__name__)
-
-
-@func_handles(SystemEvents.LAP_TELEMETRY_SEQUENCE)
-def test_laps_handler(context: HandlerContext[LapAndSession]):
-    pass
 
 
 class RacingCoachClient:
@@ -49,7 +49,7 @@ class RacingCoachClient:
         application configuration.
         """
         # Create event bus
-        self.event_bus = EventBus()
+        self.event_bus = EventBus(max_queue_size=100_000)
 
         # Create session registry
         self.session_registry = SessionRegistry()
@@ -65,16 +65,13 @@ class RacingCoachClient:
         self.event_bus.start()
 
         # Register event handlers
-        self.initialize_handlers()
+        self.initialize_handlers(upload=True)
 
         logger.info("Racing Coach Client initialized")
         print("Racing Coach Client initialized.")
 
-    def initialize_handlers(self):
+    def initialize_handlers(self, upload: bool = False):
         handlers: list[Handler[Any]] = []
-
-        # Shared cache for lap_ids (used by upload handlers)
-        lap_id_cache: dict[tuple[str, int], str] = {}
 
         lap_handler = LapHandler(self.event_bus, self.session_registry)
         handlers.append(
@@ -84,19 +81,26 @@ class RacingCoachClient:
             )
         )
         handlers.append(
-            Handler[TelemetryFrame](
-                SystemEvents.TELEMETRY_FRAME,
+            Handler[SessionEnd](
+                SystemEvents.SESSION_END,
+                lap_handler.handle_session_end,
+            )
+        )
+        handlers.append(
+            Handler[TelemetryAndSessionId](
+                SystemEvents.TELEMETRY_EVENT,
                 lap_handler.handle_telemetry_frame,
             )
         )
 
-        lap_upload_handler = LapUploadHandler(self.event_bus, lap_id_cache=lap_id_cache)
-        handlers.append(
-            Handler[LapAndSession](
-                SystemEvents.LAP_TELEMETRY_SEQUENCE,
-                lap_upload_handler.handle_lap_complete_event,
+        if upload:
+            lap_upload_handler = LapUploadHandler(self.event_bus)
+            handlers.append(
+                Handler[LapAndSession](
+                    SystemEvents.LAP_TELEMETRY_SEQUENCE,
+                    lap_upload_handler.handle_lap_complete_event,
+                )
             )
-        )
 
         # Metrics extraction handler
         metrics_handler = MetricsHandler(self.event_bus)
@@ -108,20 +112,20 @@ class RacingCoachClient:
         )
 
         # Metrics upload handler
-        metrics_upload_handler = MetricsUploadHandler(self.event_bus, lap_id_cache=lap_id_cache)
-        handlers.append(
-            Handler(
-                type=SystemEvents.LAP_METRICS_EXTRACTED,
-                fn=metrics_upload_handler.handle_metrics_extracted,
+        if upload:
+            metrics_upload_handler = MetricsUploadHandler(self.event_bus)
+            handlers.append(
+                Handler(
+                    type=SystemEvents.LAP_METRICS_EXTRACTED,
+                    fn=metrics_upload_handler.handle_metrics_extracted,
+                )
             )
-        )
 
-        handlers.append(
-            Handler(
-                type=SystemEvents.LAP_TELEMETRY_SEQUENCE,
-                fn=test_laps_handler,
-            )
-        )
+        log_handler = LogHandler(self.event_bus, self.session_registry, log_frequency=100_000)
+        # handlers.append(
+        #     Handler(type=SystemEvents.TELEMETRY_EVENT, fn=log_handler.handle_telemetry_frame)
+        # )
+        handlers.append(Handler(type=SystemEvents.SESSION_END, fn=log_handler.handle_session_end))
 
         self.event_bus.register_handlers(handlers)
 

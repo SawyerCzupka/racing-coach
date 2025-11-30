@@ -4,7 +4,7 @@ import asyncio
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, PropertyMock
 
 import pytest
 from racing_coach_client.collectors.iracing import TelemetryCollector
@@ -13,7 +13,7 @@ from racing_coach_client.handlers.lap_handler import LapHandler
 from racing_coach_client.handlers.log_handler import LogHandler
 from racing_coach_core.events.base import Event, EventBus, Handler, HandlerContext, SystemEvents
 from racing_coach_core.events.session_registry import SessionRegistry
-from racing_coach_core.models.events import LapAndSession, SessionStart
+from racing_coach_core.models.events import LapAndSession, SessionStart, TelemetryAndSessionId
 from racing_coach_core.models.telemetry import SessionFrame, TelemetryFrame
 
 from tests.conftest import EventCollector
@@ -32,8 +32,8 @@ class TestEventFlowWithMocks:
     ) -> None:
         """Test complete event flow from collector through handlers."""
         # Setup event collector to capture both event types
-        telemetry_handler: Handler[TelemetryFrame] = Handler(
-            type=SystemEvents.TELEMETRY_FRAME,
+        telemetry_handler: Handler[TelemetryAndSessionId] = Handler(
+            type=SystemEvents.TELEMETRY_EVENT,
             fn=event_collector.collect,
         )
         lap_handler_event: Handler[LapAndSession] = Handler(
@@ -54,8 +54,10 @@ class TestEventFlowWithMocks:
             call_count += 1
             return call_count <= 10
 
-        mock_telemetry_source.startup.return_value = True
-        mock_telemetry_source.is_connected.side_effect = is_connected_side_effect
+        mock_telemetry_source.start.return_value = True
+        type(mock_telemetry_source).is_connected = PropertyMock(
+            side_effect=is_connected_side_effect
+        )
 
         # Create and start collector
         collector: TelemetryCollector = TelemetryCollector(
@@ -67,16 +69,16 @@ class TestEventFlowWithMocks:
             # Wait for events to be collected
             await asyncio.sleep(1.0)
 
-            # Verify TELEMETRY_FRAME events were published
-            telemetry_events: list[Event[TelemetryFrame]] = event_collector.get_events_of_type(
-                SystemEvents.TELEMETRY_FRAME
+            # Verify TELEMETRY_EVENT events were published
+            telemetry_events: list[Event[TelemetryAndSessionId]] = (
+                event_collector.get_events_of_type(SystemEvents.TELEMETRY_EVENT)
             )
             assert len(telemetry_events) > 0
 
             # Verify events have correct structure
             for event in telemetry_events:
-                assert isinstance(event.data, TelemetryFrame)
-                assert event.data is not None
+                assert isinstance(event.data, TelemetryAndSessionId)
+                assert event.data.telemetry is not None
 
         finally:
             collector.stop()
@@ -110,11 +112,11 @@ class TestEventFlowWithMocks:
             telem: TelemetryFrame = telemetry_frame_factory.build(  # type: ignore[attr-defined]
                 lap_number=0, lap_distance_pct=i * 0.2, session_time=i * 0.1
             )
-            event: Event[TelemetryFrame] = Event(
-                type=SystemEvents.TELEMETRY_FRAME,
-                data=telem,
+            event: Event[TelemetryAndSessionId] = Event(
+                type=SystemEvents.TELEMETRY_EVENT,
+                data=TelemetryAndSessionId(telemetry=telem, session_id=session.session_id),
             )
-            context: HandlerContext[TelemetryFrame] = HandlerContext(
+            context: HandlerContext[TelemetryAndSessionId] = HandlerContext(
                 event_bus=running_event_bus, event=event
             )
             lap_handler.handle_telemetry_frame(context)
@@ -125,8 +127,8 @@ class TestEventFlowWithMocks:
                 lap_number=1, lap_distance_pct=i * 0.1, session_time=10 + i * 0.1
             )
             event = Event(
-                type=SystemEvents.TELEMETRY_FRAME,
-                data=telem,
+                type=SystemEvents.TELEMETRY_EVENT,
+                data=TelemetryAndSessionId(telemetry=telem, session_id=session.session_id),
             )
             context = HandlerContext(event_bus=running_event_bus, event=event)
             lap_handler.handle_telemetry_frame(context)
@@ -136,8 +138,8 @@ class TestEventFlowWithMocks:
             lap_number=2, lap_distance_pct=0.01, session_time=20.0
         )
         event = Event(
-            type=SystemEvents.TELEMETRY_FRAME,
-            data=telem,
+            type=SystemEvents.TELEMETRY_EVENT,
+            data=TelemetryAndSessionId(telemetry=telem, session_id=session.session_id),
         )
         context = HandlerContext(event_bus=running_event_bus, event=event)
         lap_handler.handle_telemetry_frame(context)
@@ -172,8 +174,8 @@ class TestEndToEndWithRealIBT:
     ) -> None:
         """Test complete flow from IBT file through all handlers."""
         # Register collectors for both event types
-        telemetry_handler: Handler[TelemetryFrame] = Handler(
-            type=SystemEvents.TELEMETRY_FRAME,
+        telemetry_handler: Handler[TelemetryAndSessionId] = Handler(
+            type=SystemEvents.TELEMETRY_EVENT,
             fn=event_collector.collect,
         )
         lap_handler_event: Handler[LapAndSession] = Handler(
@@ -185,7 +187,7 @@ class TestEndToEndWithRealIBT:
         # Create source and handlers
         source: ReplayTelemetrySource = ReplayTelemetrySource(
             file_path=ibt_file_path,
-            speed_multiplier=20.0,  # Speed up significantly for testing
+            speed_multiplier=50.0,  # Speed up significantly for testing
             loop=False,
         )
 
@@ -193,20 +195,24 @@ class TestEndToEndWithRealIBT:
         log_handler: LogHandler = LogHandler(running_event_bus, session_registry, log_frequency=50)
 
         # Create and start collector
-        collector: TelemetryCollector = TelemetryCollector(running_event_bus, source, session_registry)
+        collector: TelemetryCollector = TelemetryCollector(
+            running_event_bus, source, session_registry
+        )
         collector.start()
 
         try:
             # Wait for telemetry events
-            telemetry_events: list[Event[TelemetryFrame]] = await event_collector.wait_for_event(
-                SystemEvents.TELEMETRY_FRAME, timeout=15.0, count=50
+            telemetry_events: list[Event[TelemetryAndSessionId]] = (
+                await event_collector.wait_for_event(
+                    SystemEvents.TELEMETRY_EVENT, timeout=15, count=50
+                )
             )
             assert len(telemetry_events) >= 50
 
             # Verify telemetry event structure
             for event in telemetry_events[:5]:  # Check first 5
-                assert isinstance(event.data, TelemetryFrame)
-                telem: TelemetryFrame = event.data
+                assert isinstance(event.data, TelemetryAndSessionId)
+                telem: TelemetryFrame = event.data.telemetry
 
                 # Verify realistic telemetry values
                 assert telem.speed >= 0
@@ -259,7 +265,9 @@ class TestEndToEndWithRealIBT:
         source: ReplayTelemetrySource = ReplayTelemetrySource(
             file_path=ibt_file_path, speed_multiplier=20.0, loop=False
         )
-        collector: TelemetryCollector = TelemetryCollector(running_event_bus, source, session_registry)
+        collector: TelemetryCollector = TelemetryCollector(
+            running_event_bus, source, session_registry
+        )
         collector.start()
 
         try:
@@ -293,8 +301,8 @@ class TestEndToEndWithRealIBT:
     ) -> None:
         """Test that telemetry data progresses correctly through time."""
         # Register collector
-        telemetry_handler: Handler[TelemetryFrame] = Handler(
-            type=SystemEvents.TELEMETRY_FRAME,
+        telemetry_handler: Handler[TelemetryAndSessionId] = Handler(
+            type=SystemEvents.TELEMETRY_EVENT,
             fn=event_collector.collect,
         )
         running_event_bus.register_handlers([telemetry_handler])
@@ -303,17 +311,19 @@ class TestEndToEndWithRealIBT:
         source: ReplayTelemetrySource = ReplayTelemetrySource(
             file_path=ibt_file_path, speed_multiplier=10.0, loop=False
         )
-        collector: TelemetryCollector = TelemetryCollector(running_event_bus, source, session_registry)
+        collector: TelemetryCollector = TelemetryCollector(
+            running_event_bus, source, session_registry
+        )
         collector.start()
 
         try:
             # Collect events
-            events: list[Event[TelemetryFrame]] = await event_collector.wait_for_event(
-                SystemEvents.TELEMETRY_FRAME, timeout=10.0, count=30
+            events: list[Event[TelemetryAndSessionId]] = await event_collector.wait_for_event(
+                SystemEvents.TELEMETRY_EVENT, timeout=10.0, count=30
             )
 
             # Verify session_time progresses
-            session_times: list[float] = [event.data.session_time for event in events]
+            session_times: list[float] = [event.data.telemetry.session_time for event in events]
 
             # Session time should generally increase (allowing for some tolerance)
             for i in range(1, len(session_times)):
@@ -335,6 +345,7 @@ class TestEventBusSubscriberPattern:
         running_event_bus: EventBus,
         session_registry: SessionRegistry,
         telemetry_frame_factory: Callable[..., TelemetryFrame],
+        session_frame_factory: Callable[..., SessionFrame],
         event_collector: EventCollector,
     ) -> None:
         """Test that multiple subscribers can receive the same events."""
@@ -343,31 +354,37 @@ class TestEventBusSubscriberPattern:
         collector2: EventCollector = EventCollector()
 
         # Register both
-        handler1: Handler[TelemetryFrame] = Handler(
-            type=SystemEvents.TELEMETRY_FRAME,
+        handler1: Handler[TelemetryAndSessionId] = Handler(
+            type=SystemEvents.TELEMETRY_EVENT,
             fn=collector1.collect,
         )
-        handler2: Handler[TelemetryFrame] = Handler(
-            type=SystemEvents.TELEMETRY_FRAME,
+        handler2: Handler[TelemetryAndSessionId] = Handler(
+            type=SystemEvents.TELEMETRY_EVENT,
             fn=collector2.collect,
         )
         running_event_bus.register_handlers([handler1, handler2])
 
+        # Create a session for the test
+        session: SessionFrame = session_frame_factory.build()  # type: ignore[attr-defined]
+
         # Publish some events
         for _ in range(5):
             telem: TelemetryFrame = telemetry_frame_factory.build()  # type: ignore[attr-defined]
-            event: Event[TelemetryFrame] = Event(type=SystemEvents.TELEMETRY_FRAME, data=telem)
+            event: Event[TelemetryAndSessionId] = Event(
+                type=SystemEvents.TELEMETRY_EVENT,
+                data=TelemetryAndSessionId(telemetry=telem, session_id=session.session_id),
+            )
             running_event_bus.thread_safe_publish(event)
 
         # Wait for processing
         await asyncio.sleep(0.5)
 
         # Both should receive all events
-        events1: list[Event[TelemetryFrame]] = collector1.get_events_of_type(
-            SystemEvents.TELEMETRY_FRAME
+        events1: list[Event[TelemetryAndSessionId]] = collector1.get_events_of_type(
+            SystemEvents.TELEMETRY_EVENT
         )
-        events2: list[Event[TelemetryFrame]] = collector2.get_events_of_type(
-            SystemEvents.TELEMETRY_FRAME
+        events2: list[Event[TelemetryAndSessionId]] = collector2.get_events_of_type(
+            SystemEvents.TELEMETRY_EVENT
         )
 
         assert len(events1) == 5

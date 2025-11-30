@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     )
     """Path to IBT telemetry file (required when TELEMETRY_MODE='replay')"""
 
-    REPLAY_SPEED: float = 20.0
+    REPLAY_SPEED: float = 15.0
     """Playback speed multiplier for replay mode (1.0 = real-time, 2.0 = 2x speed)"""
 
     REPLAY_LOOP: bool = False

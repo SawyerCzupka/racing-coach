@@ -8,6 +8,8 @@ and recorded telemetry file playback.
 
 from typing import Any, Protocol, runtime_checkable
 
+from racing_coach_core.models.telemetry import SessionFrame, TelemetryFrame
+
 
 @runtime_checkable
 class TelemetrySource(Protocol):
@@ -17,53 +19,107 @@ class TelemetrySource(Protocol):
     This protocol allows the TelemetryCollector to work with different
     telemetry sources (live iRacing SDK, IBT file replay, mock sources, etc.)
     without knowing the implementation details.
+
+    Sources encapsulate all logic for:
+    - Connection management (live) or file handling (replay)
+    - Frame construction from raw telemetry data
+    - Timing/pacing of frame delivery
     """
 
-    def startup(self) -> bool:
-        """
-        Initialize and start the telemetry source.
-
-        Returns:
-            bool: True if startup successful, False otherwise.
-        """
-        ...
-
-    def shutdown(self) -> None:
-        """
-        Cleanly shutdown the telemetry source and release resources.
-        """
-        ...
-
+    @property
     def is_connected(self) -> bool:
         """
         Check if the telemetry source is currently connected and ready.
+
+        For live sources: True when iRacing SDK is connected.
+        For replay sources: True when file is open and not exhausted.
 
         Returns:
             bool: True if connected and ready to provide data, False otherwise.
         """
         ...
 
-    def freeze_var_buffer_latest(self) -> None:
+    def start(self) -> bool:
         """
-        Freeze the variable buffer to ensure consistent reads.
+        Initialize and start the telemetry source.
 
-        This method ensures that all subsequent reads of telemetry variables
-        come from the same snapshot in time, preventing race conditions.
+        For live sources: Initialize SDK, attempt initial connection.
+        For replay sources: Open file, determine frame count, initialize state.
+
+        Returns:
+            bool: True if initialization successful and source is ready.
+                  False if initialization failed but source can retry.
+
+        Raises:
+            TelemetryConnectionError: For unrecoverable initialization failures.
         """
         ...
 
-    def __getitem__(self, key: str) -> Any:
+    def stop(self) -> None:
         """
-        Get a telemetry variable value by name.
+        Stop the source and release all resources.
 
-        Args:
-            key: The name of the telemetry variable (e.g., 'Speed', 'RPM').
+        After calling stop(), the source should not be reused.
+        """
+        ...
+
+    def collect_session_frame(self) -> SessionFrame:
+        """
+        Collect current session metadata.
 
         Returns:
-            The value of the requested telemetry variable.
+            SessionFrame containing track, car, and series information.
 
         Raises:
-            KeyError: If the variable name is not found.
+            RuntimeError: If called while not connected.
+            TelemetryReadError: If session data cannot be read.
+        """
+        ...
+
+    def collect_telemetry_frame(self) -> TelemetryFrame:
+        """
+        Collect the next telemetry frame.
+
+        For live sources: Freezes latest buffer, constructs frame.
+        For replay sources: Advances to next frame (respecting timing), constructs frame.
+
+        Returns:
+            TelemetryFrame containing current telemetry data.
+
+        Raises:
+            RuntimeError: If called while not connected.
+            TelemetryReadError: If telemetry data cannot be read.
+        """
+        ...
+
+    def get_telemetry_data(self) -> dict[str, Any]:
+        """
+        Return a frozen snapshot of all telemetry variables.
+
+        This method freezes the buffer (if applicable) and returns a dictionary
+        containing all telemetry variable values. Safe to read multiple values
+        without race conditions.
+
+        Returns:
+            dict[str, Any]: Dictionary mapping variable names to values.
+
+        Raises:
+            RuntimeError: If called while not connected.
+        """
+        ...
+
+    def get_session_data(self) -> dict[str, Any]:
+        """
+        Return session metadata.
+
+        Returns a dictionary containing session info like WeekendInfo,
+        DriverInfo, SessionInfo, etc.
+
+        Returns:
+            dict[str, Any]: Dictionary with session metadata.
+
+        Raises:
+            RuntimeError: If called while not connected.
         """
         ...
 

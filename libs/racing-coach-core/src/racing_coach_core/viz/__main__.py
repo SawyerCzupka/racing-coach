@@ -19,9 +19,19 @@ import argparse
 import sys
 import webbrowser
 from pathlib import Path
+from uuid import UUID
 
-from ..client import RacingCoachServerSDK
-from ..client.exceptions import RequestError, ServerError
+import httpx
+from racing_coach_server_client import Client
+from racing_coach_server_client.api.metrics import get_lap_metrics_api_v1_metrics_lap_lap_id_get
+from racing_coach_server_client.api.sessions import get_lap_telemetry, get_session_detail, get_sessions_list
+from racing_coach_server_client.models import (
+    LapMetricsResponse,
+    LapTelemetryResponse,
+    SessionDetailResponse,
+    SessionListResponse,
+)
+
 from .report import generate_lap_report
 
 
@@ -74,7 +84,7 @@ def main() -> int:
     args = parser.parse_args()
 
     try:
-        client = RacingCoachServerSDK(args.server)
+        client = Client(base_url=args.server)
 
         if args.list_sessions:
             return list_sessions(client)
@@ -83,11 +93,11 @@ def main() -> int:
         elif args.lap:
             return visualize_lap(client, args.lap, args.output, not args.no_open)
 
-    except RequestError as e:
-        print(f"Error: {e}", file=sys.stderr)
+    except httpx.HTTPStatusError as e:
+        print(f"HTTP error: {e}", file=sys.stderr)
         return 1
-    except ServerError as e:
-        print(f"Server error: {e}", file=sys.stderr)
+    except httpx.RequestError as e:
+        print(f"Request error: {e}", file=sys.stderr)
         return 1
     except KeyboardInterrupt:
         print("\nInterrupted", file=sys.stderr)
@@ -96,12 +106,12 @@ def main() -> int:
     return 0
 
 
-def list_sessions(client: RacingCoachServerSDK) -> int:
+def list_sessions(client: Client) -> int:
     """List all sessions."""
     print("Fetching sessions...")
-    response = client.get_sessions()
+    response = get_sessions_list.sync(client=client)
 
-    if not response.sessions:
+    if not isinstance(response, SessionListResponse) or not response.sessions:
         print("No sessions found.")
         return 0
 
@@ -127,10 +137,14 @@ def list_sessions(client: RacingCoachServerSDK) -> int:
     return 0
 
 
-def list_laps(client: RacingCoachServerSDK, session_id: str) -> int:
+def list_laps(client: Client, session_id: str) -> int:
     """List laps in a session."""
     print(f"Fetching session {session_id}...")
-    session = client.get_session(session_id)
+    session = get_session_detail.sync(UUID(session_id), client=client)
+
+    if not isinstance(session, SessionDetailResponse):
+        print(f"Error: Could not fetch session {session_id}", file=sys.stderr)
+        return 1
 
     track = session.track_name
     if session.track_config_name:
@@ -158,7 +172,7 @@ def list_laps(client: RacingCoachServerSDK, session_id: str) -> int:
 
 
 def visualize_lap(
-    client: RacingCoachServerSDK,
+    client: Client,
     lap_id: str,
     output_path: str | None,
     open_browser: bool,
@@ -168,12 +182,18 @@ def visualize_lap(
 
     # First, we need to find the session for this lap
     # We'll get all sessions and find which one contains this lap
-    sessions = client.get_sessions()
-    session_id = None
-    session_detail = None
+    sessions = get_sessions_list.sync(client=client)
+    if not isinstance(sessions, SessionListResponse):
+        print("Error: Could not fetch sessions", file=sys.stderr)
+        return 1
+
+    session_id: str | None = None
+    session_detail: SessionDetailResponse | None = None
 
     for session_summary in sessions.sessions:
-        session = client.get_session(session_summary.session_id)
+        session = get_session_detail.sync(UUID(session_summary.session_id), client=client)
+        if not isinstance(session, SessionDetailResponse):
+            continue
         for lap in session.laps:
             if lap.lap_id == lap_id:
                 session_id = session_summary.session_id
@@ -182,7 +202,7 @@ def visualize_lap(
         if session_id:
             break
 
-    if not session_id:
+    if not session_id or not session_detail:
         print(f"Error: Lap {lap_id} not found in any session", file=sys.stderr)
         return 1
 
@@ -190,20 +210,21 @@ def visualize_lap(
 
     # Fetch telemetry
     print("  Fetching telemetry...")
-    telemetry = client.get_lap_telemetry(session_id, lap_id)
+    telemetry = get_lap_telemetry.sync(UUID(session_id), UUID(lap_id), client=client)
+    if not isinstance(telemetry, LapTelemetryResponse):
+        print("Error: Could not fetch telemetry", file=sys.stderr)
+        return 1
     print(f"  Got {telemetry.frame_count} telemetry frames")
 
     # Try to fetch metrics (may not exist)
-    metrics = None
-    try:
-        print("  Fetching metrics...")
-        metrics = client.get_lap_metrics(lap_id)
+    metrics: LapMetricsResponse | None = None
+    print("  Fetching metrics...")
+    metrics_response = get_lap_metrics_api_v1_metrics_lap_lap_id_get.sync(lap_id, client=client)
+    if isinstance(metrics_response, LapMetricsResponse):
+        metrics = metrics_response
         print(f"  Got {metrics.total_braking_zones} braking zones, {metrics.total_corners} corners")
-    except RequestError as e:
-        if "404" in str(e):
-            print("  No metrics available for this lap")
-        else:
-            raise
+    else:
+        print("  No metrics available for this lap")
 
     # Generate report
     print("  Generating visualization...")
