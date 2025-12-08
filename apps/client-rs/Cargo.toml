@@ -1,16 +1,64 @@
 [package]
-name = "client-rs"
+name = "racing-coach-client"
 version = "0.1.0"
 edition = "2024"
+description = "High-performance Rust client for Racing Coach - iRacing telemetry analysis"
+authors = ["Racing Coach Team"]
+
+[lib]
+name = "racing_coach_client"
+path = "src/lib.rs"
+
+[[bin]]
+name = "racing-coach"
+path = "src/main.rs"
 
 [dependencies]
+# Async runtime
+tokio = { version = "1.48.0", features = ["full", "sync", "time", "macros", "rt-multi-thread", "signal"] }
+tokio-util = "0.7"
 async-trait = "0.1"
-chrono = { version = "0.4", features = ["serde"] }
 futures = "0.3.31"
+
+# iRacing telemetry
 pitwall = { path = "../../libs/pitwall" }
-reqwest = "0.12.24"
+
+# HTTP client
+reqwest = { version = "0.12.24", features = ["json"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Error handling
 thiserror = "2.0"
-tokio = { version = "1.48.0", features = ["full"] }
-tracing = "0.1.43"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+anyhow = "1.0"
+
+# Time and UUIDs
+chrono = { version = "0.4", features = ["serde"] }
 uuid = { version = "1.0", features = ["v4", "serde"] }
+
+# Logging
+tracing = "0.1.43"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+
+# CLI
+clap = { version = "4.5", features = ["derive", "env"] }
+
+# Configuration
+config = "0.14"
+dotenvy = "0.15"
+
+[dev-dependencies]
+# Testing
+tokio-test = "0.4"
+mockall = "0.13"
+wiremock = "0.6"
+tempfile = "3.14"
+assert_matches = "1.5"
+proptest = "1.5"
+
+[features]
+default = []
+# Enable live iRacing connection (Windows only)
+live = []
