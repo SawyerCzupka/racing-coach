@@ -1,6 +1,6 @@
 """Integration tests for metrics extraction using real telemetry data."""
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import irsdk
@@ -77,11 +77,19 @@ def collect_lap_telemetry(ibt_file_path: Path, target_lap: int) -> list[Telemetr
             lap_end_frame = len(all_laps) - 1
 
         # If we found the lap, collect all frames
+        # Calculate proper timestamps from session time offsets
         if lap_start_frame >= 0 and lap_end_frame >= 0:
+            base_session_time = ibt.get(lap_start_frame, "SessionTime")
+            base_timestamp = datetime.now(timezone.utc)
+
             for frame_idx in range(lap_start_frame, lap_end_frame + 1):
+                session_time = ibt.get(frame_idx, "SessionTime")
+                time_offset = session_time - base_session_time
+                frame_timestamp = base_timestamp + timedelta(seconds=time_offset)
+
                 frame = TelemetryFrame(
-                    timestamp=datetime.now(timezone.utc),
-                    session_time=ibt.get(frame_idx, "SessionTime"),
+                    timestamp=frame_timestamp,
+                    session_time=session_time,
                     lap_number=ibt.get(frame_idx, "Lap"),
                     lap_distance_pct=ibt.get(frame_idx, "LapDistPct"),
                     lap_distance=ibt.get(frame_idx, "LapDist"),

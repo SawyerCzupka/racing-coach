@@ -11,8 +11,17 @@ logger = logging.getLogger(__name__)
 
 # Thresholds for detection
 BRAKE_THRESHOLD = 0.05  # 5% brake application
-STEERING_THRESHOLD = 0.15  # 15% steering angle (absolute value)
+STEERING_THRESHOLD = 0.15  # Steering angle threshold in radians (~8.6 degrees)
 THROTTLE_THRESHOLD = 0.05  # 5% throttle application
+
+# Corner detection tuning parameters
+MIN_CORNER_DURATION = 0.5  # Minimum corner duration in seconds
+MIN_CORNER_GAP = 0.4  # Minimum time gap between corners to not merge them (seconds)
+STEERING_EXIT_HYSTERESIS = 0.35  # Time steering must stay below threshold to exit corner (seconds)
+
+# Braking detection tuning parameters
+MIN_BRAKE_DURATION = 0.2  # Minimum braking duration in seconds
+MIN_BRAKE_PRESSURE = 0.10  # Minimum max brake pressure to count as significant braking
 
 
 def extract_lap_metrics(
@@ -84,7 +93,13 @@ def _extract_braking_zones(
     brake_threshold: float,
     steering_threshold: float,
 ) -> list[BrakingMetrics]:
-    """Extract detailed braking metrics from telemetry frames."""
+    """
+    Extract detailed braking metrics from telemetry frames.
+
+    Filters out:
+    - Very short brake applications (< MIN_BRAKE_DURATION)
+    - Light brake taps (max pressure < MIN_BRAKE_PRESSURE)
+    """
     braking_zones: list[BrakingMetrics] = []
 
     i = 0
@@ -114,6 +129,10 @@ def _extract_braking_zones(
 
         # Calculate braking duration
         duration = (end_frame.timestamp - start_frame.timestamp).total_seconds()
+
+        # Filter out short brake taps and light pressure braking
+        if duration < MIN_BRAKE_DURATION or max_pressure < MIN_BRAKE_PRESSURE:
+            continue
 
         # Calculate deceleration metrics
         initial_decel = _calculate_deceleration(frames, start_idx, min(start_idx + 5, end_idx))
@@ -152,7 +171,34 @@ def _extract_corners(
     steering_threshold: float,
     throttle_threshold: float,
 ) -> list[CornerMetrics]:
-    """Extract detailed corner metrics from telemetry frames."""
+    """
+    Extract detailed corner metrics from telemetry frames.
+
+    Uses improved detection with:
+    - Hysteresis: steering must stay below threshold for a minimum time to end corner
+    - Merging: consecutive short corners with small gaps are merged
+    - Filtering: corners shorter than MIN_CORNER_DURATION are filtered out
+    """
+    # First pass: extract raw corners with hysteresis
+    raw_corners = _extract_raw_corners_with_hysteresis(
+        frames, steering_threshold, throttle_threshold
+    )
+
+    # Second pass: merge consecutive corners with small gaps
+    merged_corners = _merge_consecutive_corners(raw_corners, frames)
+
+    # Third pass: filter out very short corners
+    filtered_corners = [c for c in merged_corners if c.time_in_corner >= MIN_CORNER_DURATION]
+
+    return filtered_corners
+
+
+def _extract_raw_corners_with_hysteresis(
+    frames: list[TelemetryFrame],
+    steering_threshold: float,
+    throttle_threshold: float,
+) -> list[CornerMetrics]:
+    """Extract corners using hysteresis to avoid detecting steering corrections as separate corners."""
     corners: list[CornerMetrics] = []
 
     i = 0
@@ -170,12 +216,13 @@ def _extract_corners(
         max_lateral_g = abs(frames[i].lateral_acceleration)
         apex_idx = i
         min_speed = frames[i].speed
-        min_speed_idx = i
         max_steering = abs(frames[i].steering_angle)
-        exit_idx = turn_in_idx
         throttle_idx = turn_in_idx
-
         throttle_applied = False
+
+        # For hysteresis tracking
+        below_threshold_start_idx: int | None = None
+        exit_idx = turn_in_idx
 
         # Scan through the corner
         while i < len(frames):
@@ -189,7 +236,6 @@ def _extract_corners(
             # Track minimum speed
             if frames[i].speed < min_speed:
                 min_speed = frames[i].speed
-                min_speed_idx = i
 
             # Track maximum steering angle
             if current_steering > max_steering:
@@ -200,10 +246,23 @@ def _extract_corners(
                 throttle_idx = i
                 throttle_applied = True
 
-            # Check for corner exit (steering returns below threshold)
+            # Hysteresis-based exit detection
             if current_steering < steering_threshold:
-                exit_idx = i
-                break
+                if below_threshold_start_idx is None:
+                    below_threshold_start_idx = i
+
+                # Check if we've been below threshold long enough
+                time_below = (
+                    frames[i].timestamp - frames[below_threshold_start_idx].timestamp
+                ).total_seconds()
+
+                if time_below >= STEERING_EXIT_HYSTERESIS:
+                    # Corner has truly ended
+                    exit_idx = below_threshold_start_idx
+                    break
+            else:
+                # Back above threshold - reset hysteresis counter
+                below_threshold_start_idx = None
 
             i += 1
 
@@ -221,9 +280,10 @@ def _extract_corners(
 
         # Calculate corner distance
         corner_distance = exit_frame.lap_distance - turn_in_frame.lap_distance
-        # Handle lap wrap-around
+        # Handle lap wrap-around (lap_distance is in meters, not normalized)
         if corner_distance < 0:
-            corner_distance += 1.0  # Assuming lap_distance is normalized to 0-1
+            # Assume a typical track is ~6km max
+            corner_distance += 10000.0
 
         # Calculate speed deltas
         speed_loss = turn_in_frame.speed - min_speed
@@ -252,6 +312,114 @@ def _extract_corners(
         i = exit_idx + 1
 
     return corners
+
+
+def _merge_consecutive_corners(
+    corners: list[CornerMetrics],
+    frames: list[TelemetryFrame],
+) -> list[CornerMetrics]:
+    """
+    Merge consecutive corners that have a small time gap between them.
+
+    This handles situations where a single logical corner (like an S-bend or
+    chicane) is detected as multiple corners due to brief steering straightening.
+    """
+    if len(corners) <= 1:
+        return corners
+
+    merged: list[CornerMetrics] = []
+    current = corners[0]
+
+    for next_corner in corners[1:]:
+        # Calculate time gap between current corner exit and next corner entry
+        # Find the frames closest to these distances
+        current_exit_frame = _find_frame_by_distance(frames, current.exit_distance)
+        next_entry_frame = _find_frame_by_distance(frames, next_corner.turn_in_distance)
+
+        if current_exit_frame is not None and next_entry_frame is not None:
+            time_gap = (
+                next_entry_frame.timestamp - current_exit_frame.timestamp
+            ).total_seconds()
+        else:
+            time_gap = float("inf")
+
+        # If gap is small, merge the corners
+        if time_gap < MIN_CORNER_GAP:
+            # Merge: extend current corner to include next corner
+            current = _merge_two_corners(current, next_corner, frames)
+        else:
+            # Gap is large enough - finalize current corner and start new one
+            merged.append(current)
+            current = next_corner
+
+    # Don't forget the last corner
+    merged.append(current)
+
+    return merged
+
+
+def _merge_two_corners(
+    c1: CornerMetrics,
+    c2: CornerMetrics,
+    frames: list[TelemetryFrame],
+) -> CornerMetrics:
+    """Merge two corners into one combined corner."""
+    # Find frames for the merged corner
+    turn_in_frame = _find_frame_by_distance(frames, c1.turn_in_distance)
+    exit_frame = _find_frame_by_distance(frames, c2.exit_distance)
+
+    # Combined metrics
+    time_in_corner = c1.time_in_corner + c2.time_in_corner
+    if turn_in_frame and exit_frame:
+        time_in_corner = (exit_frame.timestamp - turn_in_frame.timestamp).total_seconds()
+
+    # Use the apex with higher lateral G
+    if c1.max_lateral_g >= c2.max_lateral_g:
+        apex_distance = c1.apex_distance
+    else:
+        apex_distance = c2.apex_distance
+
+    # Combine corner distance
+    corner_distance = c2.exit_distance - c1.turn_in_distance
+    if corner_distance < 0:
+        corner_distance += 10000.0
+
+    return CornerMetrics(
+        turn_in_distance=c1.turn_in_distance,
+        apex_distance=apex_distance,
+        exit_distance=c2.exit_distance,
+        throttle_application_distance=c1.throttle_application_distance,
+        turn_in_speed=c1.turn_in_speed,
+        apex_speed=min(c1.apex_speed, c2.apex_speed),
+        exit_speed=c2.exit_speed,
+        throttle_application_speed=c1.throttle_application_speed,
+        max_lateral_g=max(c1.max_lateral_g, c2.max_lateral_g),
+        time_in_corner=time_in_corner,
+        corner_distance=corner_distance,
+        max_steering_angle=max(c1.max_steering_angle, c2.max_steering_angle),
+        speed_loss=c1.turn_in_speed - min(c1.apex_speed, c2.apex_speed),
+        speed_gain=c2.exit_speed - min(c1.apex_speed, c2.apex_speed),
+    )
+
+
+def _find_frame_by_distance(
+    frames: list[TelemetryFrame],
+    target_distance: float,
+) -> TelemetryFrame | None:
+    """Find the frame closest to a given lap distance."""
+    if not frames:
+        return None
+
+    closest_frame = frames[0]
+    closest_diff = abs(frames[0].lap_distance - target_distance)
+
+    for frame in frames:
+        diff = abs(frame.lap_distance - target_distance)
+        if diff < closest_diff:
+            closest_diff = diff
+            closest_frame = frame
+
+    return closest_frame
 
 
 def _calculate_deceleration(

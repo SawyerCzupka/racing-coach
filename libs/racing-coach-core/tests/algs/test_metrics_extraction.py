@@ -311,9 +311,16 @@ class TestExtractLapMetrics:
         base_time = datetime.now(timezone.utc)
         frames = []
 
-        # Create frames with low brake pressure (below default threshold)
-        for i in range(10):
-            brake = 0.03 if 3 <= i <= 6 else 0.0  # Below default 0.05 threshold
+        # Create frames with moderate brake pressure
+        # (above MIN_BRAKE_PRESSURE=0.10 but below default threshold=0.05 won't work,
+        # so we test with pressure above min filter but checking threshold behavior)
+        for i in range(20):
+            # 0.08 is above MIN_BRAKE_PRESSURE (0.10) but below default BRAKE_THRESHOLD (0.05)
+            # Actually, 0.08 > 0.05 so it would be detected with default threshold
+            # Let's use: 0.04 is below default 0.05, and test with 0.03 threshold
+            # But MIN_BRAKE_PRESSURE is 0.10, so we need pressure >= 0.10
+            # Use 0.12 pressure which is: > MIN_BRAKE_PRESSURE (0.10), and test threshold at 0.15
+            brake = 0.12 if 3 <= i <= 12 else 0.0  # Duration ~1s to pass MIN_BRAKE_DURATION
 
             frame = self._create_frame(
                 timestamp=base_time + timedelta(seconds=i * 0.1),
@@ -326,13 +333,13 @@ class TestExtractLapMetrics:
 
         sequence = TelemetrySequence(frames=frames, lap_time=60.0)
 
-        # With default threshold, should not detect braking
-        metrics_default = extract_lap_metrics(sequence)
-        assert metrics_default.total_braking_zones == 0
+        # With high threshold (0.15), should not detect braking since max pressure is 0.12
+        metrics_high_threshold = extract_lap_metrics(sequence, brake_threshold=0.15)
+        assert metrics_high_threshold.total_braking_zones == 0
 
-        # With custom lower threshold, should detect braking
-        metrics_custom = extract_lap_metrics(sequence, brake_threshold=0.01)
-        assert metrics_custom.total_braking_zones == 1
+        # With lower threshold (0.10), should detect braking
+        metrics_low_threshold = extract_lap_metrics(sequence, brake_threshold=0.10)
+        assert metrics_low_threshold.total_braking_zones == 1
 
     def test_lap_statistics_calculation(self) -> None:
         """Test that lap-wide statistics are calculated correctly."""
