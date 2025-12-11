@@ -57,6 +57,11 @@ wiremock = "0.6"
 tempfile = "3.14"
 assert_matches = "1.5"
 proptest = "1.5"
+criterion = { version = "0.5", features = ["async_tokio"] }
+
+[[bench]]
+name = "event_throughput"
+harness = false
 
 [features]
 default = []

@@ -211,4 +211,150 @@ mod tests {
         frame.brake = 0.5;
         assert!(frame.is_braking(0.05));
     }
+
+    #[test]
+    fn test_is_on_throttle() {
+        let mut frame = sample_frame();
+        // Default throttle is 0.8
+        assert!(frame.is_on_throttle(0.05));
+        assert!(frame.is_on_throttle(0.5));
+        assert!(!frame.is_on_throttle(0.9));
+
+        frame.throttle = 0.0;
+        assert!(!frame.is_on_throttle(0.05));
+    }
+
+    #[test]
+    fn test_is_on_throttle_threshold_boundary() {
+        let mut frame = sample_frame();
+        frame.throttle = 0.5;
+
+        // At exactly threshold - not above
+        assert!(!frame.is_on_throttle(0.5));
+        // Just below threshold
+        assert!(frame.is_on_throttle(0.49));
+    }
+
+    #[test]
+    fn test_is_steering() {
+        let mut frame = sample_frame();
+        // Default steering is 0.1
+        assert!(frame.is_steering(0.05));
+        assert!(!frame.is_steering(0.2));
+
+        // Test negative steering
+        frame.steering_angle = -0.3;
+        assert!(frame.is_steering(0.2));
+        assert!(frame.is_steering(0.05));
+    }
+
+    #[test]
+    fn test_is_steering_threshold_boundary() {
+        let mut frame = sample_frame();
+        frame.steering_angle = 0.5;
+
+        // At exactly threshold - not above
+        assert!(!frame.is_steering(0.5));
+        // Just below threshold
+        assert!(frame.is_steering(0.49));
+    }
+
+    #[test]
+    fn test_is_steering_negative() {
+        let mut frame = sample_frame();
+        frame.steering_angle = -0.8;
+
+        // Absolute value should be compared
+        assert!(frame.is_steering(0.5));
+        assert!(frame.is_steering(0.7));
+        assert!(!frame.is_steering(0.9));
+    }
+
+    #[test]
+    fn test_longitudinal_g() {
+        let mut frame = sample_frame();
+        // Default longitudinal_acceleration is 2.0
+        let expected_g = 2.0 / 9.81;
+        assert!((frame.longitudinal_g() - expected_g).abs() < 0.001);
+
+        // Test braking (negative acceleration)
+        frame.longitudinal_acceleration = -15.0;
+        let expected_braking_g = -15.0 / 9.81;
+        assert!((frame.longitudinal_g() - expected_braking_g).abs() < 0.001);
+    }
+
+    #[test]
+    fn test_lateral_g_at_zero() {
+        let mut frame = sample_frame();
+        frame.lateral_acceleration = 0.0;
+        assert!(frame.lateral_g().abs() < 0.0001);
+    }
+
+    #[test]
+    fn test_longitudinal_g_at_zero() {
+        let mut frame = sample_frame();
+        frame.longitudinal_acceleration = 0.0;
+        assert!(frame.longitudinal_g().abs() < 0.0001);
+    }
+
+    #[test]
+    fn test_speed_conversion_at_zero() {
+        let mut frame = sample_frame();
+        frame.speed = 0.0;
+        assert_eq!(frame.speed_kmh(), 0.0);
+        assert_eq!(frame.speed_mph(), 0.0);
+    }
+
+    #[test]
+    fn test_speed_conversion_at_high_speed() {
+        let mut frame = sample_frame();
+        frame.speed = 100.0; // 100 m/s = 360 km/h
+        assert!((frame.speed_kmh() - 360.0).abs() < 0.1);
+        assert!((frame.speed_mph() - 223.7).abs() < 0.1);
+    }
+
+    #[test]
+    fn test_is_braking_at_threshold() {
+        let mut frame = sample_frame();
+        frame.brake = 0.05;
+
+        // At exactly threshold - not above
+        assert!(!frame.is_braking(0.05));
+        // Just below threshold
+        assert!(frame.is_braking(0.04));
+    }
+
+    #[test]
+    fn test_frame_clone() {
+        let frame = sample_frame();
+        let cloned = frame.clone();
+
+        assert_eq!(frame.lap_number, cloned.lap_number);
+        assert_eq!(frame.speed, cloned.speed);
+        assert_eq!(frame.throttle, cloned.throttle);
+        assert_eq!(frame.brake, cloned.brake);
+    }
+
+    #[test]
+    fn test_frame_debug() {
+        let frame = sample_frame();
+        let debug_str = format!("{:?}", frame);
+
+        assert!(debug_str.contains("RacingFrame"));
+        assert!(debug_str.contains("lap_number"));
+        assert!(debug_str.contains("speed"));
+    }
+
+    #[test]
+    fn test_combined_inputs() {
+        let mut frame = sample_frame();
+        frame.throttle = 0.3;
+        frame.brake = 0.2;
+        frame.steering_angle = 0.5;
+
+        // Trail braking scenario
+        assert!(frame.is_on_throttle(0.1));
+        assert!(frame.is_braking(0.1));
+        assert!(frame.is_steering(0.3));
+    }
 }
