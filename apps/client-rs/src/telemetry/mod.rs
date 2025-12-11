@@ -8,4 +8,4 @@ pub mod source;
 
 pub use collector::TelemetryCollector;
 pub use frame::RacingFrame;
-pub use source::{TelemetrySource, TelemetrySourceConfig};
+pub use source::{TelemetrySource, TelemetrySourceConfig, TelemetrySourceError};
