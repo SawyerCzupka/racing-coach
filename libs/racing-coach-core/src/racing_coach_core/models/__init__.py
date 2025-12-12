@@ -1,10 +1,15 @@
 from .responses import HealthCheckResponse, LapUploadResponse
-from .telemetry import LapTelemetry, SessionFrame, TelemetryFrame
+from .telemetry import LapTelemetry, SessionFrame, TelemetryFrame, TelemetrySequence
+from .track import AugmentedTelemetryFrame, AugmentedTelemetrySequence, TrackBoundary
 
 __all__ = [
+    "AugmentedTelemetryFrame",
+    "AugmentedTelemetrySequence",
+    "HealthCheckResponse",
     "LapTelemetry",
+    "LapUploadResponse",
     "SessionFrame",
     "TelemetryFrame",
-    "HealthCheckResponse",
-    "LapUploadResponse",
+    "TelemetrySequence",
+    "TrackBoundary",
 ]
