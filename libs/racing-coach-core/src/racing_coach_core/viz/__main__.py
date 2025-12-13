@@ -24,7 +24,11 @@ from uuid import UUID
 import httpx
 from racing_coach_server_client import Client
 from racing_coach_server_client.api.metrics import get_lap_metrics_api_v1_metrics_lap_lap_id_get
-from racing_coach_server_client.api.sessions import get_lap_telemetry, get_session_detail, get_sessions_list
+from racing_coach_server_client.api.sessions import (
+    get_lap_telemetry,
+    get_session_detail,
+    get_sessions_list,
+)
 from racing_coach_server_client.models import (
     LapMetricsResponse,
     LapTelemetryResponse,

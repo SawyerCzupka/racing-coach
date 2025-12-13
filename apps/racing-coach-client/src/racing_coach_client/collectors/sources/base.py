@@ -8,7 +8,7 @@ and recorded telemetry file playback.
 
 from typing import Any, Protocol, runtime_checkable
 
-from racing_coach_core.models.telemetry import SessionFrame, TelemetryFrame
+from racing_coach_core.schemas.telemetry import SessionFrame, TelemetryFrame
 
 
 @runtime_checkable

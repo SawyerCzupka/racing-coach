@@ -6,7 +6,7 @@ from pathlib import Path
 import irsdk
 import pytest
 from racing_coach_core.algs.metrics import extract_lap_metrics
-from racing_coach_core.models.telemetry import LapTelemetry, TelemetryFrame
+from racing_coach_core.schemas.telemetry import LapTelemetry, TelemetryFrame
 
 # Mark all tests in this module as integration tests
 pytestmark = pytest.mark.integration

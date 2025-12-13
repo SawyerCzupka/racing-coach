@@ -6,14 +6,14 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
 
-from ..models.events import (
+from ..schemas.events import (
     LapAndSession,
     MetricsAndSession,
     SessionEnd,
     SessionStart,
     TelemetryAndSessionId,
 )
-from ..models.telemetry import TelemetryFrame
+from ..schemas.telemetry import TelemetryFrame
 
 logger = logging.getLogger(__name__)
 

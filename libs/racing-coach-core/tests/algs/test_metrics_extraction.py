@@ -10,7 +10,7 @@ from racing_coach_core.algs.metrics import (
     THROTTLE_THRESHOLD,
     extract_lap_metrics,
 )
-from racing_coach_core.models.telemetry import LapTelemetry, TelemetryFrame, TelemetrySequence
+from racing_coach_core.schemas.telemetry import LapTelemetry, TelemetryFrame, TelemetrySequence
 
 
 class TestExtractLapMetrics:

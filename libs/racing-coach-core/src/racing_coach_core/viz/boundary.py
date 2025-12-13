@@ -12,10 +12,11 @@ import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
+from .constants import MS_TO_KMH
 from .styles import COLORS, SPEED_COLORSCALE, get_chart_layout, get_xaxis, get_yaxis
 
 if TYPE_CHECKING:
-    from racing_coach_core.models.track import (
+    from racing_coach_core.schemas.track import (
         AugmentedTelemetrySequence,
         TrackBoundary,
     )
@@ -122,7 +123,12 @@ def create_track_boundary_map(
     fig.update_layout(
         **get_chart_layout(
             map_title,
-            legend={"x": 0, "y": 1, "bgcolor": "rgba(0,0,0,0.7)", "font": {"color": COLORS["text"]}},
+            legend={
+                "x": 0,
+                "y": 1,
+                "bgcolor": "rgba(0,0,0,0.7)",
+                "font": {"color": COLORS["text"]},
+            },
         ),
         xaxis=get_xaxis(title="", showticklabels=False, showgrid=False),
         yaxis=get_yaxis(title="", showticklabels=False, showgrid=False, scaleanchor="x"),
@@ -160,7 +166,7 @@ def create_track_map_with_racing_line(
 
     lon = np.array(longitudes)
     lat = np.array(latitudes)
-    speed_kmh = np.array(speeds) * 3.6  # Convert m/s to km/h
+    speed_kmh = np.array(speeds) * MS_TO_KMH
 
     # Track boundaries
     if show_boundaries:
@@ -229,7 +235,12 @@ def create_track_map_with_racing_line(
     fig.update_layout(
         **get_chart_layout(
             map_title,
-            legend={"x": 0, "y": 1, "bgcolor": "rgba(0,0,0,0.7)", "font": {"color": COLORS["text"]}},
+            legend={
+                "x": 0,
+                "y": 1,
+                "bgcolor": "rgba(0,0,0,0.7)",
+                "font": {"color": COLORS["text"]},
+            },
         ),
         xaxis=get_xaxis(title="", showticklabels=False, showgrid=False),
         yaxis=get_yaxis(title="", showticklabels=False, showgrid=False, scaleanchor="x"),
@@ -344,7 +355,12 @@ def create_track_map_with_lateral_position(
     fig.update_layout(
         **get_chart_layout(
             map_title,
-            legend={"x": 0, "y": 1, "bgcolor": "rgba(0,0,0,0.7)", "font": {"color": COLORS["text"]}},
+            legend={
+                "x": 0,
+                "y": 1,
+                "bgcolor": "rgba(0,0,0,0.7)",
+                "font": {"color": COLORS["text"]},
+            },
         ),
         xaxis=get_xaxis(title="", showticklabels=False, showgrid=False),
         yaxis=get_yaxis(title="", showticklabels=False, showgrid=False, scaleanchor="x"),
@@ -448,7 +464,7 @@ def create_telemetry_with_lateral_chart(
         Plotly figure with 4-panel telemetry chart
     """
     dist = np.array(distances)
-    speed_kmh = np.array(speeds) * 3.6
+    speed_kmh = np.array(speeds) * MS_TO_KMH
     throttle_pct = np.array(throttle) * 100
     brake_pct = np.array(brake) * 100
     steering_deg = np.degrees(np.array(steering))
@@ -459,7 +475,12 @@ def create_telemetry_with_lateral_chart(
         cols=1,
         shared_xaxes=True,
         vertical_spacing=0.05,
-        subplot_titles=("Speed (km/h)", "Throttle & Brake (%)", "Steering (deg)", "Lateral Position"),
+        subplot_titles=(
+            "Speed (km/h)",
+            "Throttle & Brake (%)",
+            "Steering (deg)",
+            "Lateral Position",
+        ),
     )
 
     # Speed
@@ -535,9 +556,15 @@ def create_telemetry_with_lateral_chart(
     )
 
     # Reference lines for lateral position
-    fig.add_hline(y=-1, line_dash="dash", line_color=COLORS["text_secondary"], opacity=0.5, row=4, col=1)
-    fig.add_hline(y=1, line_dash="dash", line_color=COLORS["text_secondary"], opacity=0.5, row=4, col=1)
-    fig.add_hline(y=0, line_dash="solid", line_color=COLORS["text_secondary"], opacity=0.3, row=4, col=1)
+    fig.add_hline(
+        y=-1, line_dash="dash", line_color=COLORS["text_secondary"], opacity=0.5, row=4, col=1
+    )
+    fig.add_hline(
+        y=1, line_dash="dash", line_color=COLORS["text_secondary"], opacity=0.5, row=4, col=1
+    )
+    fig.add_hline(
+        y=0, line_dash="solid", line_color=COLORS["text_secondary"], opacity=0.3, row=4, col=1
+    )
 
     # Update layout
     fig.update_layout(
@@ -552,8 +579,12 @@ def create_telemetry_with_lateral_chart(
 
     # Update all axes
     for i in range(1, 5):
-        fig.update_xaxes(gridcolor=COLORS["grid"], tickfont={"color": COLORS["text_secondary"]}, row=i, col=1)
-        fig.update_yaxes(gridcolor=COLORS["grid"], tickfont={"color": COLORS["text_secondary"]}, row=i, col=1)
+        fig.update_xaxes(
+            gridcolor=COLORS["grid"], tickfont={"color": COLORS["text_secondary"]}, row=i, col=1
+        )
+        fig.update_yaxes(
+            gridcolor=COLORS["grid"], tickfont={"color": COLORS["text_secondary"]}, row=i, col=1
+        )
 
     fig.update_xaxes(title_text="Distance (m)", row=4, col=1)
 

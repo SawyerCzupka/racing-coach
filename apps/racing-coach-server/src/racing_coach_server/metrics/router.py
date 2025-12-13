@@ -5,9 +5,10 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from racing_coach_core.algs.events import BrakingMetrics, CornerMetrics
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from racing_coach_server.database.engine import transactional_session
-from racing_coach_server.dependencies import get_telemetry_service
+from racing_coach_server.database.engine import get_async_session, transactional_session
+from racing_coach_server.dependencies import get_metrics_service
 from racing_coach_server.metrics.comparison_schemas import LapComparisonResponse
 from racing_coach_server.metrics.comparison_service import LapComparisonService
 from racing_coach_server.metrics.schemas import (
@@ -16,7 +17,7 @@ from racing_coach_server.metrics.schemas import (
     MetricsUploadResponse,
 )
 from racing_coach_server.telemetry.exceptions import LapNotFoundError
-from racing_coach_server.telemetry.service import TelemetryService
+from racing_coach_server.telemetry.services import MetricsService
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +27,8 @@ router = APIRouter()
 @router.post("/lap", response_model=MetricsUploadResponse, tags=["metrics"])
 async def upload_lap_metrics(
     request: MetricsUploadRequest,
-    service: TelemetryService = Depends(get_telemetry_service),
+    db: AsyncSession = Depends(get_async_session),
+    metrics_service: MetricsService = Depends(get_metrics_service),
 ) -> MetricsUploadResponse:
     """
     Upload metrics for a lap.
@@ -40,8 +42,8 @@ async def upload_lap_metrics(
         raise HTTPException(status_code=400, detail="Invalid lap_id format")
 
     try:
-        async with transactional_session(service.db):
-            db_metrics = await service.add_or_update_lap_metrics(
+        async with transactional_session(db):
+            db_metrics = await metrics_service.add_or_update_lap_metrics(
                 lap_metrics=request.lap_metrics,
                 lap_id=lap_id,
             )
@@ -66,7 +68,7 @@ async def upload_lap_metrics(
 @router.get("/lap/{lap_id}", response_model=LapMetricsResponse, tags=["metrics"])
 async def get_lap_metrics(
     lap_id: str,
-    service: TelemetryService = Depends(get_telemetry_service),
+    metrics_service: MetricsService = Depends(get_metrics_service),
 ) -> LapMetricsResponse:
     """
     Get metrics for a specific lap.
@@ -78,7 +80,7 @@ async def get_lap_metrics(
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid lap_id format")
 
-    db_metrics = await service.get_lap_metrics(uuid_lap_id)
+    db_metrics = await metrics_service.get_lap_metrics(uuid_lap_id)
 
     if not db_metrics:
         raise HTTPException(status_code=404, detail=f"Metrics not found for lap {lap_id}")
@@ -135,7 +137,7 @@ async def get_lap_metrics(
 async def compare_laps(
     lap_id_1: str = Query(..., description="UUID of the baseline lap"),
     lap_id_2: str = Query(..., description="UUID of the lap to compare against baseline"),
-    service: TelemetryService = Depends(get_telemetry_service),
+    metrics_service: MetricsService = Depends(get_metrics_service),
 ) -> LapComparisonResponse:
     """
     Compare two laps and return detailed performance deltas.
@@ -154,13 +156,13 @@ async def compare_laps(
         raise HTTPException(status_code=400, detail="Invalid lap_id format")
 
     # Get metrics for both laps
-    baseline_metrics = await service.get_lap_metrics(uuid_lap_id_1)
+    baseline_metrics = await metrics_service.get_lap_metrics(uuid_lap_id_1)
     if not baseline_metrics:
         raise HTTPException(
             status_code=404, detail=f"Metrics not found for baseline lap {lap_id_1}"
         )
 
-    comparison_metrics = await service.get_lap_metrics(uuid_lap_id_2)
+    comparison_metrics = await metrics_service.get_lap_metrics(uuid_lap_id_2)
     if not comparison_metrics:
         raise HTTPException(
             status_code=404, detail=f"Metrics not found for comparison lap {lap_id_2}"

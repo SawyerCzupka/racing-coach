@@ -9,8 +9,8 @@ import logging
 from datetime import datetime
 from typing import Any
 
-import irsdk
-from racing_coach_core.models.telemetry import SessionFrame, TelemetryFrame
+import irsdk  # pyright: ignore[reportMissingTypeStubs]
+from racing_coach_core.schemas.telemetry import SessionFrame, TelemetryFrame
 
 from .base import TelemetryConnectionError
 

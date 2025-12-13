@@ -15,7 +15,7 @@ from racing_coach_core.events import (
     SystemEvents,
 )
 from racing_coach_core.events.checking import method_handles
-from racing_coach_core.models.events import LapAndSession, MetricsAndSession
+from racing_coach_core.schemas.events import LapAndSession, MetricsAndSession
 
 logger = logging.getLogger(__name__)
 

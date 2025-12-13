@@ -9,6 +9,7 @@ Skip in CI with: uv run pytest -m "not load"
 
 import asyncio
 import time
+from uuid import uuid4
 
 import pytest
 from racing_coach_core.events.base import EventBus, Handler, HandlerContext, SystemEvents
@@ -22,7 +23,6 @@ from tests.load_test_utils import (
     measure_event_creation_overhead,
     run_load_test,
 )
-from uuid import uuid4
 
 
 @pytest.mark.load
@@ -93,10 +93,12 @@ class TestEventBusUnderLoad:
         print(metrics.summary())
 
         assert metrics.events_dropped == 0, f"Dropped {metrics.events_dropped} events"
-        assert metrics.p99_latency_ms < 100.0, f"P99 latency {metrics.p99_latency_ms:.2f}ms exceeds 100ms"
-        assert (
-            metrics.memory_growth < 50 * 1024 * 1024
-        ), f"Memory grew by {metrics.memory_growth / 1024 / 1024:.2f}MB"
+        assert metrics.p99_latency_ms < 100.0, (
+            f"P99 latency {metrics.p99_latency_ms:.2f}ms exceeds 100ms"
+        )
+        assert metrics.memory_growth < 50 * 1024 * 1024, (
+            f"Memory grew by {metrics.memory_growth / 1024 / 1024:.2f}MB"
+        )
 
     async def test_120hz_burst_load(
         self,
@@ -119,7 +121,9 @@ class TestEventBusUnderLoad:
 
         drop_rate = metrics.events_dropped / max(1, metrics.events_published)
         assert drop_rate < 0.01, f"Drop rate {drop_rate:.2%} exceeds 1%"
-        assert metrics.p99_latency_ms < 150.0, f"P99 latency {metrics.p99_latency_ms:.2f}ms exceeds 150ms"
+        assert metrics.p99_latency_ms < 150.0, (
+            f"P99 latency {metrics.p99_latency_ms:.2f}ms exceeds 150ms"
+        )
 
     async def test_queue_depth_under_load(
         self,
@@ -133,7 +137,9 @@ class TestEventBusUnderLoad:
         queue_monitor = QueueMonitor(running_high_capacity_bus, sample_interval_ms=50.0)
         queue_monitor.start()
 
-        generator = HighFrequencyEventGenerator(running_high_capacity_bus, uuid4(), frequency_hz=60.0)
+        generator = HighFrequencyEventGenerator(
+            running_high_capacity_bus, uuid4(), frequency_hz=60.0
+        )
         generator.start(duration_seconds=5.0)
         generator.wait()
 
@@ -327,12 +333,12 @@ class TestEventBusMultipleHandlers:
         print(f"\n3 Handlers at 60Hz:")
         print(f"  Events published: {metrics.events_published}")
         for i, collector in enumerate(collectors):
-            print(f"  Handler {i+1} received: {collector.get_event_count()}")
+            print(f"  Handler {i + 1} received: {collector.get_event_count()}")
         print(f"  P99 Latency: {metrics.p99_latency_ms:.2f}ms")
 
         # All handlers should receive same number of events
         for i, collector in enumerate(collectors):
             count = collector.get_event_count()
             assert count == metrics.events_published, (
-                f"Handler {i+1} received {count}, expected {metrics.events_published}"
+                f"Handler {i + 1} received {count}, expected {metrics.events_published}"
             )

@@ -8,8 +8,8 @@ import pytest
 from racing_coach_client.collectors.iracing import TelemetryCollector
 from racing_coach_core.events.base import Event, EventBus, Handler, SystemEvents
 from racing_coach_core.events.session_registry import SessionRegistry
-from racing_coach_core.models.events import SessionEnd, SessionStart, TelemetryAndSessionId
-from racing_coach_core.models.telemetry import SessionFrame, TelemetryFrame
+from racing_coach_core.schemas.events import SessionEnd, SessionStart, TelemetryAndSessionId
+from racing_coach_core.schemas.telemetry import SessionFrame, TelemetryFrame
 
 from tests.conftest import EventCollector
 

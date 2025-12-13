@@ -2,7 +2,7 @@ import logging
 
 from racing_coach_core.events import EventBus, HandlerContext, SystemEvents
 from racing_coach_core.events.checking import method_handles
-from racing_coach_core.models.events import LapAndSession
+from racing_coach_core.schemas.events import LapAndSession
 from racing_coach_server_client import Client
 from racing_coach_server_client.api.telemetry import upload_lap_api_v1_telemetry_lap_post
 from racing_coach_server_client.models import (

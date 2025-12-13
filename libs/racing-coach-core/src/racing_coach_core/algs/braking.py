@@ -1,6 +1,6 @@
 import logging
 
-from racing_coach_core.models.telemetry import TelemetrySequence
+from racing_coach_core.schemas.telemetry import TelemetrySequence
 
 from .events import BrakingEvent
 

@@ -1,11 +1,12 @@
 """Track boundary models for lateral position calculation."""
 
 import logging
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Iterator, Self
+from typing import Self
 
 import numpy as np
-import pandas as pd  # type: ignore[import-untyped]
+import pandas as pd
 from pydantic import BaseModel, Field
 
 from .telemetry import TelemetryFrame, TelemetrySequence

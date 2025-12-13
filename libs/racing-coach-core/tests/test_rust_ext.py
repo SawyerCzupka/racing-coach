@@ -7,7 +7,6 @@ All tests require the Rust extension to be compiled and available.
 from datetime import datetime, timezone
 
 import pytest
-from racing_coach_core.models.telemetry import TelemetryFrame, TelemetrySequence
 from racing_coach_core.rust_ext import (
     compute_speed_stats,
     extract_braking_zones,
@@ -16,6 +15,7 @@ from racing_coach_core.rust_ext import (
     hello_from_rust,
     is_rust_available,
 )
+from racing_coach_core.schemas.telemetry import TelemetryFrame, TelemetrySequence
 
 # Skip entire module if Rust not available
 pytestmark = [
@@ -88,9 +88,7 @@ def create_telemetry_frame(
 @pytest.fixture
 def minimal_telemetry_sequence() -> TelemetrySequence:
     """Create minimal valid TelemetrySequence with 10 frames."""
-    frames = [
-        create_telemetry_frame(lap_distance_pct=i / 10) for i in range(10)
-    ]
+    frames = [create_telemetry_frame(lap_distance_pct=i / 10) for i in range(10)]
     return TelemetrySequence(frames=frames)
 
 
@@ -344,9 +342,7 @@ class TestMetricExtraction:
         self, minimal_telemetry_sequence: TelemetrySequence
     ) -> None:
         """lap_time is set when provided."""
-        result = extract_lap_metrics(
-            minimal_telemetry_sequence, lap_time=90.5
-        )
+        result = extract_lap_metrics(minimal_telemetry_sequence, lap_time=90.5)
         assert result.lap_time == 90.5
 
     def test_extract_lap_metrics_braking_zones_is_list(
@@ -404,9 +400,7 @@ class TestEdgeCases:
 
     def test_single_frame_sequence(self) -> None:
         """Single frame sequence doesn't crash."""
-        single_frame_seq = TelemetrySequence(
-            frames=[create_telemetry_frame()]
-        )
+        single_frame_seq = TelemetrySequence(frames=[create_telemetry_frame()])
         result = extract_lap_metrics(single_frame_seq)
 
         assert result.total_braking_zones == 0
@@ -458,9 +452,7 @@ class TestEdgeCases:
 class TestSyntheticData:
     """Tests with realistic synthetic telemetry that verify detection."""
 
-    def test_braking_zone_detected(
-        self, braking_telemetry_sequence: TelemetrySequence
-    ) -> None:
+    def test_braking_zone_detected(self, braking_telemetry_sequence: TelemetrySequence) -> None:
         """Braking zones are detected in realistic data."""
         result = extract_lap_metrics(braking_telemetry_sequence)
 
@@ -486,16 +478,12 @@ class TestSyntheticData:
             assert 0.0 <= zone.max_brake_pressure <= 1.0
             assert zone.braking_duration >= 0
 
-    def test_corner_detected(
-        self, cornering_telemetry_sequence: TelemetrySequence
-    ) -> None:
+    def test_corner_detected(self, cornering_telemetry_sequence: TelemetrySequence) -> None:
         """Corners are detected in realistic data."""
         result = extract_lap_metrics(cornering_telemetry_sequence)
 
         # Should detect at least one corner
-        assert result.total_corners >= 1, (
-            f"Expected at least 1 corner, got {result.total_corners}"
-        )
+        assert result.total_corners >= 1, f"Expected at least 1 corner, got {result.total_corners}"
 
     def test_corner_metrics_have_valid_fields(
         self, cornering_telemetry_sequence: TelemetrySequence
@@ -516,9 +504,7 @@ class TestSyntheticData:
             assert corner.max_lateral_g >= 0
             assert corner.time_in_corner >= 0
 
-    def test_lap_metrics_speed_stats(
-        self, braking_telemetry_sequence: TelemetrySequence
-    ) -> None:
+    def test_lap_metrics_speed_stats(self, braking_telemetry_sequence: TelemetrySequence) -> None:
         """Lap metrics includes valid speed statistics."""
         result = extract_lap_metrics(braking_telemetry_sequence)
 

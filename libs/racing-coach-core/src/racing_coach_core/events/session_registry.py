@@ -8,7 +8,7 @@ import logging
 import threading
 from uuid import UUID
 
-from ..models.telemetry import SessionFrame
+from ..schemas.telemetry import SessionFrame
 
 logger = logging.getLogger(__name__)
 

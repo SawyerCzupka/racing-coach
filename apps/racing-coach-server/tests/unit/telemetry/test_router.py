@@ -8,7 +8,7 @@ from uuid import uuid4
 
 import pytest
 from httpx import ASGITransport, AsyncClient, Response
-from racing_coach_core.models.telemetry import SessionFrame, TelemetryFrame
+from racing_coach_core.schemas.telemetry import SessionFrame, TelemetryFrame
 from racing_coach_server.app import app
 from racing_coach_server.telemetry.models import Lap, TrackSession
 
@@ -51,25 +51,46 @@ class TestTelemetryRouter:
             is_valid=False,
         )
 
-        # Arrange service mocks
-        mock_service = AsyncMock()
-        mock_service.db = AsyncMock()
-        mock_service.add_or_get_session.return_value = mock_track_session
-        mock_service.add_lap.return_value = mock_lap
-        mock_service.add_telemetry_sequence.return_value = None
+        # Arrange service mocks for the new split services
+        mock_session_service = AsyncMock()
+        mock_session_service.add_or_get_session.return_value = mock_track_session
 
-        async def mock_service_dep():
-            return mock_service
+        mock_lap_service = AsyncMock()
+        mock_lap_service.add_lap.return_value = mock_lap
+
+        mock_telemetry_service = AsyncMock()
+        mock_telemetry_service.add_telemetry_sequence.return_value = None
+
+        mock_db = AsyncMock()
+
+        async def mock_session_service_dep():
+            return mock_session_service
+
+        async def mock_lap_service_dep():
+            return mock_lap_service
+
+        async def mock_telemetry_service_dep():
+            return mock_telemetry_service
+
+        async def mock_db_dep():
+            return mock_db
 
         @asynccontextmanager
         async def mock_transaction(session):
             yield session
 
         # Use FastAPI dependency overrides
-        from racing_coach_server.dependencies import get_telemetry_service
-        from racing_coach_server.telemetry.router import transactional_session
+        from racing_coach_server.database.engine import get_async_session
+        from racing_coach_server.dependencies import (
+            get_lap_service,
+            get_session_service,
+            get_telemetry_data_service,
+        )
 
-        app.dependency_overrides[get_telemetry_service] = mock_service_dep
+        app.dependency_overrides[get_session_service] = mock_session_service_dep
+        app.dependency_overrides[get_lap_service] = mock_lap_service_dep
+        app.dependency_overrides[get_telemetry_data_service] = mock_telemetry_service_dep
+        app.dependency_overrides[get_async_session] = mock_db_dep
 
         with patch("racing_coach_server.telemetry.router.transactional_session") as mock_txn:
             mock_txn.side_effect = mock_transaction
@@ -107,9 +128,9 @@ class TestTelemetryRouter:
         data: dict[str, Any] = response.json()
         assert data["status"] == "success"
         assert data["lap_id"] == str(lap_id)
-        mock_service.add_or_get_session.assert_called_once()
-        mock_service.add_lap.assert_called_once()
-        mock_service.add_telemetry_sequence.assert_called_once()
+        mock_session_service.add_or_get_session.assert_called_once()
+        mock_lap_service.add_lap.assert_called_once()
+        mock_telemetry_service.add_telemetry_sequence.assert_called_once()
 
     async def test_get_latest_session_success(
         self,
@@ -119,16 +140,16 @@ class TestTelemetryRouter:
         # Arrange
         mock_session: TrackSession = track_session_factory.build()
 
-        mock_service = AsyncMock()
-        mock_service.get_latest_session.return_value = mock_session
+        mock_session_service = AsyncMock()
+        mock_session_service.get_latest_session.return_value = mock_session
 
-        async def mock_service_dep():
-            return mock_service
+        async def mock_session_service_dep():
+            return mock_session_service
 
         # Use FastAPI dependency overrides
-        from racing_coach_server.dependencies import get_telemetry_service
+        from racing_coach_server.dependencies import get_session_service
 
-        app.dependency_overrides[get_telemetry_service] = mock_service_dep
+        app.dependency_overrides[get_session_service] = mock_session_service_dep
 
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             # Act
@@ -147,16 +168,16 @@ class TestTelemetryRouter:
     async def test_get_latest_session_not_found(self) -> None:
         """Test retrieving latest session when none exists."""
         # Arrange
-        mock_service: AsyncMock = AsyncMock()
-        mock_service.get_latest_session.return_value = None
+        mock_session_service = AsyncMock()
+        mock_session_service.get_latest_session.return_value = None
 
-        async def mock_service_dep():
-            return mock_service
+        async def mock_session_service_dep():
+            return mock_session_service
 
         # Use FastAPI dependency overrides
-        from racing_coach_server.dependencies import get_telemetry_service
+        from racing_coach_server.dependencies import get_session_service
 
-        app.dependency_overrides[get_telemetry_service] = mock_service_dep
+        app.dependency_overrides[get_session_service] = mock_session_service_dep
 
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             # Act

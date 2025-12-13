@@ -10,13 +10,10 @@ Skip in CI with: uv run pytest -m "not load"
 import asyncio
 import sys
 import time
-from collections.abc import Callable
-from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
-from uuid import uuid4
 
 import pytest
+from racing_coach_client.handlers.lap_handler import LapHandler
 from racing_coach_core.events.base import (
     Event,
     EventBus,
@@ -25,13 +22,15 @@ from racing_coach_core.events.base import (
     SystemEvents,
 )
 from racing_coach_core.events.session_registry import SessionRegistry
-from racing_coach_core.models.events import LapAndSession, TelemetryAndSessionId
-from racing_coach_core.models.telemetry import SessionFrame, TelemetryFrame
+from racing_coach_core.schemas.events import LapAndSession, TelemetryAndSessionId
+from racing_coach_core.schemas.telemetry import SessionFrame, TelemetryFrame
 
-from racing_coach_client.handlers.lap_handler import LapHandler
+from tests.factories import SessionFrameFactory, TelemetryFrameFactory
 
 # Import load test utilities
-_core_tests_path = Path(__file__).parent.parent.parent.parent / "libs" / "racing-coach-core" / "tests"
+_core_tests_path = (
+    Path(__file__).parent.parent.parent.parent / "libs" / "racing-coach-core" / "tests"
+)
 if str(_core_tests_path) not in sys.path:
     sys.path.insert(0, str(_core_tests_path))
 
@@ -40,8 +39,6 @@ from load_test_utils import (  # noqa: E402
     LoadTestConfig,
     run_load_test,
 )
-
-from tests.factories import SessionFrameFactory, TelemetryFrameFactory
 
 
 @pytest.mark.load
@@ -191,14 +188,14 @@ class TestLapHandlerUnderLoad:
 
         for i, lap_event in enumerate(lap_events):
             frame_count = len(lap_event.data.LapTelemetry.frames)
-            print(f"  Lap {i+1}: {frame_count} frames")
+            print(f"  Lap {i + 1}: {frame_count} frames")
 
         assert len(lap_events) == total_laps, f"Expected {total_laps} laps, got {len(lap_events)}"
 
         for i, lap_event in enumerate(lap_events):
             frame_count = len(lap_event.data.LapTelemetry.frames)
             assert frame_count == frames_per_lap, (
-                f"Lap {i+1} has {frame_count} frames, expected {frames_per_lap}"
+                f"Lap {i + 1} has {frame_count} frames, expected {frames_per_lap}"
             )
 
 
@@ -222,7 +219,9 @@ class TestFullPipelineLatency:
 
         print(metrics.summary())
 
-        assert metrics.p99_latency_ms < 100.0, f"P99 latency {metrics.p99_latency_ms:.2f}ms exceeds 100ms"
+        assert metrics.p99_latency_ms < 100.0, (
+            f"P99 latency {metrics.p99_latency_ms:.2f}ms exceeds 100ms"
+        )
         assert metrics.events_dropped == 0, f"Dropped {metrics.events_dropped} events"
 
 

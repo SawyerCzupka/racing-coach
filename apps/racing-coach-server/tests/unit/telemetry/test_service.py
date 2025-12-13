@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
-from racing_coach_core.models.telemetry import LapTelemetry, SessionFrame
+from racing_coach_core.schemas.telemetry import LapTelemetry, SessionFrame
 from racing_coach_server.telemetry.models import Lap, Telemetry, TrackSession
 from racing_coach_server.telemetry.service import TelemetryService
 from sqlalchemy import select

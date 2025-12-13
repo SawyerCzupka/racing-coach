@@ -26,8 +26,8 @@ from racing_coach_core.events.base import (
     HandlerContext,
     SystemEvents,
 )
-from racing_coach_core.models.events import TelemetryAndSessionId
-from racing_coach_core.models.telemetry import TelemetryFrame
+from racing_coach_core.schemas.events import TelemetryAndSessionId
+from racing_coach_core.schemas.telemetry import TelemetryFrame
 
 if TYPE_CHECKING:
     from collections.abc import Callable

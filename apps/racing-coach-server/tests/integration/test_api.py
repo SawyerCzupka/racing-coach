@@ -5,7 +5,7 @@ from uuid import uuid4
 
 import pytest
 from httpx import AsyncClient, Response
-from racing_coach_core.models.telemetry import LapTelemetry, SessionFrame, TelemetryFrame
+from racing_coach_core.schemas.telemetry import LapTelemetry, SessionFrame, TelemetryFrame
 from racing_coach_server.telemetry.models import Lap, Telemetry, TrackSession
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession

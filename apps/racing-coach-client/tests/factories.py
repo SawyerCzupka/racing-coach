@@ -4,8 +4,8 @@ from datetime import datetime, timezone
 from uuid import uuid4
 
 from factory import Factory, Faker, LazyAttribute, LazyFunction, SubFactory
-from racing_coach_core.models.events import LapAndSession
-from racing_coach_core.models.telemetry import (
+from racing_coach_core.schemas.events import LapAndSession
+from racing_coach_core.schemas.telemetry import (
     LapTelemetry,
     SessionFrame,
     TelemetryFrame,

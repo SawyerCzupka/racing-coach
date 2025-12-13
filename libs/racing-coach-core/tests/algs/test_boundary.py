@@ -6,14 +6,13 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import pytest
-
 from racing_coach_core.algs.boundary import (
     compute_lateral_positions,
     compute_lateral_positions_vectorized,
     get_lateral_position,
 )
-from racing_coach_core.models.telemetry import TelemetryFrame, TelemetrySequence
-from racing_coach_core.models.track import (
+from racing_coach_core.schemas.telemetry import TelemetryFrame, TelemetrySequence
+from racing_coach_core.schemas.track import (
     AugmentedTelemetryFrame,
     AugmentedTelemetrySequence,
     TrackBoundary,
@@ -107,28 +106,20 @@ class TestTrackBoundary:
             assert loaded.track_id == simple_track_boundary.track_id
             assert loaded.track_name == simple_track_boundary.track_name
             assert loaded.grid_size == simple_track_boundary.grid_size
-            assert np.allclose(
-                loaded.left_latitude, simple_track_boundary.left_latitude
-            )
-            assert np.allclose(
-                loaded.left_longitude, simple_track_boundary.left_longitude
-            )
+            assert np.allclose(loaded.left_latitude, simple_track_boundary.left_latitude)
+            assert np.allclose(loaded.left_longitude, simple_track_boundary.left_longitude)
 
 
 class TestGetLateralPosition:
     """Tests for get_lateral_position function."""
 
-    def test_left_boundary_returns_minus_one(
-        self, simple_track_boundary: TrackBoundary
-    ) -> None:
+    def test_left_boundary_returns_minus_one(self, simple_track_boundary: TrackBoundary) -> None:
         """Position at left boundary should return -1.0."""
         # At lap distance 0.5, left boundary is at (0.5, 0.0)
         result = get_lateral_position(simple_track_boundary, 0.5, 0.5, 0.0)
         assert abs(result - (-1.0)) < 0.01
 
-    def test_right_boundary_returns_plus_one(
-        self, simple_track_boundary: TrackBoundary
-    ) -> None:
+    def test_right_boundary_returns_plus_one(self, simple_track_boundary: TrackBoundary) -> None:
         """Position at right boundary should return 1.0."""
         # At lap distance 0.5, right boundary is at (0.5, 0.001)
         result = get_lateral_position(simple_track_boundary, 0.5, 0.5, 0.001)
@@ -140,27 +131,21 @@ class TestGetLateralPosition:
         result = get_lateral_position(simple_track_boundary, 0.5, 0.5, 0.0005)
         assert abs(result) < 0.01
 
-    def test_extrapolation_beyond_left(
-        self, simple_track_boundary: TrackBoundary
-    ) -> None:
+    def test_extrapolation_beyond_left(self, simple_track_boundary: TrackBoundary) -> None:
         """Position beyond left boundary should return < -1.0."""
         # 50% beyond left boundary
         result = get_lateral_position(simple_track_boundary, 0.5, 0.5, -0.0005)
         assert result < -1.0
         assert abs(result - (-2.0)) < 0.01
 
-    def test_extrapolation_beyond_right(
-        self, simple_track_boundary: TrackBoundary
-    ) -> None:
+    def test_extrapolation_beyond_right(self, simple_track_boundary: TrackBoundary) -> None:
         """Position beyond right boundary should return > 1.0."""
         # 50% beyond right boundary
         result = get_lateral_position(simple_track_boundary, 0.5, 0.5, 0.0015)
         assert result > 1.0
         assert abs(result - 2.0) < 0.01
 
-    def test_lap_distance_wraparound(
-        self, simple_track_boundary: TrackBoundary
-    ) -> None:
+    def test_lap_distance_wraparound(self, simple_track_boundary: TrackBoundary) -> None:
         """Lap distance > 1.0 should wrap around."""
         # 1.5 should be same as 0.5
         result_wrapped = get_lateral_position(simple_track_boundary, 1.5, 0.5, 0.0005)
@@ -171,9 +156,7 @@ class TestGetLateralPosition:
 class TestVectorizedComputation:
     """Tests for compute_lateral_positions_vectorized function."""
 
-    def test_batch_computation_matches_single(
-        self, simple_track_boundary: TrackBoundary
-    ) -> None:
+    def test_batch_computation_matches_single(self, simple_track_boundary: TrackBoundary) -> None:
         """Vectorized computation should match single-point computation."""
         n_points = 100
         lap_distances = np.linspace(0.1, 0.9, n_points)
@@ -197,9 +180,7 @@ class TestVectorizedComputation:
 
         assert np.allclose(vectorized_results, single_results, atol=0.01)
 
-    def test_vectorized_boundaries(
-        self, simple_track_boundary: TrackBoundary
-    ) -> None:
+    def test_vectorized_boundaries(self, simple_track_boundary: TrackBoundary) -> None:
         """Test vectorized computation at exact boundary positions."""
         grid = np.array(simple_track_boundary.grid_distance_pct)
         left_lats = np.array(simple_track_boundary.left_latitude)
@@ -280,9 +261,7 @@ class TestAugmentedTelemetry:
             on_pit_road=False,
         )
 
-    def test_augmented_frame_from_telemetry_frame(
-        self, sample_frame: TelemetryFrame
-    ) -> None:
+    def test_augmented_frame_from_telemetry_frame(self, sample_frame: TelemetryFrame) -> None:
         """Test creating AugmentedTelemetryFrame from TelemetryFrame."""
         augmented = AugmentedTelemetryFrame.from_telemetry_frame(sample_frame, 0.25)
 
@@ -290,32 +269,24 @@ class TestAugmentedTelemetry:
         assert augmented.speed == sample_frame.speed
         assert augmented.lap_distance_pct == sample_frame.lap_distance_pct
 
-    def test_augmented_sequence_iteration(
-        self, sample_frame: TelemetryFrame
-    ) -> None:
+    def test_augmented_sequence_iteration(self, sample_frame: TelemetryFrame) -> None:
         """Test iterating over AugmentedTelemetrySequence."""
         frames = [sample_frame] * 5
         lateral_positions = [0.0, -0.5, 0.5, -1.0, 1.0]
 
-        sequence = AugmentedTelemetrySequence(
-            frames=frames, lateral_positions=lateral_positions
-        )
+        sequence = AugmentedTelemetrySequence(frames=frames, lateral_positions=lateral_positions)
 
         assert len(sequence) == 5
 
         for i, augmented in enumerate(sequence.iter_augmented()):
             assert augmented.lateral_position == lateral_positions[i]
 
-    def test_augmented_sequence_get_frame(
-        self, sample_frame: TelemetryFrame
-    ) -> None:
+    def test_augmented_sequence_get_frame(self, sample_frame: TelemetryFrame) -> None:
         """Test getting single frame from AugmentedTelemetrySequence."""
         frames = [sample_frame] * 3
         lateral_positions = [-1.0, 0.0, 1.0]
 
-        sequence = AugmentedTelemetrySequence(
-            frames=frames, lateral_positions=lateral_positions
-        )
+        sequence = AugmentedTelemetrySequence(frames=frames, lateral_positions=lateral_positions)
 
         frame = sequence.get_augmented_frame(1)
         assert frame.lateral_position == 0.0

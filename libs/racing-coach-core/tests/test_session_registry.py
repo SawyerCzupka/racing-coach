@@ -7,7 +7,7 @@ from uuid import uuid4
 
 import pytest
 from racing_coach_core.events.session_registry import SessionRegistry
-from racing_coach_core.models.telemetry import SessionFrame
+from racing_coach_core.schemas.telemetry import SessionFrame
 
 
 def create_session_frame(**kwargs) -> SessionFrame:

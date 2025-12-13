@@ -13,7 +13,7 @@ from racing_coach_core.events.base import (
     HandlerContext,
     SystemEvents,
 )
-from racing_coach_core.models.events import TelemetryAndSession
+from racing_coach_core.schemas.events import TelemetryAndSession
 
 
 @pytest.mark.unit

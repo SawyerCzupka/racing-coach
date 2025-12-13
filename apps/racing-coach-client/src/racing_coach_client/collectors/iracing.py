@@ -7,11 +7,10 @@ any TelemetrySource implementation (live or replay).
 
 import logging
 import threading
-import time
 
 from racing_coach_core.events import Event, EventBus, SessionRegistry, SystemEvents
-from racing_coach_core.models.events import SessionEnd, SessionStart, TelemetryAndSessionId
-from racing_coach_core.models.telemetry import SessionFrame
+from racing_coach_core.schemas.events import SessionEnd, SessionStart, TelemetryAndSessionId
+from racing_coach_core.schemas.telemetry import SessionFrame
 
 from .sources import TelemetrySource
 

@@ -13,6 +13,7 @@ from .charts import (
     create_steering_chart,
     create_track_map,
 )
+from .constants import MS_TO_KMH, RAD_TO_DEG
 from .styles import COLORS
 
 if TYPE_CHECKING:
@@ -298,9 +299,9 @@ def _format_lap_time(seconds: float | None) -> str:
 
 def _build_metrics_summary_html(metrics: "LapMetricsResponse") -> str:
     """Build the metrics summary cards HTML."""
-    max_speed_kmh = metrics.max_speed * 3.6
-    min_speed_kmh = metrics.min_speed * 3.6
-    avg_corner_speed_kmh = metrics.average_corner_speed * 3.6
+    max_speed_kmh = metrics.max_speed * MS_TO_KMH
+    min_speed_kmh = metrics.min_speed * MS_TO_KMH
+    avg_corner_speed_kmh = metrics.average_corner_speed * MS_TO_KMH
 
     return f"""
         <div class="metrics-grid">
@@ -335,8 +336,8 @@ def _build_braking_table_html(metrics: "LapMetricsResponse") -> str:
 
     rows = ""
     for i, bz in enumerate(metrics.braking_zones, 1):
-        entry_speed_kmh = bz.braking_point_speed * 3.6
-        min_speed_kmh = bz.minimum_speed * 3.6
+        entry_speed_kmh = bz.braking_point_speed * MS_TO_KMH
+        min_speed_kmh = bz.minimum_speed * MS_TO_KMH
         trail_badge = (
             '<span class="badge badge-yes">Yes</span>'
             if bz.has_trail_braking
@@ -386,9 +387,9 @@ def _build_corners_table_html(metrics: "LapMetricsResponse") -> str:
 
     rows = ""
     for i, corner in enumerate(metrics.corners, 1):
-        turn_in_kmh = corner.turn_in_speed * 3.6
-        apex_kmh = corner.apex_speed * 3.6
-        exit_kmh = corner.exit_speed * 3.6
+        turn_in_kmh = corner.turn_in_speed * MS_TO_KMH
+        apex_kmh = corner.apex_speed * MS_TO_KMH
+        exit_kmh = corner.exit_speed * MS_TO_KMH
         rows += f"""
             <tr>
                 <td><span class="zone-label corner-label">C{i}</span></td>
@@ -398,7 +399,7 @@ def _build_corners_table_html(metrics: "LapMetricsResponse") -> str:
                 <td>{exit_kmh:.1f}</td>
                 <td>{corner.max_lateral_g:.2f}G</td>
                 <td>{corner.time_in_corner:.2f}s</td>
-                <td>{corner.max_steering_angle * 57.2958:.1f}°</td>
+                <td>{corner.max_steering_angle * RAD_TO_DEG:.1f}°</td>
             </tr>
         """
 

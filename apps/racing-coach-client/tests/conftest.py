@@ -21,25 +21,27 @@ from racing_coach_core.events.base import (
     SystemEvents,
 )
 from racing_coach_core.events.session_registry import SessionRegistry
-from racing_coach_core.models.events import LapAndSession, TelemetryAndSessionId
-from racing_coach_core.models.telemetry import SessionFrame, TelemetryFrame
-
-# Import load test utilities from racing-coach-core
-# Add the core tests path to enable importing load_test_utils
-_core_tests_path = Path(__file__).parent.parent.parent.parent / "libs" / "racing-coach-core" / "tests"
-if str(_core_tests_path) not in sys.path:
-    sys.path.insert(0, str(_core_tests_path))
-
-from load_test_utils import (  # noqa: E402
-    LatencyTrackingCollector,
-    LoadTestConfig,
-)
+from racing_coach_core.schemas.events import LapAndSession, TelemetryAndSessionId
+from racing_coach_core.schemas.telemetry import SessionFrame, TelemetryFrame
 
 from tests.factories import (
     LapAndSessionFactory,
     LapTelemetryFactory,
     SessionFrameFactory,
     TelemetryFrameFactory,
+)
+
+# Import load test utilities from racing-coach-core
+# Add the core tests path to enable importing load_test_utils
+_core_tests_path = (
+    Path(__file__).parent.parent.parent.parent / "libs" / "racing-coach-core" / "tests"
+)
+if str(_core_tests_path) not in sys.path:
+    sys.path.insert(0, str(_core_tests_path))
+
+from load_test_utils import (  # noqa: E402
+    LatencyTrackingCollector,
+    LoadTestConfig,
 )
 
 logger = logging.getLogger(__name__)

@@ -6,7 +6,7 @@ from uuid import uuid4
 
 from factory import Factory, Faker, LazyAttribute, LazyFunction, post_generation
 from factory.builder import BuildStep
-from racing_coach_core.models.telemetry import SessionFrame, TelemetryFrame
+from racing_coach_core.schemas.telemetry import SessionFrame, TelemetryFrame
 from racing_coach_server.telemetry.models import (
     BrakingMetricsDB,
     CornerMetricsDB,

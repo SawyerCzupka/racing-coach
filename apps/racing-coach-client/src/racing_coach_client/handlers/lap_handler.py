@@ -17,13 +17,13 @@ from racing_coach_core.events import (
     SystemEvents,
 )
 from racing_coach_core.events.checking import method_handles
-from racing_coach_core.models.events import (
+from racing_coach_core.schemas.events import (
     LapAndSession,
     SessionEnd,
     SessionStart,
     TelemetryAndSessionId,
 )
-from racing_coach_core.models.telemetry import LapTelemetry, TelemetryFrame
+from racing_coach_core.schemas.telemetry import LapTelemetry, TelemetryFrame
 
 from racing_coach_client.config import settings
 

@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 
 import plotly.graph_objects as go
 
+from .constants import MS_TO_KMH, accel_to_g, rad_to_deg
 from .styles import (
     COLORS,
     MARKER_SIZES,
@@ -42,7 +43,7 @@ def create_track_map(
     # Use longitude for X (east-west) and latitude for Y (north-south)
     lon = [f.longitude for f in frames]
     lat = [f.latitude for f in frames]
-    speed_kmh = [f.speed * 3.6 for f in frames]  # Convert m/s to km/h
+    speed_kmh = [f.speed * MS_TO_KMH for f in frames]
     distances = [f.lap_distance for f in frames]
 
     fig = go.Figure()
@@ -164,23 +165,13 @@ def create_speed_chart(
     frames = telemetry.frames
 
     distances = [f.lap_distance for f in frames]
-    speed_kmh = [f.speed * 3.6 for f in frames]
+    speed_kmh = [f.speed * MS_TO_KMH for f in frames]
 
     fig = go.Figure()
 
     # Add braking zone shading first (behind the line)
     if metrics:
-        for i, bz in enumerate(metrics.braking_zones, 1):
-            fig.add_vrect(
-                x0=bz.braking_point_distance,
-                x1=bz.end_distance,
-                fillcolor=COLORS["braking_zone"],
-                line_width=0,
-                layer="below",
-                annotation_text=f"B{i}",
-                annotation_position="top left",
-                annotation={"font": {"size": 10, "color": COLORS["brake"]}},
-            )
+        _add_braking_zone_shading(fig, metrics)
 
     # Speed trace
     fig.add_trace(
@@ -196,16 +187,7 @@ def create_speed_chart(
 
     # Add corner apex markers with labels
     if metrics:
-        for i, corner in enumerate(metrics.corners, 1):
-            fig.add_vline(
-                x=corner.apex_distance,
-                line_dash="dot",
-                line_color=COLORS["apex_marker"],
-                opacity=0.5,
-                annotation_text=f"C{i}",
-                annotation_position="bottom",
-                annotation={"font": {"size": 9, "color": COLORS["apex_marker"]}},
-            )
+        _add_corner_apex_markers(fig, metrics)
 
     fig.update_layout(
         **get_chart_layout("Speed", showlegend=False),
@@ -240,17 +222,7 @@ def create_inputs_chart(
 
     # Add braking zone shading with labels
     if metrics:
-        for i, bz in enumerate(metrics.braking_zones, 1):
-            fig.add_vrect(
-                x0=bz.braking_point_distance,
-                x1=bz.end_distance,
-                fillcolor=COLORS["braking_zone"],
-                line_width=0,
-                layer="below",
-                annotation_text=f"B{i}",
-                annotation_position="top left",
-                annotation={"font": {"size": 10, "color": COLORS["brake"]}},
-            )
+        _add_braking_zone_shading(fig, metrics)
 
     # Throttle trace
     fig.add_trace(
@@ -311,24 +283,13 @@ def create_steering_chart(
     frames = telemetry.frames
 
     distances = [f.lap_distance for f in frames]
-    # Convert radians to degrees for readability
-    steering_deg = [f.steering_angle * 57.2958 for f in frames]
+    steering_deg = [rad_to_deg(f.steering_angle) for f in frames]
 
     fig = go.Figure()
 
     # Add corner region shading with labels
     if metrics:
-        for i, corner in enumerate(metrics.corners, 1):
-            fig.add_vrect(
-                x0=corner.turn_in_distance,
-                x1=corner.exit_distance,
-                fillcolor=COLORS["corner_region"],
-                line_width=0,
-                layer="below",
-                annotation_text=f"C{i}",
-                annotation_position="top left",
-                annotation={"font": {"size": 10, "color": COLORS["steering"]}},
-            )
+        _add_corner_region_shading(fig, metrics)
 
     # Steering trace
     fig.add_trace(
@@ -368,25 +329,14 @@ def create_gforce_chart(
     frames = telemetry.frames
 
     distances = [f.lap_distance for f in frames]
-    # Convert m/s² to G (divide by 9.81)
-    lateral_g = [f.lateral_acceleration / 9.81 for f in frames]
-    longitudinal_g = [f.longitudinal_acceleration / 9.81 for f in frames]
+    lateral_g = [accel_to_g(f.lateral_acceleration) for f in frames]
+    longitudinal_g = [accel_to_g(f.longitudinal_acceleration) for f in frames]
 
     fig = go.Figure()
 
     # Add braking zone shading with labels
     if metrics:
-        for i, bz in enumerate(metrics.braking_zones, 1):
-            fig.add_vrect(
-                x0=bz.braking_point_distance,
-                x1=bz.end_distance,
-                fillcolor=COLORS["braking_zone"],
-                line_width=0,
-                layer="below",
-                annotation_text=f"B{i}",
-                annotation_position="top left",
-                annotation={"font": {"size": 10, "color": COLORS["brake"]}},
-            )
+        _add_braking_zone_shading(fig, metrics)
 
     # Lateral G trace
     fig.add_trace(
@@ -442,9 +392,9 @@ def create_friction_circle(telemetry: "LapTelemetryResponse") -> go.Figure:
     """
     frames = telemetry.frames
 
-    lateral_g = [f.lateral_acceleration / 9.81 for f in frames]
-    longitudinal_g = [f.longitudinal_acceleration / 9.81 for f in frames]
-    speed_kmh = [f.speed * 3.6 for f in frames]
+    lateral_g = [accel_to_g(f.lateral_acceleration) for f in frames]
+    longitudinal_g = [accel_to_g(f.longitudinal_acceleration) for f in frames]
+    speed_kmh = [f.speed * MS_TO_KMH for f in frames]
 
     fig = go.Figure()
 
@@ -491,6 +441,50 @@ def create_friction_circle(telemetry: "LapTelemetryResponse") -> go.Figure:
     )
 
     return fig
+
+
+def _add_braking_zone_shading(fig: go.Figure, metrics: "LapMetricsResponse") -> None:
+    """Add braking zone shading rectangles to a figure."""
+    for i, bz in enumerate(metrics.braking_zones, 1):
+        fig.add_vrect(
+            x0=bz.braking_point_distance,
+            x1=bz.end_distance,
+            fillcolor=COLORS["braking_zone"],
+            line_width=0,
+            layer="below",
+            annotation_text=f"B{i}",
+            annotation_position="top left",
+            annotation={"font": {"size": 10, "color": COLORS["brake"]}},
+        )
+
+
+def _add_corner_apex_markers(fig: go.Figure, metrics: "LapMetricsResponse") -> None:
+    """Add corner apex vertical line markers to a figure."""
+    for i, corner in enumerate(metrics.corners, 1):
+        fig.add_vline(
+            x=corner.apex_distance,
+            line_dash="dot",
+            line_color=COLORS["apex_marker"],
+            opacity=0.5,
+            annotation_text=f"C{i}",
+            annotation_position="bottom",
+            annotation={"font": {"size": 9, "color": COLORS["apex_marker"]}},
+        )
+
+
+def _add_corner_region_shading(fig: go.Figure, metrics: "LapMetricsResponse") -> None:
+    """Add corner region shading rectangles to a figure."""
+    for i, corner in enumerate(metrics.corners, 1):
+        fig.add_vrect(
+            x0=corner.turn_in_distance,
+            x1=corner.exit_distance,
+            fillcolor=COLORS["corner_region"],
+            line_width=0,
+            layer="below",
+            annotation_text=f"C{i}",
+            annotation_position="top left",
+            annotation={"font": {"size": 10, "color": COLORS["steering"]}},
+        )
 
 
 def _find_closest_frame_by_distance(frames: list, target_distance: float) -> int | None:

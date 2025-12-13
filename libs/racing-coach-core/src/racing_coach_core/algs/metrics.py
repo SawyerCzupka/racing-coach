@@ -3,7 +3,7 @@
 import logging
 from typing import Literal
 
-from racing_coach_core.models.telemetry import TelemetryFrame, TelemetrySequence
+from racing_coach_core.schemas.telemetry import TelemetryFrame, TelemetrySequence
 
 from .events import BrakingMetrics, CornerMetrics, LapMetrics
 

@@ -8,8 +8,8 @@ from racing_coach_core.events import (
     SystemEvents,
 )
 from racing_coach_core.events.checking import method_handles
-from racing_coach_core.models.events import SessionEnd, TelemetryAndSessionId
-from racing_coach_core.models.telemetry import TelemetryFrame
+from racing_coach_core.schemas.events import SessionEnd, TelemetryAndSessionId
+from racing_coach_core.schemas.telemetry import TelemetryFrame
 
 logger = logging.getLogger(__name__)
 

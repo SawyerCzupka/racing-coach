@@ -19,10 +19,10 @@ from typing import Any
 
 import irsdk  # type: ignore[import-untyped]
 import numpy as np
-import pandas as pd  # type: ignore[import-untyped]
+import pandas as pd
 
-from racing_coach_core.models.telemetry import TelemetrySequence
-from racing_coach_core.models.track import (
+from racing_coach_core.schemas.telemetry import TelemetrySequence
+from racing_coach_core.schemas.track import (
     AugmentedTelemetrySequence,
     TrackBoundary,
 )
@@ -104,8 +104,7 @@ def extract_track_boundary_from_ibt(
             raise ValueError(f"Right boundary lap {right_lap_number} not found in IBT file")
 
         logger.info(
-            f"Extracted boundary data: left={len(left_data)} frames, "
-            f"right={len(right_data)} frames"
+            f"Extracted boundary data: left={len(left_data)} frames, right={len(right_data)} frames"
         )
 
         return TrackBoundary.from_boundary_laps(
@@ -199,9 +198,9 @@ def get_lateral_position(
     left_lat = (1 - t) * track_boundary.left_latitude[idx_low] + t * track_boundary.left_latitude[
         idx_high
     ]
-    left_lon = (1 - t) * track_boundary.left_longitude[
-        idx_low
-    ] + t * track_boundary.left_longitude[idx_high]
+    left_lon = (1 - t) * track_boundary.left_longitude[idx_low] + t * track_boundary.left_longitude[
+        idx_high
+    ]
     right_lat = (1 - t) * track_boundary.right_latitude[
         idx_low
     ] + t * track_boundary.right_latitude[idx_high]

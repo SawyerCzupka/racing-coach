@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from racing_coach_client.collectors.sources.replay import ReplayTelemetrySource
-from racing_coach_core.models.telemetry import SessionFrame, TelemetryFrame
+from racing_coach_core.schemas.telemetry import SessionFrame, TelemetryFrame
 
 
 @pytest.mark.unit

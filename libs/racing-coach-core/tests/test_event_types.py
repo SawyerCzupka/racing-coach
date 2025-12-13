@@ -10,7 +10,7 @@ from racing_coach_core.events.base import (
     HandlerContext,
     SystemEvents,
 )
-from racing_coach_core.models.events import LapAndSession, TelemetryAndSession
+from racing_coach_core.schemas.events import LapAndSession, TelemetryAndSession
 
 
 @pytest.mark.unit

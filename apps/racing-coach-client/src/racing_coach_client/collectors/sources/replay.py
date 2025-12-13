@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any
 
 import irsdk
-from racing_coach_core.models.telemetry import SessionFrame, TelemetryFrame
+from racing_coach_core.schemas.telemetry import SessionFrame, TelemetryFrame
 
 from .base import TelemetryConnectionError, TelemetryReadError
 

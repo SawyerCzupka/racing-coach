@@ -8,7 +8,7 @@ import logging
 from uuid import UUID
 
 from racing_coach_core.algs.events import LapMetrics as LapMetricsDataclass
-from racing_coach_core.models.telemetry import SessionFrame, TelemetrySequence
+from racing_coach_core.schemas.telemetry import SessionFrame, TelemetrySequence
 from sqlalchemy import delete, desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload

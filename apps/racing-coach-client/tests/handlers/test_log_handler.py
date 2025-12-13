@@ -9,8 +9,8 @@ from pytest import LogCaptureFixture
 from racing_coach_client.handlers.log_handler import LogHandler
 from racing_coach_core.events.base import Event, EventBus, HandlerContext, SystemEvents
 from racing_coach_core.events.session_registry import SessionRegistry
-from racing_coach_core.models.events import TelemetryAndSessionId
-from racing_coach_core.models.telemetry import SessionFrame, TelemetryFrame
+from racing_coach_core.schemas.events import TelemetryAndSessionId
+from racing_coach_core.schemas.telemetry import SessionFrame, TelemetryFrame
 
 
 @pytest.mark.unit

@@ -4,12 +4,21 @@ import logging
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
-from racing_coach_core.models.responses import LapUploadResponse
-from racing_coach_core.models.telemetry import LapTelemetry, SessionFrame
+from racing_coach_core.schemas.responses import LapUploadResponse
+from racing_coach_core.schemas.telemetry import LapTelemetry, SessionFrame
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from racing_coach_server.database.engine import transactional_session
-from racing_coach_server.dependencies import get_telemetry_service
-from racing_coach_server.telemetry.service import TelemetryService
+from racing_coach_server.database.engine import get_async_session, transactional_session
+from racing_coach_server.dependencies import (
+    get_lap_service,
+    get_session_service,
+    get_telemetry_data_service,
+)
+from racing_coach_server.telemetry.services import (
+    LapService,
+    SessionService,
+    TelemetryDataService,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +34,10 @@ async def upload_lap(
     lap: LapTelemetry,
     session: SessionFrame,
     lap_id: UUID | None = None,
-    service: TelemetryService = Depends(get_telemetry_service),
+    db: AsyncSession = Depends(get_async_session),
+    session_service: SessionService = Depends(get_session_service),
+    lap_service: LapService = Depends(get_lap_service),
+    telemetry_service: TelemetryDataService = Depends(get_telemetry_data_service),
 ) -> LapUploadResponse:
     """
     Upload a lap with telemetry data.
@@ -43,22 +55,22 @@ async def upload_lap(
     logger.info(f"Router lap_id: {lap_id}")
 
     try:
-        async with transactional_session(service.db):
+        async with transactional_session(db):
             # Get lap number from first frame
             lap_number = lap.frames[0].lap_number
 
             # Get or create session
-            db_track_session = await service.add_or_get_session(session)
+            db_track_session = await session_service.add_or_get_session(session)
 
             # Add lap to the db (use client-provided lap_id if available)
-            db_lap = await service.add_lap(
+            db_lap = await lap_service.add_lap(
                 track_session_id=db_track_session.id,
                 lap_number=lap_number,
                 lap_id=lap_id,
             )
 
             # Add telemetry sequence
-            await service.add_telemetry_sequence(
+            await telemetry_service.add_telemetry_sequence(
                 telemetry_sequence=lap, lap_id=db_lap.id, session_id=db_track_session.id
             )
 
@@ -77,13 +89,13 @@ async def upload_lap(
 
 @router.get("/sessions/latest", tags=["telemetry"])
 async def get_latest_session(
-    service: TelemetryService = Depends(get_telemetry_service),
+    session_service: SessionService = Depends(get_session_service),
 ) -> SessionFrame:
     """
     Endpoint to retrieve the latest track session.
     """
     try:
-        latest_session = await service.get_latest_session()
+        latest_session = await session_service.get_latest_session()
 
         if not latest_session:
             raise HTTPException(status_code=404, detail="No sessions found.")

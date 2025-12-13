@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime
 
-from racing_coach_core.models.telemetry import SessionFrame
+from racing_coach_core.schemas.telemetry import SessionFrame
 from sqlalchemy import (
     Boolean,
     DateTime,

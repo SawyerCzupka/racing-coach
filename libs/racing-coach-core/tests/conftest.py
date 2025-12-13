@@ -8,11 +8,6 @@ import pytest
 from pytest_factoryboy import register
 from racing_coach_core.events.base import Event, EventBus, EventType
 
-from tests.load_test_utils import (
-    LatencyTrackingCollector,
-    LoadTestConfig,
-)
-
 from tests.factories import (
     BrakingMetricsFactory,
     CornerMetricsFactory,
@@ -22,6 +17,10 @@ from tests.factories import (
     SessionFrameFactory,
     TelemetryAndSessionFactory,
     TelemetryFrameFactory,
+)
+from tests.load_test_utils import (
+    LatencyTrackingCollector,
+    LoadTestConfig,
 )
 
 # Register factories to create pytest fixtures automatically

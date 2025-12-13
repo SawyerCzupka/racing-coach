@@ -9,7 +9,7 @@ from dataclasses import asdict
 
 from racing_coach_core.events import EventBus, HandlerContext, SystemEvents
 from racing_coach_core.events.checking import method_handles
-from racing_coach_core.models.events import MetricsAndSession
+from racing_coach_core.schemas.events import MetricsAndSession
 from racing_coach_server_client import Client
 from racing_coach_server_client.api.metrics import upload_lap_metrics_api_v1_metrics_lap_post
 from racing_coach_server_client.models import LapMetrics as ApiLapMetrics
@@ -67,7 +67,9 @@ class MetricsUploadHandler:
                     f"✓ Lap {lap_metrics.lap_number} metrics uploaded (id: {response.lap_metrics_id})"
                 )
             else:
-                logger.error(f"✗ Failed to upload metrics for lap {lap_metrics.lap_number}: {response}")
+                logger.error(
+                    f"✗ Failed to upload metrics for lap {lap_metrics.lap_number}: {response}"
+                )
 
         except Exception as e:
             logger.error(f"✗ Failed to upload metrics for lap {lap_metrics.lap_number}: {e}")

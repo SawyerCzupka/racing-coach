@@ -3,7 +3,6 @@
 import asyncio
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any
 from unittest.mock import MagicMock, PropertyMock
 
 import pytest
@@ -13,8 +12,8 @@ from racing_coach_client.handlers.lap_handler import LapHandler
 from racing_coach_client.handlers.log_handler import LogHandler
 from racing_coach_core.events.base import Event, EventBus, Handler, HandlerContext, SystemEvents
 from racing_coach_core.events.session_registry import SessionRegistry
-from racing_coach_core.models.events import LapAndSession, SessionStart, TelemetryAndSessionId
-from racing_coach_core.models.telemetry import SessionFrame, TelemetryFrame
+from racing_coach_core.schemas.events import LapAndSession, SessionStart, TelemetryAndSessionId
+from racing_coach_core.schemas.telemetry import SessionFrame, TelemetryFrame
 
 from tests.conftest import EventCollector
 
@@ -43,8 +42,8 @@ class TestEventFlowWithMocks:
         running_event_bus.register_handlers([telemetry_handler, lap_handler_event])
 
         # Create handlers
-        lap_handler: LapHandler = LapHandler(running_event_bus, session_registry)
-        log_handler: LogHandler = LogHandler(running_event_bus, session_registry, log_frequency=5)
+        LapHandler(running_event_bus, session_registry)
+        LogHandler(running_event_bus, session_registry, log_frequency=5)
 
         # Configure mock to disconnect after several frames
         call_count: int = 0
@@ -191,8 +190,8 @@ class TestEndToEndWithRealIBT:
             loop=False,
         )
 
-        lap_handler: LapHandler = LapHandler(running_event_bus, session_registry)
-        log_handler: LogHandler = LogHandler(running_event_bus, session_registry, log_frequency=50)
+        LapHandler(running_event_bus, session_registry)
+        LogHandler(running_event_bus, session_registry, log_frequency=50)
 
         # Create and start collector
         collector: TelemetryCollector = TelemetryCollector(
@@ -202,10 +201,10 @@ class TestEndToEndWithRealIBT:
 
         try:
             # Wait for telemetry events
-            telemetry_events: list[Event[TelemetryAndSessionId]] = (
-                await event_collector.wait_for_event(
-                    SystemEvents.TELEMETRY_EVENT, timeout=15, count=50
-                )
+            telemetry_events: list[
+                Event[TelemetryAndSessionId]
+            ] = await event_collector.wait_for_event(
+                SystemEvents.TELEMETRY_EVENT, timeout=15, count=50
             )
             assert len(telemetry_events) >= 50
 
@@ -391,5 +390,5 @@ class TestEventBusSubscriberPattern:
         assert len(events2) == 5
 
         # Events should be the same
-        for e1, e2 in zip(events1, events2):
+        for e1, e2 in zip(events1, events2, strict=False):
             assert e1.data == e2.data
