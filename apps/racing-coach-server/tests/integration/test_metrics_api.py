@@ -8,6 +8,7 @@ from racing_coach_core.algs.events import BrakingMetrics, CornerMetrics, LapMetr
 from racing_coach_server.telemetry.models import Lap, LapMetricsDB, TrackSession
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 
 @pytest.mark.integration
@@ -163,7 +164,14 @@ class TestMetricsAPI:
         assert "lap_metrics_id" in data
 
         # Verify metrics were stored in database
-        result = await db_session.execute(select(LapMetricsDB).where(LapMetricsDB.lap_id == lap.id))
+        result = await db_session.execute(
+            select(LapMetricsDB)
+            .where(LapMetricsDB.lap_id == lap.id)
+            .options(
+                selectinload(LapMetricsDB.braking_zones),
+                selectinload(LapMetricsDB.corners),
+            )
+        )
         stored_metrics = result.scalar_one_or_none()
         assert stored_metrics is not None
         assert stored_metrics.total_corners == 1
