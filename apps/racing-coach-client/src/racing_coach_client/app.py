@@ -5,12 +5,10 @@ from typing import Any
 from racing_coach_core.events import (
     EventBus,
     Handler,
-    HandlerContext,
     SystemEvents,
 )
-from racing_coach_core.events.checking import func_handles
 from racing_coach_core.events.session_registry import SessionRegistry
-from racing_coach_core.models.events import (
+from racing_coach_core.schemas.events import (
     LapAndSession,
     SessionEnd,
     SessionStart,
@@ -122,9 +120,6 @@ class RacingCoachClient:
             )
 
         log_handler = LogHandler(self.event_bus, self.session_registry, log_frequency=100_000)
-        # handlers.append(
-        #     Handler(type=SystemEvents.TELEMETRY_EVENT, fn=log_handler.handle_telemetry_frame)
-        # )
         handlers.append(Handler(type=SystemEvents.SESSION_END, fn=log_handler.handle_session_end))
 
         self.event_bus.register_handlers(handlers)

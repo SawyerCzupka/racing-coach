@@ -39,11 +39,7 @@ class LogHandler:
             logger.warning("No Telemetry Frame data found in the event.")
             return
 
-        # if self.frame_count == 24583:
-        #     logger.info("HANDLED LAST TELEMETRY FRAME")
-
-        # if self.frame_count > 24000:
-        if self.frame_count % self.log_frequency == 0:
+        if self.frame_count != 0 and self.frame_count % self.log_frequency == 0:
             logger.info(f"Telemetry Frame: {telemetry_frame.model_dump_json(indent=2)}")
             session = self.session_registry.get_current_session()
             if session:

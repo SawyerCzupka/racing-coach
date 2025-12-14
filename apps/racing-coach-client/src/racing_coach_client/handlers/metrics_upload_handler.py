@@ -7,9 +7,9 @@ to the Racing Coach server.
 import logging
 from dataclasses import asdict
 
-from racing_coach_core.events import EventBus, HandlerContext, SystemEvents
+from racing_coach_core.events import Event, EventBus, HandlerContext, SystemEvents
 from racing_coach_core.events.checking import method_handles
-from racing_coach_core.schemas.events import MetricsAndSession
+from racing_coach_core.schemas.events import MetricsAndSession, MetricsUploadResult
 from racing_coach_server_client import Client
 from racing_coach_server_client.api.metrics import upload_lap_metrics_api_v1_metrics_lap_post
 from racing_coach_server_client.models import LapMetrics as ApiLapMetrics
@@ -66,10 +66,44 @@ class MetricsUploadHandler:
                 logger.info(
                     f"✓ Lap {lap_metrics.lap_number} metrics uploaded (id: {response.lap_metrics_id})"
                 )
+                self.event_bus.thread_safe_publish(
+                    Event(
+                        type=SystemEvents.METRICS_UPLOAD_SUCCESS,
+                        data=MetricsUploadResult(
+                            lap_id=lap_id,
+                            lap_number=lap_metrics.lap_number,
+                            success=True,
+                        ),
+                    )
+                )
             else:
+                error_msg = str(response)
                 logger.error(
-                    f"✗ Failed to upload metrics for lap {lap_metrics.lap_number}: {response}"
+                    f"✗ Failed to upload metrics for lap {lap_metrics.lap_number}: {error_msg}"
+                )
+                self.event_bus.thread_safe_publish(
+                    Event(
+                        type=SystemEvents.METRICS_UPLOAD_FAILED,
+                        data=MetricsUploadResult(
+                            lap_id=lap_id,
+                            lap_number=lap_metrics.lap_number,
+                            success=False,
+                            error_message=error_msg,
+                        ),
+                    )
                 )
 
         except Exception as e:
-            logger.error(f"✗ Failed to upload metrics for lap {lap_metrics.lap_number}: {e}")
+            error_msg = str(e)
+            logger.error(f"✗ Failed to upload metrics for lap {lap_metrics.lap_number}: {error_msg}")
+            self.event_bus.thread_safe_publish(
+                Event(
+                    type=SystemEvents.METRICS_UPLOAD_FAILED,
+                    data=MetricsUploadResult(
+                        lap_id=lap_id,
+                        lap_number=lap_metrics.lap_number,
+                        success=False,
+                        error_message=error_msg,
+                    ),
+                )
+            )

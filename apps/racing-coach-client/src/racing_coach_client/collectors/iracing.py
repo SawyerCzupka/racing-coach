@@ -110,7 +110,9 @@ class TelemetryCollector:
                 )
             )
         except Exception as e:
-            logger.error(f"Failed to collect initial session frame: {e}")
+            logger.error(
+                f"Failed to collect initial session frame: {e}", exc_info=True, stack_info=True
+            )
             self._running = False
             self.source.stop()
             return

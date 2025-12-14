@@ -21,6 +21,7 @@ racing-coach-server-client = { path = "../../libs/racing-coach-api-client", edit
 
 [project.scripts]
 run-client = "racing_coach_client.app:main"
+run-client-gui = "racing_coach_client.gui:main"
 
 [build-system]
 requires = ["hatchling"]

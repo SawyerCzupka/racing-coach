@@ -1,8 +1,8 @@
 import logging
 
-from racing_coach_core.events import EventBus, HandlerContext, SystemEvents
+from racing_coach_core.events import Event, EventBus, HandlerContext, SystemEvents
 from racing_coach_core.events.checking import method_handles
-from racing_coach_core.schemas.events import LapAndSession
+from racing_coach_core.schemas.events import LapAndSession, LapUploadResult
 from racing_coach_server_client import Client
 from racing_coach_server_client.api.telemetry import upload_lap_api_v1_telemetry_lap_post
 from racing_coach_server_client.models import (
@@ -53,9 +53,42 @@ class LapUploadHandler:
 
             if isinstance(response, LapUploadResponse):
                 logger.info(f"✓ Lap {lap_number} uploaded successfully (lap_id: {data.lap_id})")
+                self.event_bus.thread_safe_publish(
+                    Event(
+                        type=SystemEvents.LAP_UPLOAD_SUCCESS,
+                        data=LapUploadResult(
+                            lap_id=data.lap_id,
+                            lap_number=lap_number,
+                            success=True,
+                        ),
+                    )
+                )
             else:
-                logger.error(f"✗ Failed to upload lap {lap_number}: {response}")
+                error_msg = str(response)
+                logger.error(f"✗ Failed to upload lap {lap_number}: {error_msg}")
+                self.event_bus.thread_safe_publish(
+                    Event(
+                        type=SystemEvents.LAP_UPLOAD_FAILED,
+                        data=LapUploadResult(
+                            lap_id=data.lap_id,
+                            lap_number=lap_number,
+                            success=False,
+                            error_message=error_msg,
+                        ),
+                    )
+                )
 
         except Exception as e:
-            logger.error(f"✗ Failed to upload lap {lap_number}: {e}")
-            return
+            error_msg = str(e)
+            logger.error(f"✗ Failed to upload lap {lap_number}: {error_msg}")
+            self.event_bus.thread_safe_publish(
+                Event(
+                    type=SystemEvents.LAP_UPLOAD_FAILED,
+                    data=LapUploadResult(
+                        lap_id=data.lap_id,
+                        lap_number=lap_number,
+                        success=False,
+                        error_message=error_msg,
+                    ),
+                )
+            )

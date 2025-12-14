@@ -12,10 +12,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-import irsdk
+import irsdk  # pyright: ignore[reportMissingTypeStubs]
 from racing_coach_core.schemas.telemetry import SessionFrame, TelemetryFrame
 
-from .base import TelemetryConnectionError, TelemetryReadError
+from .base import TelemetryConnectionError
 
 logger = logging.getLogger(__name__)
 
@@ -114,11 +114,11 @@ class ReplayTelemetrySource:
         try:
             # Initialize IBT for frame-by-frame telemetry access
             self.ibt = irsdk.IBT()
-            self.ibt.open(str(self.file_path))
+            self.ibt.open(str(self.file_path))  # pyright: ignore[reportUnknownMemberType]
 
             # Initialize IRSDK for session metadata access
             self.ir = irsdk.IRSDK()
-            if not self.ir.startup(test_file=str(self.file_path)):
+            if not self.ir.startup(test_file=str(self.file_path)):  # pyright: ignore[reportUnknownMemberType]
                 raise TelemetryConnectionError(
                     f"Failed to load session data from IBT file: {self.file_path}"
                 )
@@ -275,7 +275,7 @@ class ReplayTelemetrySource:
         self._current_buffer.clear()
         for var_name in self._var_names:
             try:
-                self._current_buffer[var_name] = self.ibt.get(self.current_frame, var_name)
+                self._current_buffer[var_name] = self.ibt.get(self.current_frame, var_name)  # pyright: ignore[reportUnknownMemberType]
             except Exception as e:
                 logger.warning(f"Failed to cache '{var_name}' at frame {self.current_frame}: {e}")
 
@@ -313,7 +313,7 @@ class ReplayTelemetrySource:
         try:
             # Use a common variable that should exist in all files
             test_var = "SessionTime" if "SessionTime" in self._var_names else self._var_names[0]
-            all_values = self.ibt.get_all(test_var)
+            all_values = self.ibt.get_all(test_var)  # pyright: ignore[reportUnknownMemberType]
 
             if all_values is None:
                 return 0
@@ -352,10 +352,10 @@ class _IRSDKSessionDataWrapper:
         self._ir = ir
 
     def __getitem__(self, key: str) -> Any:
-        return self._ir[key]
+        return self._ir[key]  # pyright: ignore[reportUnknownVariableType]
 
     def get(self, key: str, default: Any = None) -> Any:
         try:
-            return self._ir[key]
+            return self._ir[key]  # pyright: ignore[reportUnknownVariableType]
         except (KeyError, TypeError):
             return default
