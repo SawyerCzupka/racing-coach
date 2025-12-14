@@ -31,4 +31,6 @@ export interface SessionFrame {
   car_class_id: number;
   /** Series ID */
   series_id: number;
+  /** Session type */
+  session_type: string;
 }

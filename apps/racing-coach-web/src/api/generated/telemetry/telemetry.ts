@@ -26,6 +26,7 @@ import type {
   HTTPValidationError,
   LapUploadResponse,
   SessionFrame,
+  UploadLapApiV1TelemetryLapPostParams,
 } from ".././models";
 
 import { customInstance } from "../../client";
@@ -36,6 +37,11 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 /**
  * Upload a lap with telemetry data.
 
+Args:
+    lap: The lap telemetry data
+    session: The session frame with track/car info
+    lap_id: Optional client-provided UUID for the lap. If not provided, server generates one.
+
 The transaction is managed by the transactional_session context manager:
 - If any operation fails, the transaction is automatically rolled back
 - If all operations succeed, changes are committed
@@ -43,6 +49,7 @@ The transaction is managed by the transactional_session context manager:
  */
 export const uploadLapApiV1TelemetryLapPost = (
   bodyUploadLapApiV1TelemetryLapPost: BodyType<BodyUploadLapApiV1TelemetryLapPost>,
+  params?: UploadLapApiV1TelemetryLapPostParams,
   options?: SecondParameter<typeof customInstance>,
   signal?: AbortSignal,
 ) => {
@@ -52,6 +59,7 @@ export const uploadLapApiV1TelemetryLapPost = (
       method: "POST",
       headers: { "Content-Type": "application/json" },
       data: bodyUploadLapApiV1TelemetryLapPost,
+      params,
       signal,
     },
     options,
@@ -65,14 +73,20 @@ export const getUploadLapApiV1TelemetryLapPostMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof uploadLapApiV1TelemetryLapPost>>,
     TError,
-    { data: BodyType<BodyUploadLapApiV1TelemetryLapPost> },
+    {
+      data: BodyType<BodyUploadLapApiV1TelemetryLapPost>;
+      params?: UploadLapApiV1TelemetryLapPostParams;
+    },
     TContext
   >;
   request?: SecondParameter<typeof customInstance>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof uploadLapApiV1TelemetryLapPost>>,
   TError,
-  { data: BodyType<BodyUploadLapApiV1TelemetryLapPost> },
+  {
+    data: BodyType<BodyUploadLapApiV1TelemetryLapPost>;
+    params?: UploadLapApiV1TelemetryLapPostParams;
+  },
   TContext
 > => {
   const mutationKey = ["uploadLapApiV1TelemetryLapPost"];
@@ -86,11 +100,14 @@ export const getUploadLapApiV1TelemetryLapPostMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof uploadLapApiV1TelemetryLapPost>>,
-    { data: BodyType<BodyUploadLapApiV1TelemetryLapPost> }
+    {
+      data: BodyType<BodyUploadLapApiV1TelemetryLapPost>;
+      params?: UploadLapApiV1TelemetryLapPostParams;
+    }
   > = (props) => {
-    const { data } = props ?? {};
+    const { data, params } = props ?? {};
 
-    return uploadLapApiV1TelemetryLapPost(data, requestOptions);
+    return uploadLapApiV1TelemetryLapPost(data, params, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -115,7 +132,10 @@ export const useUploadLapApiV1TelemetryLapPost = <
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof uploadLapApiV1TelemetryLapPost>>,
       TError,
-      { data: BodyType<BodyUploadLapApiV1TelemetryLapPost> },
+      {
+        data: BodyType<BodyUploadLapApiV1TelemetryLapPost>;
+        params?: UploadLapApiV1TelemetryLapPostParams;
+      },
       TContext
     >;
     request?: SecondParameter<typeof customInstance>;
@@ -124,7 +144,10 @@ export const useUploadLapApiV1TelemetryLapPost = <
 ): UseMutationResult<
   Awaited<ReturnType<typeof uploadLapApiV1TelemetryLapPost>>,
   TError,
-  { data: BodyType<BodyUploadLapApiV1TelemetryLapPost> },
+  {
+    data: BodyType<BodyUploadLapApiV1TelemetryLapPost>;
+    params?: UploadLapApiV1TelemetryLapPostParams;
+  },
   TContext
 > => {
   const mutationOptions =

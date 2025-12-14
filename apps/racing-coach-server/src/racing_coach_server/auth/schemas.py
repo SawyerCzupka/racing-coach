@@ -4,7 +4,6 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
-
 # ============================================================================
 # Registration & Login
 # ============================================================================
@@ -75,7 +74,7 @@ class UpdateProfileRequest(BaseModel):
 # ============================================================================
 
 
-class SessionInfo(BaseModel):
+class AuthSessionInfo(BaseModel):
     """Information about an active session."""
 
     model_config = ConfigDict(from_attributes=True)
@@ -88,10 +87,10 @@ class SessionInfo(BaseModel):
     is_current: bool = False
 
 
-class SessionListResponse(BaseModel):
+class AuthSessionListResponse(BaseModel):
     """Response model for listing user sessions."""
 
-    sessions: list[SessionInfo]
+    sessions: list[AuthSessionInfo]
     total: int
 
 

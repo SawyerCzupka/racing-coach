@@ -56,17 +56,23 @@ export interface TelemetryFrame {
   /** Pitch rate in rad/s */
   pitch_rate: number;
   /** X velocity in m/s */
-  position_x: number;
+  velocity_x: number;
   /** Y velocity in m/s */
-  position_y: number;
+  velocity_y: number;
   /** Z velocity in m/s */
-  position_z: number;
+  velocity_z: number;
   /** Yaw orientation in radians */
   yaw: number;
   /** Pitch orientation in radians */
   pitch: number;
   /** Roll orientation in radians */
   roll: number;
+  /** Latitude in degrees */
+  latitude: number;
+  /** Longitude in degrees */
+  longitude: number;
+  /** Altitude in meters */
+  altitude: number;
   /** Tire temperatures (LF,RF,LR,RR: left,middle,right) */
   tire_temps: TelemetryFrameTireTemps;
   /** Tire wear percentage (LF,RF,LR,RR: left,middle,right) */

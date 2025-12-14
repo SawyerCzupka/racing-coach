@@ -19,6 +19,8 @@ from racing_coach_server.auth.exceptions import (
 from racing_coach_server.auth.models import User
 from racing_coach_server.auth.schemas import (
     AuthorizeDeviceRequest,
+    AuthSessionInfo,
+    AuthSessionListResponse,
     DeviceAuthorizationRequest,
     DeviceAuthorizationResponse,
     DeviceAuthorizationStatus,
@@ -30,8 +32,6 @@ from racing_coach_server.auth.schemas import (
     LoginResponse,
     RegisterRequest,
     RegisterResponse,
-    SessionInfo,
-    SessionListResponse,
     UserResponse,
 )
 from racing_coach_server.auth.service import AuthService
@@ -133,6 +133,7 @@ OptionalUser = Annotated[User | None, Depends(get_current_user_optional)]
     response_model=RegisterResponse,
     status_code=status.HTTP_201_CREATED,
     tags=["auth"],
+    operation_id="register",
 )
 async def register(
     request_body: RegisterRequest,
@@ -171,6 +172,7 @@ async def register(
     "/login",
     response_model=LoginResponse,
     tags=["auth"],
+    operation_id="login",
 )
 async def login(
     request_body: LoginRequest,
@@ -206,7 +208,7 @@ async def login(
         ) from None
 
 
-@router.post("/logout", tags=["auth"])
+@router.post("/logout", tags=["auth"], operation_id="logout")
 async def logout(
     request: Request,
     response: Response,
@@ -233,7 +235,7 @@ async def logout(
 # ============================================================================
 
 
-@router.get("/me", response_model=UserResponse, tags=["auth"])
+@router.get("/me", response_model=UserResponse, tags=["auth"], operation_id="getCurrentUser")
 async def get_me(current_user: CurrentUser) -> UserResponse:
     """Get current user profile."""
     return UserResponse(
@@ -250,20 +252,22 @@ async def get_me(current_user: CurrentUser) -> UserResponse:
 # ============================================================================
 
 
-@router.get("/sessions", response_model=SessionListResponse, tags=["auth"])
+@router.get(
+    "/sessions", response_model=AuthSessionListResponse, tags=["auth"], operation_id="listSessions"
+)
 async def list_sessions(
     request: Request,
     current_user: CurrentUser,
     auth_service: AuthServiceDep,
-) -> SessionListResponse:
+) -> AuthSessionListResponse:
     """List all active sessions for current user."""
     sessions = await auth_service.get_user_sessions(current_user.id)
     current_token = request.cookies.get(SESSION_COOKIE_NAME)
     current_hash = hash_token(current_token) if current_token else None
 
-    return SessionListResponse(
+    return AuthSessionListResponse(
         sessions=[
-            SessionInfo(
+            AuthSessionInfo(
                 session_id=str(s.id),
                 user_agent=s.user_agent,
                 ip_address=s.ip_address,
@@ -277,7 +281,7 @@ async def list_sessions(
     )
 
 
-@router.delete("/sessions/{session_id}", tags=["auth"])
+@router.delete("/sessions/{session_id}", tags=["auth"], operation_id="revokeSession")
 async def revoke_session(
     session_id: UUID,
     current_user: CurrentUser,
@@ -300,7 +304,12 @@ async def revoke_session(
 # ============================================================================
 
 
-@router.get("/devices", response_model=DeviceTokenListResponse, tags=["auth"])
+@router.get(
+    "/devices",
+    response_model=DeviceTokenListResponse,
+    tags=["auth"],
+    operation_id="listDeviceTokens",
+)
 async def list_devices(
     current_user: CurrentUser,
     auth_service: AuthServiceDep,
@@ -321,7 +330,7 @@ async def list_devices(
     )
 
 
-@router.delete("/devices/{token_id}", tags=["auth"])
+@router.delete("/devices/{token_id}", tags=["auth"], operation_id="revokeDeviceToken")
 async def revoke_device(
     token_id: UUID,
     current_user: CurrentUser,
@@ -348,6 +357,7 @@ async def revoke_device(
     "/device/authorize",
     response_model=DeviceAuthorizationResponse,
     tags=["auth", "device"],
+    operation_id="initiateDeviceAuthorization",
 )
 async def initiate_device_authorization(
     request_body: DeviceAuthorizationRequest,
@@ -378,7 +388,7 @@ async def initiate_device_authorization(
         )
 
 
-@router.post("/device/token", tags=["auth", "device"])
+@router.post("/device/token", tags=["auth", "device"], operation_id="pollDeviceToken")
 async def poll_device_token(
     request_body: DeviceTokenRequest,
     auth_service: AuthServiceDep,
@@ -436,7 +446,7 @@ async def poll_device_token(
         ) from None
 
 
-@router.post("/device/confirm", tags=["auth", "device"])
+@router.post("/device/confirm", tags=["auth", "device"], operation_id="confirmDeviceAuthorization")
 async def authorize_device_from_web(
     request_body: AuthorizeDeviceRequest,
     current_user: CurrentUser,
@@ -471,7 +481,10 @@ async def authorize_device_from_web(
 
 
 @router.get(
-    "/device/status/{user_code}", response_model=DeviceAuthorizationStatus, tags=["auth", "device"]
+    "/device/status/{user_code}",
+    response_model=DeviceAuthorizationStatus,
+    tags=["auth", "device"],
+    operation_id="getDeviceAuthorizationStatus",
 )
 async def get_device_authorization_status(
     user_code: str,

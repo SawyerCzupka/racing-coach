@@ -21,6 +21,7 @@ import type {
 import type {
   HTTPValidationError,
   LapDetailResponse,
+  LapTelemetryResponse,
   SessionDetailResponse,
   SessionListResponse,
 } from ".././models";
@@ -524,6 +525,195 @@ export function useGetSessionLapDetail<
   queryKey: DataTag<QueryKey, TData, TError>;
 } {
   const queryOptions = getGetSessionLapDetailQueryOptions(
+    sessionId,
+    lapId,
+    options,
+  );
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
+/**
+ * Get all telemetry frames for a specific lap.
+
+Returns telemetry data including position, speed, inputs, and dynamics
+for visualization and analysis.
+ * @summary Get Lap Telemetry
+ */
+export const getLapTelemetry = (
+  sessionId: string,
+  lapId: string,
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
+) => {
+  return customInstance<LapTelemetryResponse>(
+    {
+      url: `/api/v1/sessions/${sessionId}/laps/${lapId}/telemetry`,
+      method: "GET",
+      signal,
+    },
+    options,
+  );
+};
+
+export const getGetLapTelemetryQueryKey = (
+  sessionId?: string,
+  lapId?: string,
+) => {
+  return [`/api/v1/sessions/${sessionId}/laps/${lapId}/telemetry`] as const;
+};
+
+export const getGetLapTelemetryQueryOptions = <
+  TData = Awaited<ReturnType<typeof getLapTelemetry>>,
+  TError = ErrorType<HTTPValidationError>,
+>(
+  sessionId: string,
+  lapId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getLapTelemetry>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetLapTelemetryQueryKey(sessionId, lapId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getLapTelemetry>>> = ({
+    signal,
+  }) => getLapTelemetry(sessionId, lapId, requestOptions, signal);
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!(sessionId && lapId),
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getLapTelemetry>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetLapTelemetryQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getLapTelemetry>>
+>;
+export type GetLapTelemetryQueryError = ErrorType<HTTPValidationError>;
+
+export function useGetLapTelemetry<
+  TData = Awaited<ReturnType<typeof getLapTelemetry>>,
+  TError = ErrorType<HTTPValidationError>,
+>(
+  sessionId: string,
+  lapId: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getLapTelemetry>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getLapTelemetry>>,
+          TError,
+          Awaited<ReturnType<typeof getLapTelemetry>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetLapTelemetry<
+  TData = Awaited<ReturnType<typeof getLapTelemetry>>,
+  TError = ErrorType<HTTPValidationError>,
+>(
+  sessionId: string,
+  lapId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getLapTelemetry>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getLapTelemetry>>,
+          TError,
+          Awaited<ReturnType<typeof getLapTelemetry>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetLapTelemetry<
+  TData = Awaited<ReturnType<typeof getLapTelemetry>>,
+  TError = ErrorType<HTTPValidationError>,
+>(
+  sessionId: string,
+  lapId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getLapTelemetry>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary Get Lap Telemetry
+ */
+
+export function useGetLapTelemetry<
+  TData = Awaited<ReturnType<typeof getLapTelemetry>>,
+  TError = ErrorType<HTTPValidationError>,
+>(
+  sessionId: string,
+  lapId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getLapTelemetry>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetLapTelemetryQueryOptions(
     sessionId,
     lapId,
     options,
