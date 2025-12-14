@@ -36,6 +36,7 @@ def upgrade() -> None:
         sa.Column("car_name", sa.String(length=255), nullable=False),
         sa.Column("car_class_id", sa.Integer(), nullable=False),
         sa.Column("series_id", sa.Integer(), nullable=False),
+        sa.Column("session_type", sa.String(length=255), nullable=False),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),

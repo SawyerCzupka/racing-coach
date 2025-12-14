@@ -16,23 +16,11 @@ class TestMetricsAPI:
     """Integration tests for metrics upload and retrieval."""
 
     async def test_upload_lap_metrics_success(
-        self,
-        test_client: AsyncClient,
-        db_session: AsyncSession,
+        self, test_client: AsyncClient, db_session: AsyncSession, track_session_factory
     ) -> None:
         """Test successful upload of lap metrics."""
         # Create a track session and lap first
-        track_session = TrackSession(
-            id=uuid4(),
-            track_id=1,
-            track_name="Test Track",
-            track_config_name="GP",
-            track_type="road course",
-            car_id=1,
-            car_name="Test Car",
-            car_class_id=1,
-            series_id=1,
-        )
+        track_session = track_session_factory.build()
         db_session.add(track_session)
 
         lap = Lap(
@@ -183,23 +171,14 @@ class TestMetricsAPI:
         self,
         test_client: AsyncClient,
         db_session: AsyncSession,
+        track_session_factory,
         lap_metrics_db_factory,
         braking_metrics_db_factory,
         corner_metrics_db_factory,
     ) -> None:
         """Test successful retrieval of lap metrics."""
         # Create test data
-        track_session = TrackSession(
-            id=uuid4(),
-            track_id=1,
-            track_name="Test Track",
-            track_config_name="GP",
-            track_type="road course",
-            car_id=1,
-            car_name="Test Car",
-            car_class_id=1,
-            series_id=1,
-        )
+        track_session = track_session_factory.build()
         db_session.add(track_session)
 
         lap = Lap(
@@ -290,20 +269,11 @@ class TestMetricsAPI:
         self,
         test_client: AsyncClient,
         db_session: AsyncSession,
+        track_session_factory,
     ) -> None:
         """Test that uploading metrics twice uses upsert (replace old metrics)."""
         # Create a track session and lap
-        track_session = TrackSession(
-            id=uuid4(),
-            track_id=1,
-            track_name="Test Track",
-            track_config_name="GP",
-            track_type="road course",
-            car_id=1,
-            car_name="Test Car",
-            car_class_id=1,
-            series_id=1,
-        )
+        track_session = track_session_factory.build()
         db_session.add(track_session)
 
         lap = Lap(
@@ -366,23 +336,14 @@ class TestMetricsAPI:
         self,
         test_client: AsyncClient,
         db_session: AsyncSession,
+        track_session_factory,
         lap_metrics_db_factory,
         braking_metrics_db_factory,
         corner_metrics_db_factory,
     ) -> None:
         """Test successful comparison of two laps."""
         # Create track session
-        track_session = TrackSession(
-            id=uuid4(),
-            track_id=1,
-            track_name="Test Track",
-            track_config_name="GP",
-            track_type="road course",
-            car_id=1,
-            car_name="Test Car",
-            car_class_id=1,
-            series_id=1,
-        )
+        track_session = track_session_factory.build()
         db_session.add(track_session)
 
         # Create two laps

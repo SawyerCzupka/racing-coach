@@ -40,3 +40,21 @@ class SessionEnd(BaseModel):
     """Event data for session end."""
 
     session_id: UUID
+
+
+class LapUploadResult(BaseModel):
+    """Event data for lap upload result."""
+
+    lap_id: UUID
+    lap_number: int
+    success: bool
+    error_message: str | None = None
+
+
+class MetricsUploadResult(BaseModel):
+    """Event data for metrics upload result."""
+
+    lap_id: UUID
+    lap_number: int
+    success: bool
+    error_message: str | None = None

@@ -233,7 +233,7 @@ class SessionFrame(BaseModel):
     series_id: int = Field(description="Series ID")
 
     # Session
-    # session_type: str = Field(description="Session type")
+    session_type: str = Field(description="Session type")
 
     @classmethod
     def from_irsdk(cls, source: TelemetryDataSource, timestamp: datetime) -> "SessionFrame":
@@ -255,6 +255,9 @@ class SessionFrame(BaseModel):
         """
         weekend_info = source["WeekendInfo"]
         driver_info = source["DriverInfo"]
+        session_info = source["SessionInfo"]
+
+        session = session_info["Sessions"][session_info["CurrentSessionNum"]]
 
         car_idx = driver_info["DriverCarIdx"]  # type: ignore
 
@@ -263,14 +266,14 @@ class SessionFrame(BaseModel):
         return cls(
             timestamp=timestamp,
             track_id=weekend_info["TrackID"],  # type: ignore
-            track_name=weekend_info["TrackName"],  # type: ignore
+            track_name=weekend_info["TrackDisplayName"],  # type: ignore
             track_config_name=weekend_info["TrackConfigName"],  # type: ignore
             track_type=weekend_info["TrackType"],  # type: ignore
             car_id=driver["CarID"],  # type: ignore
             car_name=driver["CarScreenName"],  # type: ignore
             car_class_id=driver["CarClassID"],  # type: ignore
             series_id=weekend_info["SeriesID"],  # type: ignore
-            # session_type=weekend_info["SessionType"],  # type: ignore
+            session_type=session["SessionType"],  # type: ignore
         )
 
 

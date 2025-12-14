@@ -1,9 +1,13 @@
 """Pytest configuration and shared fixtures for racing-coach-server tests."""
 
+import os
 from collections.abc import AsyncGenerator, Generator
 from pathlib import Path
 from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock
+
+# Set test environment variables before importing app modules
+os.environ["SESSION_COOKIE_SECURE"] = "false"
 
 import pytest
 import pytest_asyncio
@@ -13,6 +17,7 @@ from httpx import ASGITransport, AsyncClient
 from pytest_factoryboy import register
 from pytest_mock import MockerFixture
 from racing_coach_server.app import app
+from racing_coach_server.auth.service import AuthService
 from racing_coach_server.database.engine import get_async_session
 from racing_coach_server.telemetry.service import TelemetryService
 from sqlalchemy.ext.asyncio import (
@@ -27,12 +32,16 @@ from testcontainers.postgres import PostgresContainer
 from tests.factories import (
     BrakingMetricsDBFactory,
     CornerMetricsDBFactory,
+    DeviceAuthorizationFactory,
+    DeviceTokenFactory,
     LapFactory,
     LapMetricsDBFactory,
     SessionFrameFactory,
     TelemetryFactory,
     TelemetryFrameFactory,
     TrackSessionFactory,
+    UserFactory,
+    UserSessionFactory,
 )
 
 if TYPE_CHECKING:
@@ -47,6 +56,10 @@ register(TelemetryFactory)
 register(LapMetricsDBFactory)
 register(BrakingMetricsDBFactory)
 register(CornerMetricsDBFactory)
+register(UserFactory)
+register(UserSessionFactory)
+register(DeviceTokenFactory)
+register(DeviceAuthorizationFactory)
 
 
 # ============================================================================
@@ -236,6 +249,20 @@ def telemetry_service(db_session: AsyncSession) -> TelemetryService:
         TelemetryService: Configured service instance for testing.
     """
     return TelemetryService(db_session)
+
+
+@pytest.fixture
+def auth_service(db_session: AsyncSession) -> AuthService:
+    """
+    Create an AuthService instance for testing.
+
+    Args:
+        db_session: The database session to inject into the service.
+
+    Returns:
+        AuthService: Configured service instance for testing.
+    """
+    return AuthService(db_session)
 
 
 # ============================================================================

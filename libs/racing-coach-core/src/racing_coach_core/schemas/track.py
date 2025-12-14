@@ -72,7 +72,7 @@ class TrackBoundary(BaseModel):
             TrackBoundary with interpolated boundary data
         """
         # Create uniform grid from 0.0 to just under 1.0
-        grid = np.linspace(0.0, 1.0, grid_size, endpoint=False)
+        grid = np.linspace(0.0, 1.0, grid_size, endpoint=True)
 
         # Process left boundary
         left_sorted = left_lap_data.sort_values("lap_distance_pct").drop_duplicates(

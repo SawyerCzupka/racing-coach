@@ -8,7 +8,9 @@ from typing import Any
 
 from ..schemas.events import (
     LapAndSession,
+    LapUploadResult,
     MetricsAndSession,
+    MetricsUploadResult,
     SessionEnd,
     SessionStart,
     TelemetryAndSessionId,
@@ -35,6 +37,10 @@ class SystemEvents:
     LAP_METRICS_EXTRACTED: EventType[MetricsAndSession] = EventType("LAP_METRICS_EXTRACTED")
     SESSION_START: EventType[SessionStart] = EventType("SESSION_START")
     SESSION_END: EventType[SessionEnd] = EventType("SESSION_END")
+    LAP_UPLOAD_SUCCESS: EventType[LapUploadResult] = EventType("LAP_UPLOAD_SUCCESS")
+    LAP_UPLOAD_FAILED: EventType[LapUploadResult] = EventType("LAP_UPLOAD_FAILED")
+    METRICS_UPLOAD_SUCCESS: EventType[MetricsUploadResult] = EventType("METRICS_UPLOAD_SUCCESS")
+    METRICS_UPLOAD_FAILED: EventType[MetricsUploadResult] = EventType("METRICS_UPLOAD_FAILED")
 
 
 @dataclass(frozen=True)
@@ -112,7 +118,7 @@ class EventBus:
             logger.info(f"Removed handler {handler} for event {event_type}")
 
     def check_size_and_log(self):
-        if self._queue.qsize() >= self._max_queue_size - 1:
+        if self._queue and self._queue.qsize() >= self._max_queue_size - 1:
             logger.warning("Attempting to add event to almost full queue.")
 
     async def publish(self, event: Event[Any]) -> None:

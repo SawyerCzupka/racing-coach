@@ -518,6 +518,15 @@ wheels = [
 ]
 
 [[package]]
+name = "plotly-stubs"
+version = "0.1.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/62/00/ba8f8a2cef92f07db28e08ddc800909c25d7c641ba1de39544765b827c54/plotly_stubs-0.1.1.tar.gz", hash = "sha256:fa6a3e7e8a8aa22b213893ed3a9e35f69888245b869661d09c92ccea06b57567", size = 163699 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ed/95/d01b3de28004c105d78a7394be8ce9faed9c9766a45544121e2694636f7c/plotly_stubs-0.1.1-py3-none-any.whl", hash = "sha256:88b48281decf489c85884d8a6310b9a24cdde5ba848e2b19e0d823aa705eecb8", size = 106427 },
+]
+
+[[package]]
 name = "pluggy"
 version = "1.6.0"
 source = { registry = "https://pypi.org/simple" }
@@ -843,6 +852,7 @@ dependencies = [
     { name = "pandas" },
     { name = "pandas-stubs" },
     { name = "plotly" },
+    { name = "plotly-stubs" },
     { name = "pyarrow" },
     { name = "pyarrow-stubs" },
     { name = "pydantic" },
@@ -873,6 +883,7 @@ requires-dist = [
     { name = "pandas", specifier = ">=2.2.3" },
     { name = "pandas-stubs", specifier = ">=2.3.3.251201" },
     { name = "plotly", specifier = ">=6.3.0" },
+    { name = "plotly-stubs", specifier = ">=0.1.1" },
     { name = "pyarrow", specifier = ">=15.0.0" },
     { name = "pyarrow-stubs", specifier = ">=20.0.0.20251209" },
     { name = "pydantic", specifier = ">=2.11.2" },

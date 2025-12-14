@@ -35,6 +35,7 @@ class TrackSession(Base):
     car_name: Mapped[str] = mapped_column(String(255), nullable=False)
     car_class_id: Mapped[int] = mapped_column(Integer, nullable=False)
     series_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    session_type: Mapped[str] = mapped_column(String(255), nullable=False)
 
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(
@@ -78,6 +79,7 @@ class TrackSession(Base):
             car_name=self.car_name,
             car_class_id=self.car_class_id,
             series_id=self.series_id,
+            session_type=self.session_type,
         )
 
 

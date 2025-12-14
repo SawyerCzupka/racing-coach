@@ -63,6 +63,7 @@ class TelemetryService:
             car_name=session_frame.car_name,
             car_class_id=session_frame.car_class_id,
             series_id=session_frame.series_id,
+            session_type=session_frame.session_type,
         )
         self.db.add(new_session)
         await self.db.flush()  # Flush to ensure ID is available

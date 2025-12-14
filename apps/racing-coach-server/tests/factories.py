@@ -5,8 +5,9 @@ from typing import Any
 from uuid import uuid4
 
 from factory import Factory, Faker, LazyAttribute, LazyFunction, post_generation
-from factory.builder import BuildStep
 from racing_coach_core.schemas.telemetry import SessionFrame, TelemetryFrame
+from racing_coach_server.auth.models import DeviceAuthorization, DeviceToken, User, UserSession
+from racing_coach_server.auth.utils import hash_password, hash_token
 from racing_coach_server.telemetry.models import (
     BrakingMetricsDB,
     CornerMetricsDB,
@@ -147,6 +148,8 @@ class SessionFrameFactory(Factory[SessionFrame]):
     # Series
     series_id = Faker("pyint", min_value=1, max_value=100)
 
+    session_type = Faker("company")
+
 
 # ============================================================================
 # Database Model Factories
@@ -173,6 +176,7 @@ class TrackSessionFactory(Factory[TrackSession]):
     car_name = Faker("company")
     car_class_id = Faker("pyint", min_value=1, max_value=50)
     series_id = Faker("pyint", min_value=1, max_value=100)
+    session_type = Faker("company")
 
     @post_generation
     def set_timestamps(
@@ -401,3 +405,101 @@ class CornerMetricsDBFactory(Factory[CornerMetricsDB]):
     # Speed delta
     speed_loss = Faker("pyfloat", min_value=5, max_value=30)
     speed_gain = Faker("pyfloat", min_value=5, max_value=40)
+
+
+# ============================================================================
+# Auth Database Model Factories
+# ============================================================================
+
+
+class UserFactory(Factory[User]):
+    """Factory for creating User database model instances."""
+
+    class Meta:
+        model = User
+
+    email = Faker("email")
+    password_hash = LazyAttribute(lambda _: hash_password("testpassword123"))
+    display_name = Faker("name")
+    is_active = True
+
+    @post_generation
+    def set_timestamps(
+        obj: User,
+        create: bool,
+        extracted: Any,
+        **kwargs: Any,
+    ) -> None:
+        """Set timestamps after object creation."""
+        obj.created_at = datetime.now(timezone.utc)
+        obj.updated_at = datetime.now(timezone.utc)
+
+
+class UserSessionFactory(Factory[UserSession]):
+    """Factory for creating UserSession database model instances."""
+
+    class Meta:
+        model = UserSession
+
+    user_id = LazyFunction(uuid4)
+    token_hash = LazyAttribute(lambda _: hash_token("test_session_token"))
+    expires_at = LazyFunction(
+        lambda: datetime.now(timezone.utc) + __import__("datetime").timedelta(days=30)
+    )
+
+    @post_generation
+    def set_timestamps(
+        obj: UserSession,
+        create: bool,
+        extracted: Any,
+        **kwargs: Any,
+    ) -> None:
+        """Set timestamps after object creation."""
+        obj.created_at = datetime.now(timezone.utc)
+        obj.last_active_at = datetime.now(timezone.utc)
+
+
+class DeviceTokenFactory(Factory[DeviceToken]):
+    """Factory for creating DeviceToken database model instances."""
+
+    class Meta:
+        model = DeviceToken
+
+    user_id = LazyFunction(uuid4)
+    token_hash = LazyAttribute(lambda _: hash_token("test_device_token"))
+    device_name = Faker("word")
+
+    @post_generation
+    def set_timestamps(
+        obj: DeviceToken,
+        create: bool,
+        extracted: Any,
+        **kwargs: Any,
+    ) -> None:
+        """Set timestamps after object creation."""
+        obj.created_at = datetime.now(timezone.utc)
+
+
+class DeviceAuthorizationFactory(Factory[DeviceAuthorization]):
+    """Factory for creating DeviceAuthorization database model instances."""
+
+    class Meta:
+        model = DeviceAuthorization
+
+    device_code = LazyFunction(lambda: __import__("secrets").token_urlsafe(32))
+    user_code = Faker("pystr", min_chars=8, max_chars=8)
+    device_name = Faker("word")
+    expires_at = LazyFunction(
+        lambda: datetime.now(timezone.utc) + __import__("datetime").timedelta(minutes=15)
+    )
+    status = "pending"
+
+    @post_generation
+    def set_timestamps(
+        obj: DeviceAuthorization,
+        create: bool,
+        extracted: Any,
+        **kwargs: Any,
+    ) -> None:
+        """Set timestamps after object creation."""
+        obj.created_at = datetime.now(timezone.utc)

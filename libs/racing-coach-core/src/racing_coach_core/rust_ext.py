@@ -31,7 +31,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from racing_coach_core.algs.events import BrakingMetrics, CornerMetrics, LapMetrics
-    from racing_coach_core.models.telemetry import TelemetrySequence
+    from racing_coach_core.schemas.telemetry import TelemetrySequence
 
 # Try to import the Rust extension, fall back to Python implementations if not available
 _RUST_AVAILABLE = False
