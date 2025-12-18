@@ -2,7 +2,9 @@
 
 import uuid
 from datetime import datetime
+from typing import Self
 
+from racing_coach_core import TelemetryFrame
 from racing_coach_core.schemas.telemetry import SessionFrame
 from sqlalchemy import (
     Boolean,
@@ -19,9 +21,10 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from racing_coach_server.database.base import Base
+from racing_coach_server.database.mixins import TimestampMixin
 
 
-class TrackSession(Base):
+class TrackSession(TimestampMixin, Base):
     """Model representing a track session."""
 
     __tablename__ = "track_session"
@@ -36,17 +39,6 @@ class TrackSession(Base):
     car_class_id: Mapped[int] = mapped_column(Integer, nullable=False)
     series_id: Mapped[int] = mapped_column(Integer, nullable=False)
     session_type: Mapped[str] = mapped_column(String(255), nullable=False)
-
-    # Timestamps
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), init=False
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        server_default=func.now(),
-        onupdate=func.now(),
-        init=False,
-    )
 
     # Relationships
     laps: Mapped[list["Lap"]] = relationship(
@@ -83,7 +75,7 @@ class TrackSession(Base):
         )
 
 
-class Lap(Base):
+class Lap(TimestampMixin, Base):
     """Model representing a lap in a session."""
 
     __tablename__ = "lap"
@@ -96,17 +88,6 @@ class Lap(Base):
     lap_number: Mapped[int] = mapped_column(Integer, nullable=False)
     lap_time: Mapped[float | None] = mapped_column(Float, nullable=True)
     is_valid: Mapped[bool] = mapped_column(Boolean, default=True)
-
-    # Timestamps
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), init=False
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        server_default=func.now(),
-        onupdate=func.now(),
-        init=False,
-    )
 
     # Relationships
     track_session: Mapped["TrackSession"] = relationship(
@@ -263,8 +244,113 @@ class Telemetry(Base):
         Index("idx_session_time", "session_time"),
     )
 
+    @classmethod
+    def from_telemetry_frame(
+        cls,
+        frame: TelemetryFrame,
+        track_session_id: uuid.UUID,
+        lap_id: uuid.UUID,
+    ) -> Self:
+        """Create a Telemetry database model from a TelemetryFrame.
 
-class LapMetricsDB(Base):
+        Args:
+            frame: The TelemetryFrame containing telemetry data.
+            track_session_id: The UUID of the associated track session.
+            lap_id: The UUID of the associated lap.
+
+        Returns:
+            A new Telemetry instance ready to be persisted.
+        """
+        return cls(
+            track_session_id=track_session_id,
+            lap_id=lap_id,
+            # Time fields
+            timestamp=frame.timestamp,
+            session_time=frame.session_time,
+            # Lap information
+            lap_number=frame.lap_number,
+            lap_distance_pct=frame.lap_distance_pct,
+            lap_distance=frame.lap_distance,
+            current_lap_time=frame.current_lap_time,
+            last_lap_time=frame.last_lap_time if frame.last_lap_time > 0 else None,
+            best_lap_time=frame.best_lap_time if frame.best_lap_time > 0 else None,
+            # Vehicle state
+            speed=frame.speed,
+            rpm=frame.rpm,
+            gear=frame.gear,
+            # Driver inputs
+            throttle=frame.throttle,
+            brake=frame.brake,
+            clutch=frame.clutch,
+            steering_angle=frame.steering_angle,
+            # Vehicle dynamics
+            lateral_acceleration=frame.lateral_acceleration,
+            longitudinal_acceleration=frame.longitudinal_acceleration,
+            vertical_acceleration=frame.vertical_acceleration,
+            yaw_rate=frame.yaw_rate,
+            roll_rate=frame.roll_rate,
+            pitch_rate=frame.pitch_rate,
+            # Vehicle velocity
+            velocity_x=frame.velocity_x,
+            velocity_y=frame.velocity_y,
+            velocity_z=frame.velocity_z,
+            # Vehicle orientation
+            yaw=frame.yaw,
+            pitch=frame.pitch,
+            roll=frame.roll,
+            # GPS position
+            latitude=frame.latitude,
+            longitude=frame.longitude,
+            altitude=frame.altitude,
+            # Tire temps - Left Front
+            lf_tire_temp_left=frame.tire_temps.get("LF", {}).get("left"),
+            lf_tire_temp_middle=frame.tire_temps.get("LF", {}).get("middle"),
+            lf_tire_temp_right=frame.tire_temps.get("LF", {}).get("right"),
+            # Tire temps - Right Front
+            rf_tire_temp_left=frame.tire_temps.get("RF", {}).get("left"),
+            rf_tire_temp_middle=frame.tire_temps.get("RF", {}).get("middle"),
+            rf_tire_temp_right=frame.tire_temps.get("RF", {}).get("right"),
+            # Tire temps - Left Rear
+            lr_tire_temp_left=frame.tire_temps.get("LR", {}).get("left"),
+            lr_tire_temp_middle=frame.tire_temps.get("LR", {}).get("middle"),
+            lr_tire_temp_right=frame.tire_temps.get("LR", {}).get("right"),
+            # Tire temps - Right Rear
+            rr_tire_temp_left=frame.tire_temps.get("RR", {}).get("left"),
+            rr_tire_temp_middle=frame.tire_temps.get("RR", {}).get("middle"),
+            rr_tire_temp_right=frame.tire_temps.get("RR", {}).get("right"),
+            # Tire wear - Left Front
+            lf_tire_wear_left=frame.tire_wear.get("LF", {}).get("left"),
+            lf_tire_wear_middle=frame.tire_wear.get("LF", {}).get("middle"),
+            lf_tire_wear_right=frame.tire_wear.get("LF", {}).get("right"),
+            # Tire wear - Right Front
+            rf_tire_wear_left=frame.tire_wear.get("RF", {}).get("left"),
+            rf_tire_wear_middle=frame.tire_wear.get("RF", {}).get("middle"),
+            rf_tire_wear_right=frame.tire_wear.get("RF", {}).get("right"),
+            # Tire wear - Left Rear
+            lr_tire_wear_left=frame.tire_wear.get("LR", {}).get("left"),
+            lr_tire_wear_middle=frame.tire_wear.get("LR", {}).get("middle"),
+            lr_tire_wear_right=frame.tire_wear.get("LR", {}).get("right"),
+            # Tire wear - Right Rear
+            rr_tire_wear_left=frame.tire_wear.get("RR", {}).get("left"),
+            rr_tire_wear_middle=frame.tire_wear.get("RR", {}).get("middle"),
+            rr_tire_wear_right=frame.tire_wear.get("RR", {}).get("right"),
+            # Brake pressure
+            lf_brake_pressure=frame.brake_line_pressure.get("LF"),
+            rf_brake_pressure=frame.brake_line_pressure.get("RF"),
+            lr_brake_pressure=frame.brake_line_pressure.get("LR"),
+            rr_brake_pressure=frame.brake_line_pressure.get("RR"),
+            # Track conditions
+            track_temp=frame.track_temp,
+            track_wetness=frame.track_wetness,
+            air_temp=frame.air_temp,
+            # Session state
+            session_flags=frame.session_flags,
+            track_surface=frame.track_surface,
+            on_pit_road=frame.on_pit_road,
+        )
+
+
+class LapMetricsDB(TimestampMixin, Base):
     """Model representing aggregate metrics for a lap."""
 
     __tablename__ = "lap_metrics"
@@ -285,17 +371,6 @@ class LapMetricsDB(Base):
     # Fields with defaults come after
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default_factory=uuid.uuid4, init=False
-    )
-
-    # Timestamps
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), init=False
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        server_default=func.now(),
-        onupdate=func.now(),
-        init=False,
     )
 
     # Relationships

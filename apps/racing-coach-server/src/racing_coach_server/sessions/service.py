@@ -1,4 +1,4 @@
-"""Service for session management."""
+"""Service for session and lap management."""
 
 import logging
 from uuid import UUID
@@ -8,16 +8,18 @@ from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from racing_coach_server.telemetry.models import TrackSession
+from racing_coach_server.telemetry.models import Lap, LapMetricsDB, TrackSession
 
 logger = logging.getLogger(__name__)
 
 
 class SessionService:
-    """Service for track session operations."""
+    """Service for track session and lap operations."""
 
-    def __init__(self, db: AsyncSession):
+    def __init__(self, db: AsyncSession) -> None:
         self.db = db
+
+    # === Session Operations ===
 
     async def add_or_get_session(self, session_frame: SessionFrame) -> TrackSession:
         """
@@ -115,3 +117,97 @@ class SessionService:
             logger.debug(f"No session found with ID {session_id}")
 
         return session
+
+    # === Lap Operations ===
+
+    async def get_laps_for_session(self, session_id: UUID) -> list[Lap]:
+        """
+        Get all laps for a session ordered by lap number.
+
+        Args:
+            session_id: The ID of the session
+
+        Returns:
+            list[Lap]: The laps for the session
+        """
+        stmt = (
+            select(Lap)
+            .where(Lap.track_session_id == session_id)
+            .options(selectinload(Lap.metrics))
+            .order_by(Lap.lap_number)
+        )
+        result = await self.db.execute(stmt)
+        laps = result.scalars().all()
+
+        logger.debug(f"Found {len(laps)} laps for session {session_id}")
+        return list(laps)
+
+    async def get_lap_by_id(self, lap_id: UUID) -> Lap | None:
+        """
+        Get a specific lap by ID with its metrics.
+
+        Args:
+            lap_id: The ID of the lap
+
+        Returns:
+            Lap | None: The lap or None if not found
+        """
+        stmt = (
+            select(Lap)
+            .where(Lap.id == lap_id)
+            .options(
+                selectinload(Lap.metrics).selectinload(LapMetricsDB.braking_zones),
+                selectinload(Lap.metrics).selectinload(LapMetricsDB.corners),
+                selectinload(Lap.track_session),
+            )
+        )
+        result = await self.db.execute(stmt)
+        lap = result.scalar_one_or_none()
+
+        if lap:
+            logger.debug(f"Found lap with ID {lap_id}")
+        else:
+            logger.debug(f"No lap found with ID {lap_id}")
+
+        return lap
+
+    async def add_lap(
+        self,
+        track_session_id: UUID,
+        lap_number: int,
+        lap_time: float | None = None,
+        is_valid: bool = False,
+        lap_id: UUID | None = None,
+    ) -> Lap:
+        """
+        Create a lap record for a session.
+
+        Args:
+            track_session_id: The ID of the track session
+            lap_number: The lap number
+            lap_time: Optional lap time (nullable)
+            is_valid: Whether the lap is valid
+            lap_id: Optional client-provided UUID. If not provided, server generates one.
+
+        Returns:
+            Lap: The created lap record
+        """
+        lap_kwargs: dict = {
+            "track_session_id": track_session_id,
+            "lap_number": lap_number,
+            "lap_time": lap_time,
+            "is_valid": is_valid,
+        }
+        if lap_id is not None:
+            lap_kwargs["id"] = lap_id
+
+        lap = Lap(**lap_kwargs)
+
+        logger.info(f"Lap Id: {lap.id} | Lap_id: {lap_id}")
+        self.db.add(lap)
+        await self.db.flush()
+        logger.info(f"Created lap {lap_number} for session {track_session_id} with ID {lap.id}")
+
+        if lap.id != lap_id:
+            logger.warning("Actual lap ID does not match provided lap id.")
+        return lap

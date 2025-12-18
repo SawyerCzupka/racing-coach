@@ -3,30 +3,47 @@
 from typing import Annotated
 
 from fastapi import Depends
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from racing_coach_server.auth.router import (
+from racing_coach_server.auth.dependencies import (
     AuthServiceDep,
-    CurrentUser,
-    OptionalUser,
+    CurrentUserDep,
+    OptionalUserDep,
     get_auth_service,
     get_current_user,
     get_current_user_optional,
 )
 from racing_coach_server.auth.service import AuthService
-from racing_coach_server.database.engine import get_async_session
+from racing_coach_server.database.dependencies import AsyncSessionDep
+from racing_coach_server.metrics.service import MetricsService
+from racing_coach_server.sessions.service import SessionService
 from racing_coach_server.telemetry.service import TelemetryService
-from racing_coach_server.telemetry.services import (
-    LapService,
-    MetricsService,
-    SessionService,
-    TelemetryDataService,
-)
 
 
-# Legacy service - kept for backward compatibility
+# Session service (sessions + laps)
+async def get_session_service(
+    db: AsyncSessionDep,
+) -> SessionService:
+    """Provide SessionService with injected AsyncSession."""
+    return SessionService(db)
+
+
+SessionServiceDep = Annotated[SessionService, Depends(get_session_service)]
+
+
+# Metrics service
+async def get_metrics_service(
+    db: AsyncSessionDep,
+) -> MetricsService:
+    """Provide MetricsService with injected AsyncSession."""
+    return MetricsService(db)
+
+
+MetricsServiceDep = Annotated[MetricsService, Depends(get_metrics_service)]
+
+
+# Telemetry service (telemetry data/frames)
 async def get_telemetry_service(
-    db: AsyncSession = Depends(get_async_session),
+    db: AsyncSessionDep,
 ) -> TelemetryService:
     """Provide TelemetryService with injected AsyncSession."""
     return TelemetryService(db)
@@ -35,59 +52,25 @@ async def get_telemetry_service(
 TelemetryServiceDep = Annotated[TelemetryService, Depends(get_telemetry_service)]
 
 
-# New focused services
-async def get_session_service(
-    db: AsyncSession = Depends(get_async_session),
-) -> SessionService:
-    """Provide SessionService with injected AsyncSession."""
-    return SessionService(db)
-
-
-async def get_lap_service(
-    db: AsyncSession = Depends(get_async_session),
-) -> LapService:
-    """Provide LapService with injected AsyncSession."""
-    return LapService(db)
-
-
-async def get_metrics_service(
-    db: AsyncSession = Depends(get_async_session),
-) -> MetricsService:
-    """Provide MetricsService with injected AsyncSession."""
-    return MetricsService(db)
-
-
-async def get_telemetry_data_service(
-    db: AsyncSession = Depends(get_async_session),
-) -> TelemetryDataService:
-    """Provide TelemetryDataService with injected AsyncSession."""
-    return TelemetryDataService(db)
-
-
-SessionServiceDep = Annotated[SessionService, Depends(get_session_service)]
-LapServiceDep = Annotated[LapService, Depends(get_lap_service)]
-MetricsServiceDep = Annotated[MetricsService, Depends(get_metrics_service)]
-TelemetryDataServiceDep = Annotated[TelemetryDataService, Depends(get_telemetry_data_service)]
-
-# Auth dependencies re-exported for convenience
+# Re-exported for convenience
 __all__ = [
+    # Database
+    "AsyncSessionDep",
+    # Sessions
+    "get_session_service",
+    "SessionServiceDep",
+    # Metrics
+    "get_metrics_service",
+    "MetricsServiceDep",
     # Telemetry
     "get_telemetry_service",
     "TelemetryServiceDep",
-    "get_session_service",
-    "SessionServiceDep",
-    "get_lap_service",
-    "LapServiceDep",
-    "get_metrics_service",
-    "MetricsServiceDep",
-    "get_telemetry_data_service",
-    "TelemetryDataServiceDep",
     # Auth
     "get_auth_service",
     "AuthService",
     "AuthServiceDep",
     "get_current_user",
     "get_current_user_optional",
-    "CurrentUser",
-    "OptionalUser",
+    "CurrentUserDep",
+    "OptionalUserDep",
 ]

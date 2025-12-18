@@ -3,22 +3,12 @@
 import logging
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, HTTPException
 from racing_coach_core.schemas.responses import LapUploadResponse
 from racing_coach_core.schemas.telemetry import LapTelemetry, SessionFrame
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from racing_coach_server.database.engine import get_async_session, transactional_session
-from racing_coach_server.dependencies import (
-    get_lap_service,
-    get_session_service,
-    get_telemetry_data_service,
-)
-from racing_coach_server.telemetry.services import (
-    LapService,
-    SessionService,
-    TelemetryDataService,
-)
+from racing_coach_server.database.engine import transactional_session
+from racing_coach_server.dependencies import AsyncSessionDep, SessionServiceDep, TelemetryServiceDep
 
 logger = logging.getLogger(__name__)
 
@@ -29,15 +19,15 @@ router = APIRouter()
     "/lap",
     response_model=LapUploadResponse,
     tags=["telemetry"],
+    operation_id="uploadLap",
 )
 async def upload_lap(
     lap: LapTelemetry,
     session: SessionFrame,
+    session_service: SessionServiceDep,
+    telemetry_service: TelemetryServiceDep,
+    db: AsyncSessionDep,
     lap_id: UUID | None = None,
-    db: AsyncSession = Depends(get_async_session),
-    session_service: SessionService = Depends(get_session_service),
-    lap_service: LapService = Depends(get_lap_service),
-    telemetry_service: TelemetryDataService = Depends(get_telemetry_data_service),
 ) -> LapUploadResponse:
     """
     Upload a lap with telemetry data.
@@ -51,7 +41,6 @@ async def upload_lap(
     - If any operation fails, the transaction is automatically rolled back
     - If all operations succeed, changes are committed
     """
-
     logger.info(f"Router lap_id: {lap_id}")
 
     try:
@@ -63,7 +52,7 @@ async def upload_lap(
             db_track_session = await session_service.add_or_get_session(session)
 
             # Add lap to the db (use client-provided lap_id if available)
-            db_lap = await lap_service.add_lap(
+            db_lap = await session_service.add_lap(
                 track_session_id=db_track_session.id,
                 lap_number=lap_number,
                 lap_id=lap_id,
@@ -87,13 +76,16 @@ async def upload_lap(
         raise HTTPException(status_code=500, detail=f"Server error: {str(e)}") from e
 
 
-@router.get("/sessions/latest", tags=["telemetry"])
+@router.get(
+    "/sessions/latest",
+    tags=["telemetry"],
+    response_model=SessionFrame,
+    operation_id="getLatestSession",
+)
 async def get_latest_session(
-    session_service: SessionService = Depends(get_session_service),
+    session_service: SessionServiceDep,
 ) -> SessionFrame:
-    """
-    Endpoint to retrieve the latest track session.
-    """
+    """Endpoint to retrieve the latest track session."""
     try:
         latest_session = await session_service.get_latest_session()
 

@@ -3,13 +3,9 @@
 import logging
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, HTTPException
 
-from racing_coach_server.dependencies import (
-    get_lap_service,
-    get_session_service,
-    get_telemetry_data_service,
-)
+from racing_coach_server.dependencies import SessionServiceDep, TelemetryServiceDep
 from racing_coach_server.sessions.schemas import (
     LapDetailResponse,
     LapSummary,
@@ -18,11 +14,6 @@ from racing_coach_server.sessions.schemas import (
     SessionListResponse,
     SessionSummary,
     TelemetryFrameResponse,
-)
-from racing_coach_server.telemetry.services import (
-    LapService,
-    SessionService,
-    TelemetryDataService,
 )
 
 logger = logging.getLogger(__name__)
@@ -37,7 +28,7 @@ router = APIRouter()
     tags=["sessions"],
 )
 async def list_sessions(
-    session_service: SessionService = Depends(get_session_service),
+    session_service: SessionServiceDep,
 ) -> SessionListResponse:
     """
     List all sessions.
@@ -82,19 +73,16 @@ async def list_sessions(
 )
 async def get_session(
     session_id: UUID,
-    session_service: SessionService = Depends(get_session_service),
-    lap_service: LapService = Depends(get_lap_service),
+    session_service: SessionServiceDep,
 ) -> SessionDetailResponse:
-    """
-    Get session details including all laps.
-    """
+    """Get session details including all laps."""
     try:
         session = await session_service.get_session_by_id(session_id)
 
         if not session:
             raise HTTPException(status_code=404, detail=f"Session {session_id} not found")
 
-        laps = await lap_service.get_laps_for_session(session_id)
+        laps = await session_service.get_laps_for_session(session_id)
 
         lap_summaries = [
             LapSummary(
@@ -138,13 +126,11 @@ async def get_session(
 async def get_lap(
     session_id: UUID,
     lap_id: UUID,
-    lap_service: LapService = Depends(get_lap_service),
+    session_service: SessionServiceDep,
 ) -> LapDetailResponse:
-    """
-    Get detailed information about a specific lap.
-    """
+    """Get detailed information about a specific lap."""
     try:
-        lap = await lap_service.get_lap_by_id(lap_id)
+        lap = await session_service.get_lap_by_id(lap_id)
 
         if not lap:
             raise HTTPException(status_code=404, detail=f"Lap {lap_id} not found")
@@ -184,8 +170,8 @@ async def get_lap(
 async def get_lap_telemetry(
     session_id: UUID,
     lap_id: UUID,
-    lap_service: LapService = Depends(get_lap_service),
-    telemetry_service: TelemetryDataService = Depends(get_telemetry_data_service),
+    session_service: SessionServiceDep,
+    telemetry_service: TelemetryServiceDep,
 ) -> LapTelemetryResponse:
     """
     Get all telemetry frames for a specific lap.
@@ -195,7 +181,7 @@ async def get_lap_telemetry(
     """
     try:
         # Verify lap exists and belongs to session
-        lap = await lap_service.get_lap_by_id(lap_id)
+        lap = await session_service.get_lap_by_id(lap_id)
 
         if not lap:
             raise HTTPException(status_code=404, detail=f"Lap {lap_id} not found")

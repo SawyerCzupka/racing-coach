@@ -8,9 +8,10 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from racing_coach_server.database.base import Base
+from racing_coach_server.database.mixins import TimestampMixin
 
 
-class User(Base):
+class User(TimestampMixin, Base):
     """Model representing a user account."""
 
     __tablename__ = "user"
@@ -29,14 +30,6 @@ class User(Base):
     # Primary key with default_factory
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default_factory=uuid.uuid4
-    )
-
-    # Server-defaulted timestamps
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), init=False
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), init=False
     )
 
     # Relationships
