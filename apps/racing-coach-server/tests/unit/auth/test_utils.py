@@ -1,7 +1,6 @@
 """Unit tests for auth utility functions."""
 
 import pytest
-
 from racing_coach_server.auth.utils import (
     generate_device_code,
     generate_session_token,

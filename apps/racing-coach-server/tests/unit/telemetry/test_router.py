@@ -1,18 +1,22 @@
 """Unit tests for telemetry router endpoints."""
 
-from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from typing import Any
 from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 import pytest
-from httpx import ASGITransport, AsyncClient, Response
-from racing_coach_core.schemas.telemetry import SessionFrame, TelemetryFrame
+from httpx import ASGITransport, AsyncClient
 from racing_coach_server.app import app
 from racing_coach_server.telemetry.models import Lap, TrackSession
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from tests.factories import SessionFrameFactory, TelemetryFrameFactory, TrackSessionFactory
+from tests.polyfactories import (
+    LapTelemetryFactory,
+    SessionFrameFactory,
+    TelemetryFrameFactory,
+    TrackSessionFactory,
+)
 
 
 @pytest.mark.unit
@@ -21,16 +25,18 @@ class TestTelemetryRouter:
 
     async def test_upload_lap_success(
         self,
-        telemetry_frame_factory,
-        session_frame_factory,
+        telemetry_frame_factory: TelemetryFrameFactory,
+        session_frame_factory: SessionFrameFactory,
+        lap_telemetry_factory: LapTelemetryFactory,
+        track_session_factory: TrackSessionFactory,
     ):
         """Test successful lap upload."""
         # Arrange
         frames = [telemetry_frame_factory.build(lap_number=1) for _ in range(100)]
-        lap_telemetry = type("LapTelemetry", (), {"frames": frames})()
+        # lap_telemetry = lap_telemetry_factory.build(frames=frames)
         session_frame = session_frame_factory.build()
 
-        mock_track_session = TrackSession(
+        mock_track_session = track_session_factory.build(
             id=session_frame.session_id,
             track_id=session_frame.track_id,
             track_name=session_frame.track_name,
@@ -52,12 +58,10 @@ class TestTelemetryRouter:
             is_valid=False,
         )
 
-        # Arrange service mocks for the new split services
+        # Arrange service mocks
         mock_session_service = AsyncMock()
         mock_session_service.add_or_get_session.return_value = mock_track_session
-
-        mock_lap_service = AsyncMock()
-        mock_lap_service.add_lap.return_value = mock_lap
+        mock_session_service.add_lap.return_value = mock_lap
 
         mock_telemetry_service = AsyncMock()
         mock_telemetry_service.add_telemetry_sequence.return_value = None
@@ -67,9 +71,6 @@ class TestTelemetryRouter:
         async def mock_session_service_dep():
             return mock_session_service
 
-        async def mock_lap_service_dep():
-            return mock_lap_service
-
         async def mock_telemetry_service_dep():
             return mock_telemetry_service
 
@@ -77,20 +78,18 @@ class TestTelemetryRouter:
             return mock_db
 
         @asynccontextmanager
-        async def mock_transaction(session):
+        async def mock_transaction(session: AsyncSession):
             yield session
 
         # Use FastAPI dependency overrides
         from racing_coach_server.database.engine import get_async_session
         from racing_coach_server.dependencies import (
-            get_lap_service,
             get_session_service,
-            get_telemetry_data_service,
+            get_telemetry_service,
         )
 
         app.dependency_overrides[get_session_service] = mock_session_service_dep
-        app.dependency_overrides[get_lap_service] = mock_lap_service_dep
-        app.dependency_overrides[get_telemetry_data_service] = mock_telemetry_service_dep
+        app.dependency_overrides[get_telemetry_service] = mock_telemetry_service_dep
         app.dependency_overrides[get_async_session] = mock_db_dep
 
         with patch("racing_coach_server.telemetry.router.transactional_session") as mock_txn:
@@ -100,26 +99,26 @@ class TestTelemetryRouter:
                 transport=ASGITransport(app=app), base_url="http://test"
             ) as client:
                 # Act
-                response = await client.post(
-                    "/api/v1/telemetry/lap",
-                    json={
-                        "lap": {
-                            "frames": [
-                                {
-                                    **frame.model_dump(),
-                                    "timestamp": frame.timestamp.isoformat(),
-                                }
-                                for frame in frames
-                            ],
-                            "lap_time": 90.5,
-                        },
-                        "session": {
-                            **session_frame.model_dump(),
-                            "timestamp": session_frame.timestamp.isoformat(),
-                            "session_id": str(session_frame.session_id),
-                        },
+
+                data: dict[str, Any] = {
+                    "lap": {
+                        "frames": [
+                            {
+                                **frame.model_dump(),
+                                "timestamp": frame.timestamp.isoformat(),
+                            }
+                            for frame in frames
+                        ],
+                        "lap_time": 90.5,
                     },
-                )
+                    "session": {
+                        **session_frame.model_dump(),
+                        "timestamp": session_frame.timestamp.isoformat(),
+                        "session_id": str(session_frame.session_id),
+                    },
+                }
+
+                response = await client.post("/api/v1/telemetry/lap", json=data)
 
         # Clean up override
         app.dependency_overrides.clear()
@@ -130,7 +129,7 @@ class TestTelemetryRouter:
         assert data["status"] == "success"
         assert data["lap_id"] == str(lap_id)
         mock_session_service.add_or_get_session.assert_called_once()
-        mock_lap_service.add_lap.assert_called_once()
+        mock_session_service.add_lap.assert_called_once()
         mock_telemetry_service.add_telemetry_sequence.assert_called_once()
 
     async def test_get_latest_session_success(

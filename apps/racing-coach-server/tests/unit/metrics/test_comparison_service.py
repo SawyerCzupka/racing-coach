@@ -2,7 +2,8 @@
 
 import pytest
 from racing_coach_server.metrics.comparison_service import LapComparisonService
-from racing_coach_server.telemetry.models import BrakingMetricsDB, CornerMetricsDB, LapMetricsDB
+
+from tests.polyfactories import BrakingMetricsDBFactory, CornerMetricsDBFactory, LapMetricsDBFactory
 
 
 @pytest.mark.unit
@@ -11,9 +12,9 @@ class TestLapComparisonService:
 
     def test_compare_identical_laps(
         self,
-        lap_metrics_db_factory,
-        braking_metrics_db_factory,
-        corner_metrics_db_factory,
+        lap_metrics_db_factory: LapMetricsDBFactory,
+        braking_metrics_db_factory: BrakingMetricsDBFactory,
+        corner_metrics_db_factory: CornerMetricsDBFactory,
     ) -> None:
         """Test comparing two identical laps produces zero deltas."""
         # Create identical metrics
@@ -122,9 +123,9 @@ class TestLapComparisonService:
 
     def test_compare_laps_with_improvements(
         self,
-        lap_metrics_db_factory,
-        braking_metrics_db_factory,
-        corner_metrics_db_factory,
+        lap_metrics_db_factory: LapMetricsDBFactory,
+        braking_metrics_db_factory: BrakingMetricsDBFactory,
+        corner_metrics_db_factory: CornerMetricsDBFactory,
     ) -> None:
         """Test comparison shows positive deltas when comparison lap is faster."""
         # Create baseline metrics
@@ -185,8 +186,8 @@ class TestLapComparisonService:
 
     def test_distance_based_matching(
         self,
-        lap_metrics_db_factory,
-        corner_metrics_db_factory,
+        lap_metrics_db_factory: LapMetricsDBFactory,
+        corner_metrics_db_factory: CornerMetricsDBFactory,
     ) -> None:
         """Test that corners are matched by closest distance."""
         # Create baseline with 3 corners
@@ -227,8 +228,8 @@ class TestLapComparisonService:
 
     def test_unmatched_zones(
         self,
-        lap_metrics_db_factory,
-        braking_metrics_db_factory,
+        lap_metrics_db_factory: LapMetricsDBFactory,
+        braking_metrics_db_factory: BrakingMetricsDBFactory,
     ) -> None:
         """Test that zones that don't match show as unmatched."""
         # Create baseline with 2 braking zones
@@ -257,8 +258,8 @@ class TestLapComparisonService:
 
     def test_trail_braking_comparison(
         self,
-        lap_metrics_db_factory,
-        braking_metrics_db_factory,
+        lap_metrics_db_factory: LapMetricsDBFactory,
+        braking_metrics_db_factory: BrakingMetricsDBFactory,
     ) -> None:
         """Test trail braking comparison between laps."""
         # Baseline uses trail braking
@@ -287,7 +288,7 @@ class TestLapComparisonService:
 
     def test_empty_laps_comparison(
         self,
-        lap_metrics_db_factory,
+        lap_metrics_db_factory: LapMetricsDBFactory,
     ) -> None:
         """Test comparison with no braking zones or corners."""
         baseline = lap_metrics_db_factory.build()

@@ -1,14 +1,22 @@
 """Integration tests for metrics API endpoints."""
 
+from typing import Any
 from uuid import uuid4
 
 import pytest
 from httpx import AsyncClient
 from racing_coach_core.algs.events import BrakingMetrics, CornerMetrics, LapMetrics
-from racing_coach_server.telemetry.models import Lap, LapMetricsDB, TrackSession
+from racing_coach_server.telemetry.models import Lap, LapMetricsDB
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+
+from tests.polyfactories import (
+    BrakingMetricsDBFactory,
+    CornerMetricsDBFactory,
+    LapMetricsDBFactory,
+    TrackSessionFactory,
+)
 
 
 @pytest.mark.integration
@@ -16,7 +24,10 @@ class TestMetricsAPI:
     """Integration tests for metrics upload and retrieval."""
 
     async def test_upload_lap_metrics_success(
-        self, test_client: AsyncClient, db_session: AsyncSession, track_session_factory
+        self,
+        test_client: AsyncClient,
+        db_session: AsyncSession,
+        track_session_factory: TrackSessionFactory,
     ) -> None:
         """Test successful upload of lap metrics."""
         # Create a track session and lap first
@@ -93,56 +104,57 @@ class TestMetricsAPI:
         )
 
         # Upload metrics
+        data: dict[str, Any] = {
+            "lap_id": str(lap.id),
+            "lap_metrics": {
+                "lap_number": lap_metrics.lap_number,
+                "lap_time": lap_metrics.lap_time,
+                "braking_zones": [
+                    {
+                        "braking_point_distance": b.braking_point_distance,
+                        "braking_point_speed": b.braking_point_speed,
+                        "end_distance": b.end_distance,
+                        "max_brake_pressure": b.max_brake_pressure,
+                        "braking_duration": b.braking_duration,
+                        "minimum_speed": b.minimum_speed,
+                        "initial_deceleration": b.initial_deceleration,
+                        "average_deceleration": b.average_deceleration,
+                        "braking_efficiency": b.braking_efficiency,
+                        "has_trail_braking": b.has_trail_braking,
+                        "trail_brake_distance": b.trail_brake_distance,
+                        "trail_brake_percentage": b.trail_brake_percentage,
+                    }
+                    for b in lap_metrics.braking_zones
+                ],
+                "corners": [
+                    {
+                        "turn_in_distance": c.turn_in_distance,
+                        "apex_distance": c.apex_distance,
+                        "exit_distance": c.exit_distance,
+                        "throttle_application_distance": c.throttle_application_distance,
+                        "turn_in_speed": c.turn_in_speed,
+                        "apex_speed": c.apex_speed,
+                        "exit_speed": c.exit_speed,
+                        "throttle_application_speed": c.throttle_application_speed,
+                        "max_lateral_g": c.max_lateral_g,
+                        "time_in_corner": c.time_in_corner,
+                        "corner_distance": c.corner_distance,
+                        "max_steering_angle": c.max_steering_angle,
+                        "speed_loss": c.speed_loss,
+                        "speed_gain": c.speed_gain,
+                    }
+                    for c in lap_metrics.corners
+                ],
+                "total_corners": lap_metrics.total_corners,
+                "total_braking_zones": lap_metrics.total_braking_zones,
+                "average_corner_speed": lap_metrics.average_corner_speed,
+                "max_speed": lap_metrics.max_speed,
+                "min_speed": lap_metrics.min_speed,
+            },
+        }
         response = await test_client.post(
             "/api/v1/metrics/lap",
-            json={
-                "lap_id": str(lap.id),
-                "lap_metrics": {
-                    "lap_number": lap_metrics.lap_number,
-                    "lap_time": lap_metrics.lap_time,
-                    "braking_zones": [
-                        {
-                            "braking_point_distance": b.braking_point_distance,
-                            "braking_point_speed": b.braking_point_speed,
-                            "end_distance": b.end_distance,
-                            "max_brake_pressure": b.max_brake_pressure,
-                            "braking_duration": b.braking_duration,
-                            "minimum_speed": b.minimum_speed,
-                            "initial_deceleration": b.initial_deceleration,
-                            "average_deceleration": b.average_deceleration,
-                            "braking_efficiency": b.braking_efficiency,
-                            "has_trail_braking": b.has_trail_braking,
-                            "trail_brake_distance": b.trail_brake_distance,
-                            "trail_brake_percentage": b.trail_brake_percentage,
-                        }
-                        for b in lap_metrics.braking_zones
-                    ],
-                    "corners": [
-                        {
-                            "turn_in_distance": c.turn_in_distance,
-                            "apex_distance": c.apex_distance,
-                            "exit_distance": c.exit_distance,
-                            "throttle_application_distance": c.throttle_application_distance,
-                            "turn_in_speed": c.turn_in_speed,
-                            "apex_speed": c.apex_speed,
-                            "exit_speed": c.exit_speed,
-                            "throttle_application_speed": c.throttle_application_speed,
-                            "max_lateral_g": c.max_lateral_g,
-                            "time_in_corner": c.time_in_corner,
-                            "corner_distance": c.corner_distance,
-                            "max_steering_angle": c.max_steering_angle,
-                            "speed_loss": c.speed_loss,
-                            "speed_gain": c.speed_gain,
-                        }
-                        for c in lap_metrics.corners
-                    ],
-                    "total_corners": lap_metrics.total_corners,
-                    "total_braking_zones": lap_metrics.total_braking_zones,
-                    "average_corner_speed": lap_metrics.average_corner_speed,
-                    "max_speed": lap_metrics.max_speed,
-                    "min_speed": lap_metrics.min_speed,
-                },
-            },
+            json=data,
         )
 
         # Assert
@@ -171,10 +183,10 @@ class TestMetricsAPI:
         self,
         test_client: AsyncClient,
         db_session: AsyncSession,
-        track_session_factory,
-        lap_metrics_db_factory,
-        braking_metrics_db_factory,
-        corner_metrics_db_factory,
+        track_session_factory: TrackSessionFactory,
+        lap_metrics_db_factory: LapMetricsDBFactory,
+        braking_metrics_db_factory: BrakingMetricsDBFactory,
+        corner_metrics_db_factory: CornerMetricsDBFactory,
     ) -> None:
         """Test successful retrieval of lap metrics."""
         # Create test data
@@ -269,7 +281,7 @@ class TestMetricsAPI:
         self,
         test_client: AsyncClient,
         db_session: AsyncSession,
-        track_session_factory,
+        track_session_factory: TrackSessionFactory,
     ) -> None:
         """Test that uploading metrics twice uses upsert (replace old metrics)."""
         # Create a track session and lap
@@ -287,7 +299,7 @@ class TestMetricsAPI:
         await db_session.commit()
 
         # Upload metrics first time
-        metrics_v1 = {
+        metrics_v1: dict[str, Any] = {
             "lap_id": str(lap.id),
             "lap_metrics": {
                 "lap_number": 1,
@@ -305,7 +317,7 @@ class TestMetricsAPI:
         assert response1.status_code == 200
 
         # Upload metrics second time with different values
-        metrics_v2 = {
+        metrics_v2: dict[str, Any] = {
             "lap_id": str(lap.id),
             "lap_metrics": {
                 "lap_number": 1,
@@ -336,10 +348,10 @@ class TestMetricsAPI:
         self,
         test_client: AsyncClient,
         db_session: AsyncSession,
-        track_session_factory,
-        lap_metrics_db_factory,
-        braking_metrics_db_factory,
-        corner_metrics_db_factory,
+        track_session_factory: TrackSessionFactory,
+        lap_metrics_db_factory: LapMetricsDBFactory,
+        braking_metrics_db_factory: BrakingMetricsDBFactory,
+        corner_metrics_db_factory: CornerMetricsDBFactory,
     ) -> None:
         """Test successful comparison of two laps."""
         # Create track session

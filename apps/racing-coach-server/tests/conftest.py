@@ -3,7 +3,6 @@
 import os
 from collections.abc import AsyncGenerator, Generator
 from pathlib import Path
-from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock
 
 # Set test environment variables before importing app modules
@@ -14,7 +13,7 @@ import pytest_asyncio
 from alembic import command
 from alembic.config import Config
 from httpx import ASGITransport, AsyncClient
-from pytest_factoryboy import register
+from polyfactory.pytest_plugin import register_fixture
 from pytest_mock import MockerFixture
 from racing_coach_server.app import app
 from racing_coach_server.auth.service import AuthService
@@ -27,39 +26,40 @@ from sqlalchemy.ext.asyncio import (
     AsyncTransaction,
     create_async_engine,
 )
-from testcontainers.postgres import PostgresContainer
+from testcontainers.postgres import PostgresContainer  # pyright: ignore[reportMissingTypeStubs]
 
-from tests.factories import (
+from tests.polyfactories import (
     BrakingMetricsDBFactory,
     CornerMetricsDBFactory,
     DeviceAuthorizationFactory,
     DeviceTokenFactory,
     LapFactory,
     LapMetricsDBFactory,
+    LapTelemetryFactory,
     SessionFrameFactory,
-    TelemetryFactory,
+    TelemetryDBFactory,
     TelemetryFrameFactory,
+    TelemetrySequenceFactory,
     TrackSessionFactory,
     UserFactory,
     UserSessionFactory,
 )
 
-if TYPE_CHECKING:
-    from pytest_mock.plugin import MockType
-
-# Register factories to create pytest fixtures automatically
-register(TelemetryFrameFactory)
-register(SessionFrameFactory)
-register(TrackSessionFactory)
-register(LapFactory)
-register(TelemetryFactory)
-register(LapMetricsDBFactory)
-register(BrakingMetricsDBFactory)
-register(CornerMetricsDBFactory)
-register(UserFactory)
-register(UserSessionFactory)
-register(DeviceTokenFactory)
-register(DeviceAuthorizationFactory)
+# Register all polyfactory factories as pytest fixtures
+register_fixture(TelemetryFrameFactory)
+register_fixture(SessionFrameFactory)
+register_fixture(LapTelemetryFactory)
+register_fixture(TelemetrySequenceFactory)
+register_fixture(TrackSessionFactory)
+register_fixture(LapFactory)
+register_fixture(TelemetryDBFactory)
+register_fixture(LapMetricsDBFactory)
+register_fixture(BrakingMetricsDBFactory)
+register_fixture(CornerMetricsDBFactory)
+register_fixture(UserFactory)
+register_fixture(UserSessionFactory)
+register_fixture(DeviceTokenFactory)
+register_fixture(DeviceAuthorizationFactory)
 
 
 # ============================================================================
@@ -322,24 +322,3 @@ def mock_db_session(mocker: MockerFixture) -> AsyncMock:
     mock_session.add = mocker.Mock()
     mock_session.add_all = mocker.Mock()
     return mock_session
-
-
-# ============================================================================
-# Parameterization Helpers
-# ============================================================================
-
-
-# def pytest_configure(config):
-#     """Configure custom pytest markers."""
-#     config.addinivalue_line(
-#         "markers",
-#         "unit: mark test as a unit test (mocks external dependencies)",
-#     )
-#     config.addinivalue_line(
-#         "markers",
-#         "integration: mark test as an integration test (uses test database)",
-#     )
-#     config.addinivalue_line(
-#         "markers",
-#         "slow: mark test as slow (takes longer than 1 second)",
-#     )
