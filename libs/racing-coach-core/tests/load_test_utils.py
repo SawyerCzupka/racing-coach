@@ -43,7 +43,7 @@ class LoadTestMetrics:
     events_dropped: int = 0
 
     # Timing metrics (in milliseconds)
-    latencies: list[float] = field(default_factory=list)
+    latencies: list[float] = field(default_factory=list[float])
     min_latency_ms: float = float("inf")
     max_latency_ms: float = 0.0
     avg_latency_ms: float = 0.0
@@ -52,7 +52,7 @@ class LoadTestMetrics:
     p99_latency_ms: float = 0.0
 
     # Event creation metrics (in milliseconds)
-    creation_times: list[float] = field(default_factory=list)
+    creation_times: list[float] = field(default_factory=list[float])
     avg_creation_time_ms: float = 0.0
     p99_creation_time_ms: float = 0.0
 
@@ -67,7 +67,7 @@ class LoadTestMetrics:
     memory_growth: int = 0
 
     # Queue metrics
-    queue_size_samples: list[int] = field(default_factory=list)
+    queue_size_samples: list[int] = field(default_factory=list[int])
     max_queue_size: int = 0
     avg_queue_size: float = 0.0
     queue_overflow_count: int = 0
@@ -132,7 +132,7 @@ Load Test Results:
     Avg Depth: {self.avg_queue_size:.1f}
 
   Failures: latency={self.had_latency_violations}, memory={self.had_memory_growth}, dropped={self.had_dropped_events}
-"""
+"""  # noqa: E501
 
 
 @dataclass
@@ -371,8 +371,8 @@ class QueueMonitor:
     def _monitor_loop(self) -> None:
         """Main loop for monitoring queue depth."""
         while self._running:
-            if self.event_bus._queue is not None:
-                qsize = self.event_bus._queue.qsize()
+            if self.event_bus._queue is not None:  # pyright: ignore[reportPrivateUsage]
+                qsize = self.event_bus._queue.qsize()  # pyright: ignore[reportPrivateUsage]
                 with self._lock:
                     self.samples.append(qsize)
             time.sleep(self.sample_interval)

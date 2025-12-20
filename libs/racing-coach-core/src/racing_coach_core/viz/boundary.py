@@ -6,23 +6,17 @@ and lateral position data.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
+from racing_coach_core.schemas.track import AugmentedTelemetrySequence, TrackBoundary
+
 from .constants import MS_TO_KMH
 from .styles import COLORS, SPEED_COLORSCALE, get_chart_layout, get_xaxis, get_yaxis
 
-if TYPE_CHECKING:
-    from racing_coach_core.schemas.track import (
-        AugmentedTelemetrySequence,
-        TrackBoundary,
-    )
-
 # Lateral position colorscale: red (left) -> white (center) -> blue (right)
-LATERAL_COLORSCALE = [
+LATERAL_COLORSCALE: list[list[float | str]] = [
     [0.0, "#ef4444"],  # red - full left
     [0.25, "#fca5a5"],  # light red
     [0.5, "#ffffff"],  # white - center
@@ -41,7 +35,7 @@ BOUNDARY_COLORS = {
 
 
 def create_track_boundary_map(
-    boundary: "TrackBoundary",
+    boundary: TrackBoundary,
     show_center_line: bool = True,
     show_start_finish: bool = True,
     title: str | None = None,
@@ -139,7 +133,7 @@ def create_track_boundary_map(
 
 
 def create_track_map_with_racing_line(
-    boundary: "TrackBoundary",
+    boundary: TrackBoundary,
     longitudes: list[float] | np.ndarray,
     latitudes: list[float] | np.ndarray,
     speeds: list[float] | np.ndarray,
@@ -251,7 +245,7 @@ def create_track_map_with_racing_line(
 
 
 def create_track_map_with_lateral_position(
-    boundary: "TrackBoundary",
+    boundary: TrackBoundary,
     longitudes: list[float] | np.ndarray,
     latitudes: list[float] | np.ndarray,
     lateral_positions: list[float] | np.ndarray,
@@ -411,7 +405,7 @@ def create_lateral_position_chart(
     fig.add_hline(y=0, line_dash="solid", line_color=COLORS["text_secondary"], opacity=0.3)
 
     # Annotations for boundaries
-    fig.add_annotation(
+    fig.add_annotation(  # type: ignore[reportUnknownMemberType]  # plotly stubs incomplete
         x=0.02,
         y=-1,
         xref="paper",
@@ -420,7 +414,7 @@ def create_lateral_position_chart(
         showarrow=False,
         font={"color": COLORS["text_secondary"], "size": 10},
     )
-    fig.add_annotation(
+    fig.add_annotation(  # type: ignore[reportUnknownMemberType]  # plotly stubs incomplete
         x=0.02,
         y=1,
         xref="paper",
@@ -475,12 +469,12 @@ def create_telemetry_with_lateral_chart(
         cols=1,
         shared_xaxes=True,
         vertical_spacing=0.05,
-        subplot_titles=(
+        subplot_titles=[
             "Speed (km/h)",
             "Throttle & Brake (%)",
             "Steering (deg)",
             "Lateral Position",
-        ),
+        ],
     )
 
     # Speed
@@ -592,7 +586,7 @@ def create_telemetry_with_lateral_chart(
 
 
 def create_augmented_telemetry_chart(
-    augmented_sequence: "AugmentedTelemetrySequence",
+    augmented_sequence: AugmentedTelemetrySequence,
     title: str = "Augmented Telemetry",
 ) -> go.Figure:
     """

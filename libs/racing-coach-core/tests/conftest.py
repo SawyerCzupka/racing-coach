@@ -5,7 +5,7 @@ from collections.abc import AsyncGenerator
 from typing import Any
 
 import pytest
-from pytest_factoryboy import register
+from polyfactory.pytest_plugin import register_fixture
 from racing_coach_core.events.base import Event, EventBus, EventType
 
 from tests.factories import (
@@ -24,14 +24,14 @@ from tests.load_test_utils import (
 )
 
 # Register factories to create pytest fixtures automatically
-register(TelemetryFrameFactory)
-register(SessionFrameFactory)
-register(LapTelemetryFactory)
-register(TelemetryAndSessionFactory)
-register(LapAndSessionFactory)
-register(BrakingMetricsFactory)
-register(CornerMetricsFactory)
-register(LapMetricsFactory)
+register_fixture(TelemetryFrameFactory)
+register_fixture(SessionFrameFactory)
+register_fixture(LapTelemetryFactory)
+register_fixture(TelemetryAndSessionFactory)
+register_fixture(LapAndSessionFactory)
+register_fixture(BrakingMetricsFactory)
+register_fixture(CornerMetricsFactory)
+register_fixture(LapMetricsFactory)
 
 
 @pytest.fixture

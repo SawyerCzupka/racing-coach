@@ -9,6 +9,7 @@ Skip in CI with: uv run pytest -m "not load"
 
 import asyncio
 import time
+from typing import Any
 from uuid import uuid4
 
 import pytest
@@ -39,7 +40,7 @@ class TestEventCreationOverhead:
         """
         avg_ms, p99_ms, max_ms = measure_event_creation_overhead(num_events=1000)
 
-        print(f"\nTelemetryFrame Creation Overhead (1000 events):")
+        print("\nTelemetryFrame Creation Overhead (1000 events):")
         print(f"  Avg: {avg_ms:.3f}ms")
         print(f"  P99: {p99_ms:.3f}ms")
         print(f"  Max: {max_ms:.3f}ms")
@@ -53,7 +54,7 @@ class TestEventCreationOverhead:
         # Create 6000 events (100 seconds at 60Hz equivalent)
         avg_ms, p99_ms, max_ms = measure_event_creation_overhead(num_events=6000)
 
-        print(f"\nSustained TelemetryFrame Creation (6000 events):")
+        print("\nSustained TelemetryFrame Creation (6000 events):")
         print(f"  Avg: {avg_ms:.3f}ms")
         print(f"  P99: {p99_ms:.3f}ms")
         print(f"  Max: {max_ms:.3f}ms (likely includes GC)")
@@ -150,13 +151,13 @@ class TestEventBusUnderLoad:
         max_depth = max(samples) if samples else 0
         avg_depth = sum(samples) / len(samples) if samples else 0
 
-        print(f"\nQueue Depth Analysis:")
+        print("\nQueue Depth Analysis:")
         print(f"  Max: {max_depth}")
         print(f"  Avg: {avg_depth:.1f}")
         print(f"  Samples: {len(samples)}")
 
         # Queue should stay well below capacity (10000)
-        assert max_depth < running_high_capacity_bus._max_queue_size * 0.5, (
+        assert max_depth < running_high_capacity_bus._max_queue_size * 0.5, (  # pyright: ignore[reportPrivateUsage]
             f"Queue depth {max_depth} exceeds 50% of capacity"
         )
 
@@ -178,7 +179,7 @@ class TestEventBusLatencyMetrics:
         config = LoadTestConfig(frequency_hz=60.0, duration_seconds=10.0)
         metrics = run_load_test(running_high_capacity_bus, latency_collector, config)
 
-        print(f"\nLatency Distribution at 60Hz:")
+        print("\nLatency Distribution at 60Hz:")
         print(f"  Min: {metrics.min_latency_ms:.2f}ms")
         print(f"  Avg: {metrics.avg_latency_ms:.2f}ms")
         print(f"  P50: {metrics.p50_latency_ms:.2f}ms")
@@ -196,7 +197,7 @@ class TestEventBusLatencyMetrics:
     ) -> None:
         """Test impact of a slow handler on overall latency."""
 
-        def slow_handler(context: HandlerContext) -> None:  # type: ignore[type-arg]
+        def slow_handler(context: HandlerContext[Any]) -> None:
             time.sleep(0.05)  # 50ms delay
 
         running_high_capacity_bus.register_handler(
@@ -209,7 +210,7 @@ class TestEventBusLatencyMetrics:
         config = LoadTestConfig(frequency_hz=60.0, duration_seconds=5.0)
         metrics = run_load_test(running_high_capacity_bus, latency_collector, config)
 
-        print(f"\nWith 50ms slow handler:")
+        print("\nWith 50ms slow handler:")
         print(f"  P99 Latency: {metrics.p99_latency_ms:.2f}ms")
         print(f"  Max Queue: {metrics.max_queue_size}")
         print(f"  Dropped: {metrics.events_dropped}")
@@ -241,7 +242,7 @@ class TestEventBusMemory:
         metrics = run_load_test(running_high_capacity_bus, latency_collector, config)
 
         memory_growth_mb = metrics.memory_growth / 1024 / 1024
-        print(f"\nMemory after 30s at 60Hz:")
+        print("\nMemory after 30s at 60Hz:")
         print(f"  Start: {metrics.memory_start / 1024 / 1024:.2f}MB")
         print(f"  Peak: {metrics.memory_peak / 1024 / 1024:.2f}MB")
         print(f"  End: {metrics.memory_end / 1024 / 1024:.2f}MB")
@@ -270,7 +271,7 @@ class TestEventBusBreakingPoint:
             latency_threshold_ms=100.0,
         )
 
-        print(f"\nBreaking Point Analysis:")
+        print("\nBreaking Point Analysis:")
         print(f"  Max Sustainable Frequency: {max_freq:.1f}Hz")
         print(f"  Final Test Frequency: {final_metrics.events_per_second:.1f} events/sec actual")
         print(f"  Final P99 Latency: {final_metrics.p99_latency_ms:.2f}ms")
@@ -286,7 +287,7 @@ class TestEventBusBreakingPoint:
 
         collector = LatencyTrackingCollector()
 
-        def slow_handler(context: HandlerContext) -> None:  # type: ignore[type-arg]
+        def slow_handler(context: HandlerContext[Any]) -> None:
             time.sleep(0.1)  # 100ms delay - will cause queue buildup
             collector.collect(context)
 
@@ -297,7 +298,7 @@ class TestEventBusBreakingPoint:
 
         bus.stop()
 
-        print(f"\nQueue Overflow Test (small queue + fast events):")
+        print("\nQueue Overflow Test (small queue + fast events):")
         print(f"  Published: {metrics.events_published}")
         print(f"  Received: {metrics.events_received}")
         print(f"  Dropped: {metrics.events_dropped}")
@@ -330,7 +331,7 @@ class TestEventBusMultipleHandlers:
         # Use first collector for metrics
         metrics = run_load_test(running_high_capacity_bus, collectors[0], config)
 
-        print(f"\n3 Handlers at 60Hz:")
+        print("\n3 Handlers at 60Hz:")
         print(f"  Events published: {metrics.events_published}")
         for i, collector in enumerate(collectors):
             print(f"  Handler {i + 1} received: {collector.get_event_count()}")

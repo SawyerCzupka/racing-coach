@@ -16,8 +16,10 @@ dependencies = [
     "pyarrow-stubs>=20.0.0.20251209",
     "pydantic>=2.11.2",
     "pyirsdk>=1.3.5",
-    "racing-coach-server-client",
 ]
+
+[project.optional-dependencies]
+viz-cli = ["racing-coach-server-client"]
 
 [tool.uv.sources]
 racing-coach-server-client = { path = "../racing-coach-api-client", editable = true }
@@ -63,16 +65,16 @@ addopts = [
 
 [dependency-groups]
 dev = [
+    "basedpyright>=1.36.1",
     "openapi-python-client>=0.27.1",
     "ruff>=0.12.11",
+    "ty>=0.0.2",
 ]
 test = [
     "pytest>=8.0.0",
     "pytest-asyncio>=0.24.0",
     "pytest-cov>=6.0.0",
     "pytest-mock>=3.14.0",
-    "factory-boy>=3.3.0",
-    "pytest-factoryboy>=2.8.0",
-    "types-factory-boy>=0.4.1",
     "pytest-randomly>=4.0.1",
+    "polyfactory>=3.1.0",
 ]

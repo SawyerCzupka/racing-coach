@@ -1,11 +1,11 @@
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Protocol, Self, runtime_checkable
+from typing import Any, Protocol, Self, runtime_checkable
 from uuid import UUID, uuid4
 
 import pandas as pd
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 logger = logging.getLogger(__name__)
 
@@ -221,7 +221,7 @@ class SessionFrame(BaseModel):
     # Track
     track_id: int = Field(description="Track ID")
     track_name: str = Field(description="Track name")
-    track_config_name: str | None = Field(description="Track config name")
+    track_config_name: str = Field(description="Track config name")
     track_type: str = Field(description="Track type", default="road course")
 
     # Car
@@ -255,7 +255,7 @@ class SessionFrame(BaseModel):
         """
         weekend_info = source["WeekendInfo"]
         driver_info = source["DriverInfo"]
-        session_info = source["SessionInfo"]
+        session_info: dict[str, Any] = source["SessionInfo"]  # type: ignore
 
         session = session_info["Sessions"][session_info["CurrentSessionNum"]]
 
@@ -286,6 +286,14 @@ class LapTelemetry(TelemetrySequence):
     #     description="List of telemetry frames for the lap"
     # )
     lap_time: float | None = Field(description="Total lap time in seconds")
+
+    @field_validator("frames", mode="before")
+    @classmethod
+    def validate_frames_not_empty(cls, v: list[Any]) -> list[Any]:
+        """Validate that frames list is not empty."""
+        if not v:
+            raise ValueError("LapTelemetry must contain at least one frame")
+        return v
 
     def to_parquet(self, file_path: str | Path) -> None:
         """Save the LapTelemetry object to a Parquet file."""

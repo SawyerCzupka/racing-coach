@@ -1,31 +1,12 @@
 """Tests for the SessionRegistry class."""
 
 import threading
-from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timezone
 from uuid import uuid4
 
 import pytest
 from racing_coach_core.events.session_registry import SessionRegistry
-from racing_coach_core.schemas.telemetry import SessionFrame
 
-
-def create_session_frame(**kwargs) -> SessionFrame:
-    """Create a SessionFrame with default values."""
-    defaults = {
-        "timestamp": datetime.now(timezone.utc),
-        "session_id": uuid4(),
-        "track_id": 1,
-        "track_name": "Test Track",
-        "track_config_name": "Full Course",
-        "track_type": "road course",
-        "car_id": 1,
-        "car_name": "Test Car",
-        "car_class_id": 1,
-        "series_id": 1,
-    }
-    defaults.update(kwargs)
-    return SessionFrame(**defaults)
+from tests.factories import SessionFrameFactory
 
 
 @pytest.mark.unit
@@ -42,18 +23,20 @@ class TestSessionRegistryUnit:
     def test_start_session(self):
         """Test starting a new session."""
         registry = SessionRegistry()
-        session = create_session_frame()
+        session = SessionFrameFactory.build()
 
         registry.start_session(session)
 
+        cur_session = registry.get_current_session()
+
         assert registry.has_active_session
-        assert registry.get_current_session() is session
-        assert registry.get_current_session().session_id == session.session_id
+        assert cur_session is session and cur_session is not None
+        assert cur_session.session_id == session.session_id
 
     def test_end_session(self):
         """Test ending an active session."""
         registry = SessionRegistry()
-        session = create_session_frame()
+        session = SessionFrameFactory.build()
 
         registry.start_session(session)
         assert registry.has_active_session
@@ -68,7 +51,7 @@ class TestSessionRegistryUnit:
         import logging
 
         registry = SessionRegistry()
-        session = create_session_frame()
+        session = SessionFrameFactory.build()
         wrong_id = uuid4()
 
         registry.start_session(session)
@@ -96,8 +79,8 @@ class TestSessionRegistryUnit:
         import logging
 
         registry = SessionRegistry()
-        session1 = create_session_frame()
-        session2 = create_session_frame()
+        session1 = SessionFrameFactory.build()
+        session2 = SessionFrameFactory.build()
 
         registry.start_session(session1)
 
@@ -120,7 +103,7 @@ class TestSessionRegistryUnit:
 
         assert not registry.has_active_session
 
-        session = create_session_frame()
+        session = SessionFrameFactory.build()
         registry.start_session(session)
 
         assert registry.has_active_session
@@ -137,11 +120,11 @@ class TestSessionRegistryThreadSafety:
     def test_concurrent_reads(self):
         """Test that concurrent reads don't cause issues."""
         registry = SessionRegistry()
-        session = create_session_frame()
+        session = SessionFrameFactory.build()
         registry.start_session(session)
 
-        results = []
-        errors = []
+        results: list[bool] = []
+        errors: list[Exception] = []
 
         def read_session():
             try:
@@ -163,12 +146,12 @@ class TestSessionRegistryThreadSafety:
     def test_concurrent_start_end(self):
         """Test that concurrent start/end operations don't cause corruption."""
         registry = SessionRegistry()
-        errors = []
+        errors: list[Exception] = []
 
         def start_and_end():
             try:
                 for _ in range(50):
-                    session = create_session_frame()
+                    session = SessionFrameFactory.build()
                     registry.start_session(session)
                     registry.end_session(session.session_id)
             except Exception as e:
@@ -185,16 +168,16 @@ class TestSessionRegistryThreadSafety:
     def test_read_during_write(self):
         """Test that reads work correctly while writes are happening."""
         registry = SessionRegistry()
-        session = create_session_frame()
+        session = SessionFrameFactory.build()
         registry.start_session(session)
         stop_event = threading.Event()
-        errors = []
+        errors: list[Exception] = []
         read_count = [0]
 
         def writer():
             try:
-                for i in range(100):
-                    new_session = create_session_frame()
+                for _ in range(100):
+                    new_session = SessionFrameFactory.build()
                     registry.start_session(new_session)
                 stop_event.set()
             except Exception as e:
