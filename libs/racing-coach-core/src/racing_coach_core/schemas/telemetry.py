@@ -221,7 +221,7 @@ class SessionFrame(BaseModel):
     # Track
     track_id: int = Field(description="Track ID")
     track_name: str = Field(description="Track name")
-    track_config_name: str = Field(description="Track config name")
+    track_config_name: str | None = Field(description="Track config name")
     track_type: str = Field(description="Track type", default="road course")
 
     # Car
@@ -306,7 +306,7 @@ class LapTelemetry(TelemetrySequence):
     @classmethod
     def from_parquet(cls, file_path: str | Path):
         """Load a LapTelemetry object from a Parquet file."""
-        df = pd.read_parquet(file_path)
+        df = pd.read_parquet(file_path)  # pyright: ignore[reportUnknownMemberType]
 
         # lap_time = df["lap_time"].iloc[0]
 

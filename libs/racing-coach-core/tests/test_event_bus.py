@@ -13,7 +13,6 @@ from racing_coach_core.events.base import (
     HandlerContext,
     SystemEvents,
 )
-from racing_coach_core.schemas.events import TelemetryAndSession
 from racing_coach_core.schemas.telemetry import TelemetryFrame
 
 from tests.factories import TelemetryFrameFactory
@@ -401,7 +400,7 @@ class TestEventBusWithSystemEvents:
         await asyncio.sleep(0.2)
 
         assert len(received_events) == 1
-        assert isinstance(received_events[0], TelemetryAndSession)
+        assert isinstance(received_events[0], TelemetryFrame)
 
     async def test_handler_accesses_telemetry_data(
         self, running_event_bus: EventBus, telemetry_frame_factory: TelemetryFrameFactory
