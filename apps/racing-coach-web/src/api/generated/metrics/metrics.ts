@@ -22,7 +22,7 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
-  CompareLapsApiV1MetricsCompareGetParams,
+  CompareLapsParams,
   HTTPValidationError,
   LapComparisonResponse,
   LapMetricsResponse,
@@ -42,7 +42,7 @@ This endpoint accepts extracted lap metrics and stores them in the database.
 If metrics already exist for the lap, they are replaced (upsert pattern).
  * @summary Upload Lap Metrics
  */
-export const uploadLapMetricsApiV1MetricsLapPost = (
+export const uploadLapMetrics = (
   metricsUploadRequest: BodyType<MetricsUploadRequest>,
   options?: SecondParameter<typeof customInstance>,
   signal?: AbortSignal,
@@ -59,24 +59,24 @@ export const uploadLapMetricsApiV1MetricsLapPost = (
   );
 };
 
-export const getUploadLapMetricsApiV1MetricsLapPostMutationOptions = <
+export const getUploadLapMetricsMutationOptions = <
   TError = ErrorType<HTTPValidationError>,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof uploadLapMetricsApiV1MetricsLapPost>>,
+    Awaited<ReturnType<typeof uploadLapMetrics>>,
     TError,
     { data: BodyType<MetricsUploadRequest> },
     TContext
   >;
   request?: SecondParameter<typeof customInstance>;
 }): UseMutationOptions<
-  Awaited<ReturnType<typeof uploadLapMetricsApiV1MetricsLapPost>>,
+  Awaited<ReturnType<typeof uploadLapMetrics>>,
   TError,
   { data: BodyType<MetricsUploadRequest> },
   TContext
 > => {
-  const mutationKey = ["uploadLapMetricsApiV1MetricsLapPost"];
+  const mutationKey = ["uploadLapMetrics"];
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation &&
       "mutationKey" in options.mutation &&
@@ -86,35 +86,33 @@ export const getUploadLapMetricsApiV1MetricsLapPostMutationOptions = <
     : { mutation: { mutationKey }, request: undefined };
 
   const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof uploadLapMetricsApiV1MetricsLapPost>>,
+    Awaited<ReturnType<typeof uploadLapMetrics>>,
     { data: BodyType<MetricsUploadRequest> }
   > = (props) => {
     const { data } = props ?? {};
 
-    return uploadLapMetricsApiV1MetricsLapPost(data, requestOptions);
+    return uploadLapMetrics(data, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
 };
 
-export type UploadLapMetricsApiV1MetricsLapPostMutationResult = NonNullable<
-  Awaited<ReturnType<typeof uploadLapMetricsApiV1MetricsLapPost>>
+export type UploadLapMetricsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof uploadLapMetrics>>
 >;
-export type UploadLapMetricsApiV1MetricsLapPostMutationBody =
-  BodyType<MetricsUploadRequest>;
-export type UploadLapMetricsApiV1MetricsLapPostMutationError =
-  ErrorType<HTTPValidationError>;
+export type UploadLapMetricsMutationBody = BodyType<MetricsUploadRequest>;
+export type UploadLapMetricsMutationError = ErrorType<HTTPValidationError>;
 
 /**
  * @summary Upload Lap Metrics
  */
-export const useUploadLapMetricsApiV1MetricsLapPost = <
+export const useUploadLapMetrics = <
   TError = ErrorType<HTTPValidationError>,
   TContext = unknown,
 >(
   options?: {
     mutation?: UseMutationOptions<
-      Awaited<ReturnType<typeof uploadLapMetricsApiV1MetricsLapPost>>,
+      Awaited<ReturnType<typeof uploadLapMetrics>>,
       TError,
       { data: BodyType<MetricsUploadRequest> },
       TContext
@@ -123,13 +121,12 @@ export const useUploadLapMetricsApiV1MetricsLapPost = <
   },
   queryClient?: QueryClient,
 ): UseMutationResult<
-  Awaited<ReturnType<typeof uploadLapMetricsApiV1MetricsLapPost>>,
+  Awaited<ReturnType<typeof uploadLapMetrics>>,
   TError,
   { data: BodyType<MetricsUploadRequest> },
   TContext
 > => {
-  const mutationOptions =
-    getUploadLapMetricsApiV1MetricsLapPostMutationOptions(options);
+  const mutationOptions = getUploadLapMetricsMutationOptions(options);
 
   return useMutation(mutationOptions, queryClient);
 };
@@ -139,7 +136,7 @@ export const useUploadLapMetricsApiV1MetricsLapPost = <
 Returns all metrics including braking zones and corner analysis.
  * @summary Get Lap Metrics
  */
-export const getLapMetricsApiV1MetricsLapLapIdGet = (
+export const getLapMetrics = (
   lapId: string,
   options?: SecondParameter<typeof customInstance>,
   signal?: AbortSignal,
@@ -150,38 +147,29 @@ export const getLapMetricsApiV1MetricsLapLapIdGet = (
   );
 };
 
-export const getGetLapMetricsApiV1MetricsLapLapIdGetQueryKey = (
-  lapId?: string,
-) => {
+export const getGetLapMetricsQueryKey = (lapId?: string) => {
   return [`/api/v1/metrics/lap/${lapId}`] as const;
 };
 
-export const getGetLapMetricsApiV1MetricsLapLapIdGetQueryOptions = <
-  TData = Awaited<ReturnType<typeof getLapMetricsApiV1MetricsLapLapIdGet>>,
+export const getGetLapMetricsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getLapMetrics>>,
   TError = ErrorType<HTTPValidationError>,
 >(
   lapId: string,
   options?: {
     query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof getLapMetricsApiV1MetricsLapLapIdGet>>,
-        TError,
-        TData
-      >
+      UseQueryOptions<Awaited<ReturnType<typeof getLapMetrics>>, TError, TData>
     >;
     request?: SecondParameter<typeof customInstance>;
   },
 ) => {
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey =
-    queryOptions?.queryKey ??
-    getGetLapMetricsApiV1MetricsLapLapIdGetQueryKey(lapId);
+  const queryKey = queryOptions?.queryKey ?? getGetLapMetricsQueryKey(lapId);
 
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof getLapMetricsApiV1MetricsLapLapIdGet>>
-  > = ({ signal }) =>
-    getLapMetricsApiV1MetricsLapLapIdGet(lapId, requestOptions, signal);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getLapMetrics>>> = ({
+    signal,
+  }) => getLapMetrics(lapId, requestOptions, signal);
 
   return {
     queryKey,
@@ -189,36 +177,31 @@ export const getGetLapMetricsApiV1MetricsLapLapIdGetQueryOptions = <
     enabled: !!lapId,
     ...queryOptions,
   } as UseQueryOptions<
-    Awaited<ReturnType<typeof getLapMetricsApiV1MetricsLapLapIdGet>>,
+    Awaited<ReturnType<typeof getLapMetrics>>,
     TError,
     TData
   > & { queryKey: DataTag<QueryKey, TData, TError> };
 };
 
-export type GetLapMetricsApiV1MetricsLapLapIdGetQueryResult = NonNullable<
-  Awaited<ReturnType<typeof getLapMetricsApiV1MetricsLapLapIdGet>>
+export type GetLapMetricsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getLapMetrics>>
 >;
-export type GetLapMetricsApiV1MetricsLapLapIdGetQueryError =
-  ErrorType<HTTPValidationError>;
+export type GetLapMetricsQueryError = ErrorType<HTTPValidationError>;
 
-export function useGetLapMetricsApiV1MetricsLapLapIdGet<
-  TData = Awaited<ReturnType<typeof getLapMetricsApiV1MetricsLapLapIdGet>>,
+export function useGetLapMetrics<
+  TData = Awaited<ReturnType<typeof getLapMetrics>>,
   TError = ErrorType<HTTPValidationError>,
 >(
   lapId: string,
   options: {
     query: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof getLapMetricsApiV1MetricsLapLapIdGet>>,
-        TError,
-        TData
-      >
+      UseQueryOptions<Awaited<ReturnType<typeof getLapMetrics>>, TError, TData>
     > &
       Pick<
         DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getLapMetricsApiV1MetricsLapLapIdGet>>,
+          Awaited<ReturnType<typeof getLapMetrics>>,
           TError,
-          Awaited<ReturnType<typeof getLapMetricsApiV1MetricsLapLapIdGet>>
+          Awaited<ReturnType<typeof getLapMetrics>>
         >,
         "initialData"
       >;
@@ -228,24 +211,20 @@ export function useGetLapMetricsApiV1MetricsLapLapIdGet<
 ): DefinedUseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
-export function useGetLapMetricsApiV1MetricsLapLapIdGet<
-  TData = Awaited<ReturnType<typeof getLapMetricsApiV1MetricsLapLapIdGet>>,
+export function useGetLapMetrics<
+  TData = Awaited<ReturnType<typeof getLapMetrics>>,
   TError = ErrorType<HTTPValidationError>,
 >(
   lapId: string,
   options?: {
     query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof getLapMetricsApiV1MetricsLapLapIdGet>>,
-        TError,
-        TData
-      >
+      UseQueryOptions<Awaited<ReturnType<typeof getLapMetrics>>, TError, TData>
     > &
       Pick<
         UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getLapMetricsApiV1MetricsLapLapIdGet>>,
+          Awaited<ReturnType<typeof getLapMetrics>>,
           TError,
-          Awaited<ReturnType<typeof getLapMetricsApiV1MetricsLapLapIdGet>>
+          Awaited<ReturnType<typeof getLapMetrics>>
         >,
         "initialData"
       >;
@@ -255,18 +234,14 @@ export function useGetLapMetricsApiV1MetricsLapLapIdGet<
 ): UseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
-export function useGetLapMetricsApiV1MetricsLapLapIdGet<
-  TData = Awaited<ReturnType<typeof getLapMetricsApiV1MetricsLapLapIdGet>>,
+export function useGetLapMetrics<
+  TData = Awaited<ReturnType<typeof getLapMetrics>>,
   TError = ErrorType<HTTPValidationError>,
 >(
   lapId: string,
   options?: {
     query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof getLapMetricsApiV1MetricsLapLapIdGet>>,
-        TError,
-        TData
-      >
+      UseQueryOptions<Awaited<ReturnType<typeof getLapMetrics>>, TError, TData>
     >;
     request?: SecondParameter<typeof customInstance>;
   },
@@ -278,18 +253,14 @@ export function useGetLapMetricsApiV1MetricsLapLapIdGet<
  * @summary Get Lap Metrics
  */
 
-export function useGetLapMetricsApiV1MetricsLapLapIdGet<
-  TData = Awaited<ReturnType<typeof getLapMetricsApiV1MetricsLapLapIdGet>>,
+export function useGetLapMetrics<
+  TData = Awaited<ReturnType<typeof getLapMetrics>>,
   TError = ErrorType<HTTPValidationError>,
 >(
   lapId: string,
   options?: {
     query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof getLapMetricsApiV1MetricsLapLapIdGet>>,
-        TError,
-        TData
-      >
+      UseQueryOptions<Awaited<ReturnType<typeof getLapMetrics>>, TError, TData>
     >;
     request?: SecondParameter<typeof customInstance>;
   },
@@ -297,10 +268,7 @@ export function useGetLapMetricsApiV1MetricsLapLapIdGet<
 ): UseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 } {
-  const queryOptions = getGetLapMetricsApiV1MetricsLapLapIdGetQueryOptions(
-    lapId,
-    options,
-  );
+  const queryOptions = getGetLapMetricsQueryOptions(lapId, options);
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<
     TData,
@@ -323,8 +291,8 @@ This endpoint compares metrics from two laps and returns:
 Zones and corners are matched based on distance (closest match within threshold).
  * @summary Compare Laps
  */
-export const compareLapsApiV1MetricsCompareGet = (
-  params: CompareLapsApiV1MetricsCompareGetParams,
+export const compareLaps = (
+  params: CompareLapsParams,
   options?: SecondParameter<typeof customInstance>,
   signal?: AbortSignal,
 ) => {
@@ -334,70 +302,56 @@ export const compareLapsApiV1MetricsCompareGet = (
   );
 };
 
-export const getCompareLapsApiV1MetricsCompareGetQueryKey = (
-  params?: CompareLapsApiV1MetricsCompareGetParams,
-) => {
+export const getCompareLapsQueryKey = (params?: CompareLapsParams) => {
   return [`/api/v1/metrics/compare`, ...(params ? [params] : [])] as const;
 };
 
-export const getCompareLapsApiV1MetricsCompareGetQueryOptions = <
-  TData = Awaited<ReturnType<typeof compareLapsApiV1MetricsCompareGet>>,
+export const getCompareLapsQueryOptions = <
+  TData = Awaited<ReturnType<typeof compareLaps>>,
   TError = ErrorType<HTTPValidationError>,
 >(
-  params: CompareLapsApiV1MetricsCompareGetParams,
+  params: CompareLapsParams,
   options?: {
     query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof compareLapsApiV1MetricsCompareGet>>,
-        TError,
-        TData
-      >
+      UseQueryOptions<Awaited<ReturnType<typeof compareLaps>>, TError, TData>
     >;
     request?: SecondParameter<typeof customInstance>;
   },
 ) => {
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey =
-    queryOptions?.queryKey ??
-    getCompareLapsApiV1MetricsCompareGetQueryKey(params);
+  const queryKey = queryOptions?.queryKey ?? getCompareLapsQueryKey(params);
 
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof compareLapsApiV1MetricsCompareGet>>
-  > = ({ signal }) =>
-    compareLapsApiV1MetricsCompareGet(params, requestOptions, signal);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof compareLaps>>> = ({
+    signal,
+  }) => compareLaps(params, requestOptions, signal);
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof compareLapsApiV1MetricsCompareGet>>,
+    Awaited<ReturnType<typeof compareLaps>>,
     TError,
     TData
   > & { queryKey: DataTag<QueryKey, TData, TError> };
 };
 
-export type CompareLapsApiV1MetricsCompareGetQueryResult = NonNullable<
-  Awaited<ReturnType<typeof compareLapsApiV1MetricsCompareGet>>
+export type CompareLapsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof compareLaps>>
 >;
-export type CompareLapsApiV1MetricsCompareGetQueryError =
-  ErrorType<HTTPValidationError>;
+export type CompareLapsQueryError = ErrorType<HTTPValidationError>;
 
-export function useCompareLapsApiV1MetricsCompareGet<
-  TData = Awaited<ReturnType<typeof compareLapsApiV1MetricsCompareGet>>,
+export function useCompareLaps<
+  TData = Awaited<ReturnType<typeof compareLaps>>,
   TError = ErrorType<HTTPValidationError>,
 >(
-  params: CompareLapsApiV1MetricsCompareGetParams,
+  params: CompareLapsParams,
   options: {
     query: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof compareLapsApiV1MetricsCompareGet>>,
-        TError,
-        TData
-      >
+      UseQueryOptions<Awaited<ReturnType<typeof compareLaps>>, TError, TData>
     > &
       Pick<
         DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof compareLapsApiV1MetricsCompareGet>>,
+          Awaited<ReturnType<typeof compareLaps>>,
           TError,
-          Awaited<ReturnType<typeof compareLapsApiV1MetricsCompareGet>>
+          Awaited<ReturnType<typeof compareLaps>>
         >,
         "initialData"
       >;
@@ -407,24 +361,20 @@ export function useCompareLapsApiV1MetricsCompareGet<
 ): DefinedUseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
-export function useCompareLapsApiV1MetricsCompareGet<
-  TData = Awaited<ReturnType<typeof compareLapsApiV1MetricsCompareGet>>,
+export function useCompareLaps<
+  TData = Awaited<ReturnType<typeof compareLaps>>,
   TError = ErrorType<HTTPValidationError>,
 >(
-  params: CompareLapsApiV1MetricsCompareGetParams,
+  params: CompareLapsParams,
   options?: {
     query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof compareLapsApiV1MetricsCompareGet>>,
-        TError,
-        TData
-      >
+      UseQueryOptions<Awaited<ReturnType<typeof compareLaps>>, TError, TData>
     > &
       Pick<
         UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof compareLapsApiV1MetricsCompareGet>>,
+          Awaited<ReturnType<typeof compareLaps>>,
           TError,
-          Awaited<ReturnType<typeof compareLapsApiV1MetricsCompareGet>>
+          Awaited<ReturnType<typeof compareLaps>>
         >,
         "initialData"
       >;
@@ -434,18 +384,14 @@ export function useCompareLapsApiV1MetricsCompareGet<
 ): UseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
-export function useCompareLapsApiV1MetricsCompareGet<
-  TData = Awaited<ReturnType<typeof compareLapsApiV1MetricsCompareGet>>,
+export function useCompareLaps<
+  TData = Awaited<ReturnType<typeof compareLaps>>,
   TError = ErrorType<HTTPValidationError>,
 >(
-  params: CompareLapsApiV1MetricsCompareGetParams,
+  params: CompareLapsParams,
   options?: {
     query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof compareLapsApiV1MetricsCompareGet>>,
-        TError,
-        TData
-      >
+      UseQueryOptions<Awaited<ReturnType<typeof compareLaps>>, TError, TData>
     >;
     request?: SecondParameter<typeof customInstance>;
   },
@@ -457,18 +403,14 @@ export function useCompareLapsApiV1MetricsCompareGet<
  * @summary Compare Laps
  */
 
-export function useCompareLapsApiV1MetricsCompareGet<
-  TData = Awaited<ReturnType<typeof compareLapsApiV1MetricsCompareGet>>,
+export function useCompareLaps<
+  TData = Awaited<ReturnType<typeof compareLaps>>,
   TError = ErrorType<HTTPValidationError>,
 >(
-  params: CompareLapsApiV1MetricsCompareGetParams,
+  params: CompareLapsParams,
   options?: {
     query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof compareLapsApiV1MetricsCompareGet>>,
-        TError,
-        TData
-      >
+      UseQueryOptions<Awaited<ReturnType<typeof compareLaps>>, TError, TData>
     >;
     request?: SecondParameter<typeof customInstance>;
   },
@@ -476,10 +418,7 @@ export function useCompareLapsApiV1MetricsCompareGet<
 ): UseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 } {
-  const queryOptions = getCompareLapsApiV1MetricsCompareGetQueryOptions(
-    params,
-    options,
-  );
+  const queryOptions = getCompareLapsQueryOptions(params, options);
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<
     TData,

@@ -3,13 +3,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { LoadingState, EmptyState } from '@/components/ui/loading-states';
 import { formatLapTime, formatSpeed, formatGForce, formatDistance } from '@/lib/format';
-import { useGetLapMetricsApiV1MetricsLapLapIdGet } from '@/api/generated/metrics/metrics';
+import { useGetLapMetrics } from '@/api/generated/metrics/metrics';
 import type { BrakingMetrics, CornerMetrics } from '@/api/generated/models';
 
 export function LapDetailPage() {
   const { lapId } = useParams<{ lapId: string }>();
   const navigate = useNavigate();
-  const { data: metrics, isLoading, error } = useGetLapMetricsApiV1MetricsLapLapIdGet(
+  const { data: metrics, isLoading, error } = useGetLapMetrics(
     lapId ?? ''
   );
 
@@ -33,7 +33,7 @@ export function LapDetailPage() {
         <div>
           <button
             onClick={() => navigate(-1)}
-            className="text-sm text-gray-400 hover:text-white mb-2 flex items-center gap-1"
+            className="flex items-center gap-1 mb-2 text-sm text-gray-400 hover:text-white"
           >
             &larr; Back
           </button>
@@ -43,7 +43,7 @@ export function LapDetailPage() {
         <Card>
           <CardContent className="py-8">
             <div className="text-center">
-              <p className="text-gray-400 mb-4">
+              <p className="mb-4 text-gray-400">
                 Metrics have not been computed for this lap yet.
               </p>
               <p className="text-sm text-gray-500">
@@ -62,7 +62,7 @@ export function LapDetailPage() {
         <div>
           <button
             onClick={() => navigate(-1)}
-            className="text-sm text-gray-400 hover:text-white mb-2 flex items-center gap-1"
+            className="flex items-center gap-1 mb-2 text-sm text-gray-400 hover:text-white"
           >
             &larr; Back
           </button>
@@ -86,7 +86,7 @@ export function LapDetailPage() {
         <div>
           <button
             onClick={() => navigate(-1)}
-            className="text-sm text-gray-400 hover:text-white mb-2 flex items-center gap-1"
+            className="flex items-center gap-1 mb-2 text-sm text-gray-400 hover:text-white"
           >
             &larr; Back
           </button>
@@ -103,7 +103,7 @@ export function LapDetailPage() {
       </div>
 
       {/* Summary Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-400">Max Speed</CardTitle>
@@ -133,7 +133,7 @@ export function LapDetailPage() {
             <CardTitle className="text-sm font-medium text-gray-400">Lap Time</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold text-white font-mono">
+            <p className="font-mono text-2xl font-bold text-white">
               {metrics.lap_time ? formatLapTime(metrics.lap_time) : '--:--.---'}
             </p>
           </CardContent>
@@ -150,13 +150,13 @@ export function LapDetailPage() {
           {brakingZones.length === 0 ? (
             <EmptyState message="No braking zones detected" />
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
               {brakingZones.map((zone: BrakingMetrics, index: number) => (
                 <div
                   key={index}
-                  className="p-4 rounded-lg bg-gray-800/50 border border-gray-700"
+                  className="p-4 border border-gray-700 rounded-lg bg-gray-800/50"
                 >
-                  <div className="flex justify-between items-center mb-3">
+                  <div className="flex items-center justify-between mb-3">
                     <span className="text-lg font-semibold text-white">Zone {index + 1}</span>
                     {zone.has_trail_braking && (
                       <Badge variant="success" className="text-xs">Trail Braking</Badge>
@@ -205,13 +205,13 @@ export function LapDetailPage() {
           {corners.length === 0 ? (
             <EmptyState message="No corners detected" />
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
               {corners.map((corner: CornerMetrics, index: number) => (
                 <div
                   key={index}
-                  className="p-4 rounded-lg bg-gray-800/50 border border-gray-700"
+                  className="p-4 border border-gray-700 rounded-lg bg-gray-800/50"
                 >
-                  <div className="flex justify-between items-center mb-3">
+                  <div className="flex items-center justify-between mb-3">
                     <span className="text-lg font-semibold text-white">Corner {index + 1}</span>
                     <Badge variant="default" className="text-xs">
                       {formatGForce(corner.max_lateral_g)}

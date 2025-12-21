@@ -13,6 +13,7 @@ dependencies = [
     "fastapi>=0.115.12",
     "fastapi-cli>=0.0.7",
     "pydantic-settings>=2.9.1",
+    "python-multipart>=0.0.9",
     "racing-coach-core",
     "sqlalchemy[asyncio]>=2.0.40",
     "uvicorn>=0.34.0",

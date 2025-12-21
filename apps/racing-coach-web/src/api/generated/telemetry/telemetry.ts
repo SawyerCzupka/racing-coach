@@ -22,11 +22,11 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
-  BodyUploadLapApiV1TelemetryLapPost,
+  BodyUploadLap,
   HTTPValidationError,
   LapUploadResponse,
   SessionFrame,
-  UploadLapApiV1TelemetryLapPostParams,
+  UploadLapParams,
 } from ".././models";
 
 import { customInstance } from "../../client";
@@ -47,9 +47,9 @@ The transaction is managed by the transactional_session context manager:
 - If all operations succeed, changes are committed
  * @summary Upload Lap
  */
-export const uploadLapApiV1TelemetryLapPost = (
-  bodyUploadLapApiV1TelemetryLapPost: BodyType<BodyUploadLapApiV1TelemetryLapPost>,
-  params?: UploadLapApiV1TelemetryLapPostParams,
+export const uploadLap = (
+  bodyUploadLap: BodyType<BodyUploadLap>,
+  params?: UploadLapParams,
   options?: SecondParameter<typeof customInstance>,
   signal?: AbortSignal,
 ) => {
@@ -58,7 +58,7 @@ export const uploadLapApiV1TelemetryLapPost = (
       url: `/api/v1/telemetry/lap`,
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      data: bodyUploadLapApiV1TelemetryLapPost,
+      data: bodyUploadLap,
       params,
       signal,
     },
@@ -66,30 +66,24 @@ export const uploadLapApiV1TelemetryLapPost = (
   );
 };
 
-export const getUploadLapApiV1TelemetryLapPostMutationOptions = <
+export const getUploadLapMutationOptions = <
   TError = ErrorType<HTTPValidationError>,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof uploadLapApiV1TelemetryLapPost>>,
+    Awaited<ReturnType<typeof uploadLap>>,
     TError,
-    {
-      data: BodyType<BodyUploadLapApiV1TelemetryLapPost>;
-      params?: UploadLapApiV1TelemetryLapPostParams;
-    },
+    { data: BodyType<BodyUploadLap>; params?: UploadLapParams },
     TContext
   >;
   request?: SecondParameter<typeof customInstance>;
 }): UseMutationOptions<
-  Awaited<ReturnType<typeof uploadLapApiV1TelemetryLapPost>>,
+  Awaited<ReturnType<typeof uploadLap>>,
   TError,
-  {
-    data: BodyType<BodyUploadLapApiV1TelemetryLapPost>;
-    params?: UploadLapApiV1TelemetryLapPostParams;
-  },
+  { data: BodyType<BodyUploadLap>; params?: UploadLapParams },
   TContext
 > => {
-  const mutationKey = ["uploadLapApiV1TelemetryLapPost"];
+  const mutationKey = ["uploadLap"];
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation &&
       "mutationKey" in options.mutation &&
@@ -99,59 +93,47 @@ export const getUploadLapApiV1TelemetryLapPostMutationOptions = <
     : { mutation: { mutationKey }, request: undefined };
 
   const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof uploadLapApiV1TelemetryLapPost>>,
-    {
-      data: BodyType<BodyUploadLapApiV1TelemetryLapPost>;
-      params?: UploadLapApiV1TelemetryLapPostParams;
-    }
+    Awaited<ReturnType<typeof uploadLap>>,
+    { data: BodyType<BodyUploadLap>; params?: UploadLapParams }
   > = (props) => {
     const { data, params } = props ?? {};
 
-    return uploadLapApiV1TelemetryLapPost(data, params, requestOptions);
+    return uploadLap(data, params, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
 };
 
-export type UploadLapApiV1TelemetryLapPostMutationResult = NonNullable<
-  Awaited<ReturnType<typeof uploadLapApiV1TelemetryLapPost>>
+export type UploadLapMutationResult = NonNullable<
+  Awaited<ReturnType<typeof uploadLap>>
 >;
-export type UploadLapApiV1TelemetryLapPostMutationBody =
-  BodyType<BodyUploadLapApiV1TelemetryLapPost>;
-export type UploadLapApiV1TelemetryLapPostMutationError =
-  ErrorType<HTTPValidationError>;
+export type UploadLapMutationBody = BodyType<BodyUploadLap>;
+export type UploadLapMutationError = ErrorType<HTTPValidationError>;
 
 /**
  * @summary Upload Lap
  */
-export const useUploadLapApiV1TelemetryLapPost = <
+export const useUploadLap = <
   TError = ErrorType<HTTPValidationError>,
   TContext = unknown,
 >(
   options?: {
     mutation?: UseMutationOptions<
-      Awaited<ReturnType<typeof uploadLapApiV1TelemetryLapPost>>,
+      Awaited<ReturnType<typeof uploadLap>>,
       TError,
-      {
-        data: BodyType<BodyUploadLapApiV1TelemetryLapPost>;
-        params?: UploadLapApiV1TelemetryLapPostParams;
-      },
+      { data: BodyType<BodyUploadLap>; params?: UploadLapParams },
       TContext
     >;
     request?: SecondParameter<typeof customInstance>;
   },
   queryClient?: QueryClient,
 ): UseMutationResult<
-  Awaited<ReturnType<typeof uploadLapApiV1TelemetryLapPost>>,
+  Awaited<ReturnType<typeof uploadLap>>,
   TError,
-  {
-    data: BodyType<BodyUploadLapApiV1TelemetryLapPost>;
-    params?: UploadLapApiV1TelemetryLapPostParams;
-  },
+  { data: BodyType<BodyUploadLap>; params?: UploadLapParams },
   TContext
 > => {
-  const mutationOptions =
-    getUploadLapApiV1TelemetryLapPostMutationOptions(options);
+  const mutationOptions = getUploadLapMutationOptions(options);
 
   return useMutation(mutationOptions, queryClient);
 };
@@ -159,7 +141,7 @@ export const useUploadLapApiV1TelemetryLapPost = <
  * Endpoint to retrieve the latest track session.
  * @summary Get Latest Session
  */
-export const getLatestSessionApiV1TelemetrySessionsLatestGet = (
+export const getLatestSession = (
   options?: SecondParameter<typeof customInstance>,
   signal?: AbortSignal,
 ) => {
@@ -169,78 +151,56 @@ export const getLatestSessionApiV1TelemetrySessionsLatestGet = (
   );
 };
 
-export const getGetLatestSessionApiV1TelemetrySessionsLatestGetQueryKey =
-  () => {
-    return [`/api/v1/telemetry/sessions/latest`] as const;
-  };
+export const getGetLatestSessionQueryKey = () => {
+  return [`/api/v1/telemetry/sessions/latest`] as const;
+};
 
-export const getGetLatestSessionApiV1TelemetrySessionsLatestGetQueryOptions = <
-  TData = Awaited<
-    ReturnType<typeof getLatestSessionApiV1TelemetrySessionsLatestGet>
-  >,
+export const getGetLatestSessionQueryOptions = <
+  TData = Awaited<ReturnType<typeof getLatestSession>>,
   TError = ErrorType<unknown>,
 >(options?: {
   query?: Partial<
-    UseQueryOptions<
-      Awaited<
-        ReturnType<typeof getLatestSessionApiV1TelemetrySessionsLatestGet>
-      >,
-      TError,
-      TData
-    >
+    UseQueryOptions<Awaited<ReturnType<typeof getLatestSession>>, TError, TData>
   >;
   request?: SecondParameter<typeof customInstance>;
 }) => {
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey =
-    queryOptions?.queryKey ??
-    getGetLatestSessionApiV1TelemetrySessionsLatestGetQueryKey();
+  const queryKey = queryOptions?.queryKey ?? getGetLatestSessionQueryKey();
 
   const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof getLatestSessionApiV1TelemetrySessionsLatestGet>>
-  > = ({ signal }) =>
-    getLatestSessionApiV1TelemetrySessionsLatestGet(requestOptions, signal);
+    Awaited<ReturnType<typeof getLatestSession>>
+  > = ({ signal }) => getLatestSession(requestOptions, signal);
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof getLatestSessionApiV1TelemetrySessionsLatestGet>>,
+    Awaited<ReturnType<typeof getLatestSession>>,
     TError,
     TData
   > & { queryKey: DataTag<QueryKey, TData, TError> };
 };
 
-export type GetLatestSessionApiV1TelemetrySessionsLatestGetQueryResult =
-  NonNullable<
-    Awaited<ReturnType<typeof getLatestSessionApiV1TelemetrySessionsLatestGet>>
-  >;
-export type GetLatestSessionApiV1TelemetrySessionsLatestGetQueryError =
-  ErrorType<unknown>;
+export type GetLatestSessionQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getLatestSession>>
+>;
+export type GetLatestSessionQueryError = ErrorType<unknown>;
 
-export function useGetLatestSessionApiV1TelemetrySessionsLatestGet<
-  TData = Awaited<
-    ReturnType<typeof getLatestSessionApiV1TelemetrySessionsLatestGet>
-  >,
+export function useGetLatestSession<
+  TData = Awaited<ReturnType<typeof getLatestSession>>,
   TError = ErrorType<unknown>,
 >(
   options: {
     query: Partial<
       UseQueryOptions<
-        Awaited<
-          ReturnType<typeof getLatestSessionApiV1TelemetrySessionsLatestGet>
-        >,
+        Awaited<ReturnType<typeof getLatestSession>>,
         TError,
         TData
       >
     > &
       Pick<
         DefinedInitialDataOptions<
-          Awaited<
-            ReturnType<typeof getLatestSessionApiV1TelemetrySessionsLatestGet>
-          >,
+          Awaited<ReturnType<typeof getLatestSession>>,
           TError,
-          Awaited<
-            ReturnType<typeof getLatestSessionApiV1TelemetrySessionsLatestGet>
-          >
+          Awaited<ReturnType<typeof getLatestSession>>
         >,
         "initialData"
       >;
@@ -250,31 +210,23 @@ export function useGetLatestSessionApiV1TelemetrySessionsLatestGet<
 ): DefinedUseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
-export function useGetLatestSessionApiV1TelemetrySessionsLatestGet<
-  TData = Awaited<
-    ReturnType<typeof getLatestSessionApiV1TelemetrySessionsLatestGet>
-  >,
+export function useGetLatestSession<
+  TData = Awaited<ReturnType<typeof getLatestSession>>,
   TError = ErrorType<unknown>,
 >(
   options?: {
     query?: Partial<
       UseQueryOptions<
-        Awaited<
-          ReturnType<typeof getLatestSessionApiV1TelemetrySessionsLatestGet>
-        >,
+        Awaited<ReturnType<typeof getLatestSession>>,
         TError,
         TData
       >
     > &
       Pick<
         UndefinedInitialDataOptions<
-          Awaited<
-            ReturnType<typeof getLatestSessionApiV1TelemetrySessionsLatestGet>
-          >,
+          Awaited<ReturnType<typeof getLatestSession>>,
           TError,
-          Awaited<
-            ReturnType<typeof getLatestSessionApiV1TelemetrySessionsLatestGet>
-          >
+          Awaited<ReturnType<typeof getLatestSession>>
         >,
         "initialData"
       >;
@@ -284,18 +236,14 @@ export function useGetLatestSessionApiV1TelemetrySessionsLatestGet<
 ): UseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 };
-export function useGetLatestSessionApiV1TelemetrySessionsLatestGet<
-  TData = Awaited<
-    ReturnType<typeof getLatestSessionApiV1TelemetrySessionsLatestGet>
-  >,
+export function useGetLatestSession<
+  TData = Awaited<ReturnType<typeof getLatestSession>>,
   TError = ErrorType<unknown>,
 >(
   options?: {
     query?: Partial<
       UseQueryOptions<
-        Awaited<
-          ReturnType<typeof getLatestSessionApiV1TelemetrySessionsLatestGet>
-        >,
+        Awaited<ReturnType<typeof getLatestSession>>,
         TError,
         TData
       >
@@ -310,18 +258,14 @@ export function useGetLatestSessionApiV1TelemetrySessionsLatestGet<
  * @summary Get Latest Session
  */
 
-export function useGetLatestSessionApiV1TelemetrySessionsLatestGet<
-  TData = Awaited<
-    ReturnType<typeof getLatestSessionApiV1TelemetrySessionsLatestGet>
-  >,
+export function useGetLatestSession<
+  TData = Awaited<ReturnType<typeof getLatestSession>>,
   TError = ErrorType<unknown>,
 >(
   options?: {
     query?: Partial<
       UseQueryOptions<
-        Awaited<
-          ReturnType<typeof getLatestSessionApiV1TelemetrySessionsLatestGet>
-        >,
+        Awaited<ReturnType<typeof getLatestSession>>,
         TError,
         TData
       >
@@ -332,8 +276,7 @@ export function useGetLatestSessionApiV1TelemetrySessionsLatestGet<
 ): UseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>;
 } {
-  const queryOptions =
-    getGetLatestSessionApiV1TelemetrySessionsLatestGetQueryOptions(options);
+  const queryOptions = getGetLatestSessionQueryOptions(options);
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<
     TData,

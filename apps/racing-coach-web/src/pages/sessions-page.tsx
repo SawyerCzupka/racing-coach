@@ -12,7 +12,6 @@ import {
 } from '@/components/ui/table';
 import { LoadingState, EmptyState, ErrorState } from '@/components/ui/loading-states';
 import { formatDateTime } from '@/lib/format';
-// import { useListSessionsApiV1SessionsGet } from '@/api/generated/sessions/sessions';
 import { useGetSessionsList } from '@/api/generated/sessions/sessions';
 
 export function SessionsPage() {
@@ -99,7 +98,7 @@ export function SessionsPage() {
             <input
               type="text"
               placeholder="Filter by track or car..."
-              className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-2 text-white placeholder-gray-500 bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
             />
@@ -147,7 +146,7 @@ export function SessionsPage() {
           </div>
 
           {filteredSessions.length === 0 && filter && (
-            <div className="text-center py-8">
+            <div className="py-8 text-center">
               <p className="text-gray-400">No sessions match your filter</p>
             </div>
           )}

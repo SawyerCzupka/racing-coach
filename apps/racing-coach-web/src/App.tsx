@@ -13,6 +13,9 @@ import { SessionDetailPage } from './pages/session-detail-page';
 import { LapDetailPage } from './pages/lap-detail-page';
 import { ComparePage } from './pages/compare-page';
 import { LivePage } from './pages/live-page';
+import { TrackBoundariesPage } from './pages/track-boundaries-page';
+import { TrackBoundaryDetailPage } from './pages/track-boundary-detail-page';
+import { TrackBoundaryUploadPage } from './pages/track-boundary-upload-page';
 
 function App() {
   return (
@@ -41,6 +44,9 @@ function App() {
                 <Route path="/lap/:lapId" element={<LapDetailPage />} />
                 <Route path="/compare" element={<ComparePage />} />
                 <Route path="/live" element={<LivePage />} />
+                <Route path="/tracks" element={<TrackBoundariesPage />} />
+                <Route path="/tracks/upload" element={<TrackBoundaryUploadPage />} />
+                <Route path="/tracks/:boundaryId" element={<TrackBoundaryDetailPage />} />
               </Route>
             </Routes>
           </AuthProvider>
