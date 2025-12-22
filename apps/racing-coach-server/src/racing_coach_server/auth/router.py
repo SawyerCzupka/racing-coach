@@ -1,13 +1,15 @@
 """FastAPI route handlers for authentication."""
 
 import logging
-from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
-from fastapi.security import APIKeyHeader
-from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import APIRouter, HTTPException, Request, Response, status
 
+from racing_coach_server.auth.dependencies import (
+    SESSION_COOKIE_NAME,
+    AuthServiceDep,
+    CurrentUserDep,
+)
 from racing_coach_server.auth.exceptions import (
     DeviceAuthorizationDeniedError,
     DeviceAuthorizationExpiredError,
@@ -16,7 +18,6 @@ from racing_coach_server.auth.exceptions import (
     SessionNotFoundError,
     UserAlreadyExistsError,
 )
-from racing_coach_server.auth.models import User
 from racing_coach_server.auth.schemas import (
     AuthorizeDeviceRequest,
     AuthSessionInfo,
@@ -34,36 +35,17 @@ from racing_coach_server.auth.schemas import (
     RegisterResponse,
     UserResponse,
 )
-from racing_coach_server.auth.service import AuthService
 from racing_coach_server.auth.utils import hash_token
 from racing_coach_server.config import settings
-from racing_coach_server.database.engine import get_async_session, transactional_session
+from racing_coach_server.database.dependencies import AsyncSessionDep
+from racing_coach_server.database.engine import transactional_session
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
 # Cookie configuration
-SESSION_COOKIE_NAME = "session_token"
 SESSION_COOKIE_MAX_AGE = settings.web_session_duration_days * 24 * 60 * 60  # in seconds
-
-# Device token header
-device_token_header = APIKeyHeader(name="X-Device-Token", auto_error=False)
-
-
-# ============================================================================
-# Dependencies
-# ============================================================================
-
-
-async def get_auth_service(
-    db: AsyncSession = Depends(get_async_session),  # noqa: B008
-) -> AuthService:
-    """Provide AuthService with injected AsyncSession."""
-    return AuthService(db)
-
-
-AuthServiceDep = Annotated[AuthService, Depends(get_auth_service)]
 
 
 def _set_session_cookie(response: Response, token: str) -> None:
@@ -87,42 +69,6 @@ def _clear_session_cookie(response: Response) -> None:
     )
 
 
-async def get_current_user_optional(
-    request: Request,
-    device_token: Annotated[str | None, Depends(device_token_header)],
-    auth_service: AuthServiceDep,
-) -> User | None:
-    """Get current user from session cookie or device token (optional)."""
-    # Try device token first (for desktop client)
-    if device_token:
-        user = await auth_service.validate_device_token(device_token)
-        if user:
-            return user
-
-    # Try session cookie (for web)
-    session_token = request.cookies.get(SESSION_COOKIE_NAME)
-    if session_token:
-        return await auth_service.validate_session(session_token)
-
-    return None
-
-
-async def get_current_user(
-    user: Annotated[User | None, Depends(get_current_user_optional)],
-) -> User:
-    """Require authenticated user."""
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication required",
-        )
-    return user
-
-
-CurrentUser = Annotated[User, Depends(get_current_user)]
-OptionalUser = Annotated[User | None, Depends(get_current_user_optional)]
-
-
 # ============================================================================
 # Registration & Login
 # ============================================================================
@@ -140,7 +86,7 @@ async def register(
     response: Response,
     request: Request,
     auth_service: AuthServiceDep,
-    db: AsyncSession = Depends(get_async_session),
+    db: AsyncSessionDep,
 ) -> RegisterResponse:
     """Register a new user account."""
     try:
@@ -179,7 +125,7 @@ async def login(
     response: Response,
     request: Request,
     auth_service: AuthServiceDep,
-    db: AsyncSession = Depends(get_async_session),
+    db: AsyncSessionDep,
 ) -> LoginResponse:
     """Login with email and password."""
     try:
@@ -212,9 +158,9 @@ async def login(
 async def logout(
     request: Request,
     response: Response,
-    current_user: CurrentUser,
+    current_user: CurrentUserDep,
     auth_service: AuthServiceDep,
-    db: AsyncSession = Depends(get_async_session),
+    db: AsyncSessionDep,
 ) -> dict[str, str]:
     """Logout current session."""
     session_token = request.cookies.get(SESSION_COOKIE_NAME)
@@ -236,7 +182,7 @@ async def logout(
 
 
 @router.get("/me", response_model=UserResponse, tags=["auth"], operation_id="getCurrentUser")
-async def get_me(current_user: CurrentUser) -> UserResponse:
+async def get_me(current_user: CurrentUserDep) -> UserResponse:
     """Get current user profile."""
     return UserResponse(
         user_id=str(current_user.id),
@@ -257,7 +203,7 @@ async def get_me(current_user: CurrentUser) -> UserResponse:
 )
 async def list_sessions(
     request: Request,
-    current_user: CurrentUser,
+    current_user: CurrentUserDep,
     auth_service: AuthServiceDep,
 ) -> AuthSessionListResponse:
     """List all active sessions for current user."""
@@ -284,9 +230,9 @@ async def list_sessions(
 @router.delete("/sessions/{session_id}", tags=["auth"], operation_id="revokeSession")
 async def revoke_session(
     session_id: UUID,
-    current_user: CurrentUser,
+    current_user: CurrentUserDep,
     auth_service: AuthServiceDep,
-    db: AsyncSession = Depends(get_async_session),
+    db: AsyncSessionDep,
 ) -> dict[str, str]:
     """Revoke a specific session."""
     try:
@@ -311,7 +257,7 @@ async def revoke_session(
     operation_id="listDeviceTokens",
 )
 async def list_devices(
-    current_user: CurrentUser,
+    current_user: CurrentUserDep,
     auth_service: AuthServiceDep,
 ) -> DeviceTokenListResponse:
     """List all device tokens for current user."""
@@ -333,9 +279,9 @@ async def list_devices(
 @router.delete("/devices/{token_id}", tags=["auth"], operation_id="revokeDeviceToken")
 async def revoke_device(
     token_id: UUID,
-    current_user: CurrentUser,
+    current_user: CurrentUserDep,
     auth_service: AuthServiceDep,
-    db: AsyncSession = Depends(get_async_session),
+    db: AsyncSessionDep,
 ) -> dict[str, str]:
     """Revoke a device token."""
     try:
@@ -363,7 +309,7 @@ async def initiate_device_authorization(
     request_body: DeviceAuthorizationRequest,
     request: Request,
     auth_service: AuthServiceDep,
-    db: AsyncSession = Depends(get_async_session),
+    db: AsyncSessionDep,
 ) -> DeviceAuthorizationResponse:
     """
     Initiate OAuth device authorization flow.
@@ -392,7 +338,7 @@ async def initiate_device_authorization(
 async def poll_device_token(
     request_body: DeviceTokenRequest,
     auth_service: AuthServiceDep,
-    db: AsyncSession = Depends(get_async_session),
+    db: AsyncSessionDep,
 ) -> DeviceTokenResponse:
     """
     Poll for device token.
@@ -449,9 +395,9 @@ async def poll_device_token(
 @router.post("/device/confirm", tags=["auth", "device"], operation_id="confirmDeviceAuthorization")
 async def authorize_device_from_web(
     request_body: AuthorizeDeviceRequest,
-    current_user: CurrentUser,
+    current_user: CurrentUserDep,
     auth_service: AuthServiceDep,
-    db: AsyncSession = Depends(get_async_session),
+    db: AsyncSessionDep,
 ) -> dict[str, str]:
     """
     Authorize a device from web UI.
@@ -488,7 +434,7 @@ async def authorize_device_from_web(
 )
 async def get_device_authorization_status(
     user_code: str,
-    current_user: CurrentUser,
+    current_user: CurrentUserDep,
     auth_service: AuthServiceDep,
 ) -> DeviceAuthorizationStatus:
     """

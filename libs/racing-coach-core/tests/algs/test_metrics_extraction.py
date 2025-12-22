@@ -3,13 +3,7 @@
 from datetime import datetime, timedelta, timezone
 
 import pytest
-from racing_coach_core.algs.events import BrakingMetrics, CornerMetrics, LapMetrics
-from racing_coach_core.algs.metrics import (
-    BRAKE_THRESHOLD,
-    STEERING_THRESHOLD,
-    THROTTLE_THRESHOLD,
-    extract_lap_metrics,
-)
+from racing_coach_core.algs.metrics import extract_lap_metrics
 from racing_coach_core.schemas.telemetry import LapTelemetry, TelemetryFrame, TelemetrySequence
 
 
@@ -18,7 +12,7 @@ class TestExtractLapMetrics:
 
     def test_extract_metrics_from_empty_sequence_raises_error(self) -> None:
         """Test that extracting metrics from empty sequence raises ValueError."""
-        empty_sequence = TelemetrySequence(frames=[], lap_time=None)
+        empty_sequence = TelemetrySequence(frames=[])
 
         with pytest.raises(ValueError, match="Cannot extract metrics from empty telemetry"):
             extract_lap_metrics(empty_sequence)
@@ -91,7 +85,7 @@ class TestExtractLapMetrics:
     def test_detect_simple_braking_zone(self) -> None:
         """Test detection of a simple braking zone."""
         base_time = datetime.now(timezone.utc)
-        frames = []
+        frames: list[TelemetryFrame] = []
 
         # Create frames: no braking -> braking -> no braking
         for i in range(10):
@@ -107,21 +101,21 @@ class TestExtractLapMetrics:
             )
             frames.append(frame)
 
-        sequence = TelemetrySequence(frames=frames, lap_time=80.0)
+        sequence = TelemetrySequence(frames=frames)
         metrics = extract_lap_metrics(sequence)
 
         assert metrics.total_braking_zones == 1
         assert len(metrics.braking_zones) == 1
 
         braking_zone = metrics.braking_zones[0]
-        assert braking_zone.braking_point_distance == pytest.approx(0.3, abs=0.01)
-        assert braking_zone.max_brake_pressure == pytest.approx(0.8, abs=0.01)
+        assert braking_zone.braking_point_distance == pytest.approx(0.3, abs=0.01)  # type: ignore
+        assert braking_zone.max_brake_pressure == pytest.approx(0.8, abs=0.01)  # type: ignore
         assert braking_zone.braking_point_speed > braking_zone.minimum_speed
 
     def test_detect_simple_corner(self) -> None:
         """Test detection of a simple corner."""
         base_time = datetime.now(timezone.utc)
-        frames = []
+        frames: list[TelemetryFrame] = []
 
         # Create frames: straight -> turn -> straight
         for i in range(15):
@@ -139,21 +133,21 @@ class TestExtractLapMetrics:
             )
             frames.append(frame)
 
-        sequence = TelemetrySequence(frames=frames, lap_time=90.0)
+        sequence = TelemetrySequence(frames=frames)
         metrics = extract_lap_metrics(sequence)
 
         assert metrics.total_corners == 1
         assert len(metrics.corners) == 1
 
         corner = metrics.corners[0]
-        assert corner.turn_in_distance == pytest.approx(0.25, abs=0.01)
+        assert corner.turn_in_distance == pytest.approx(0.25, abs=0.01)  # type: ignore
         assert corner.turn_in_speed > corner.apex_speed
         assert corner.exit_speed > corner.apex_speed
 
     def test_detect_trail_braking(self) -> None:
         """Test detection of trail braking (braking while turning)."""
         base_time = datetime.now(timezone.utc)
-        frames = []
+        frames: list[TelemetryFrame] = []
 
         # Create frames with overlapping braking and steering
         for i in range(20):
@@ -171,7 +165,7 @@ class TestExtractLapMetrics:
             )
             frames.append(frame)
 
-        sequence = TelemetrySequence(frames=frames, lap_time=100.0)
+        sequence = TelemetrySequence(frames=frames)
         metrics = extract_lap_metrics(sequence)
 
         assert metrics.total_braking_zones >= 1
@@ -185,7 +179,7 @@ class TestExtractLapMetrics:
     def test_no_braking_zones_detected(self) -> None:
         """Test lap with no braking (e.g., oval racing with constant throttle)."""
         base_time = datetime.now(timezone.utc)
-        frames = []
+        frames: list[TelemetryFrame] = []
 
         # Create frames with no braking
         for i in range(100):
@@ -199,7 +193,7 @@ class TestExtractLapMetrics:
             )
             frames.append(frame)
 
-        sequence = TelemetrySequence(frames=frames, lap_time=100.0)
+        sequence = TelemetrySequence(frames=frames)
         metrics = extract_lap_metrics(sequence)
 
         assert metrics.total_braking_zones == 0
@@ -208,7 +202,7 @@ class TestExtractLapMetrics:
     def test_no_corners_detected(self) -> None:
         """Test lap with minimal steering (straight line)."""
         base_time = datetime.now(timezone.utc)
-        frames = []
+        frames: list[TelemetryFrame] = []
 
         # Create frames with minimal steering
         for i in range(100):
@@ -221,7 +215,7 @@ class TestExtractLapMetrics:
             )
             frames.append(frame)
 
-        sequence = TelemetrySequence(frames=frames, lap_time=90.0)
+        sequence = TelemetrySequence(frames=frames)
         metrics = extract_lap_metrics(sequence)
 
         assert metrics.total_corners == 0
@@ -230,7 +224,7 @@ class TestExtractLapMetrics:
     def test_lap_wrap_around_corner(self) -> None:
         """Test corner that wraps around start/finish line."""
         base_time = datetime.now(timezone.utc)
-        frames = []
+        frames: list[TelemetryFrame] = []
 
         # Create frames with corner wrapping around (distance goes from 0.95 -> 1.0 -> 0.05)
         distances = [0.92, 0.94, 0.96, 0.98, 0.99, 0.01, 0.03, 0.05, 0.07]
@@ -247,7 +241,7 @@ class TestExtractLapMetrics:
             )
             frames.append(frame)
 
-        sequence = TelemetrySequence(frames=frames, lap_time=85.0)
+        sequence = TelemetrySequence(frames=frames)
         metrics = extract_lap_metrics(sequence)
 
         # Should detect the corner even though it wraps
@@ -256,7 +250,7 @@ class TestExtractLapMetrics:
     def test_multiple_braking_zones_and_corners(self) -> None:
         """Test lap with multiple braking zones and corners."""
         base_time = datetime.now(timezone.utc)
-        frames = []
+        frames: list[TelemetryFrame] = []
 
         # Simulate 3 corners with braking
         for corner_idx in range(3):
@@ -300,7 +294,7 @@ class TestExtractLapMetrics:
                 )
                 frames.append(frame)
 
-        sequence = TelemetrySequence(frames=frames, lap_time=120.0)
+        sequence = TelemetrySequence(frames=frames)
         metrics = extract_lap_metrics(sequence)
 
         assert metrics.total_braking_zones == 3
@@ -309,7 +303,7 @@ class TestExtractLapMetrics:
     def test_custom_thresholds(self) -> None:
         """Test that custom thresholds are respected."""
         base_time = datetime.now(timezone.utc)
-        frames = []
+        frames: list[TelemetryFrame] = []
 
         # Create frames with low brake pressure (below default threshold)
         for i in range(10):
@@ -324,7 +318,7 @@ class TestExtractLapMetrics:
             )
             frames.append(frame)
 
-        sequence = TelemetrySequence(frames=frames, lap_time=60.0)
+        sequence = TelemetrySequence(frames=frames)
 
         # With default threshold, should not detect braking
         metrics_default = extract_lap_metrics(sequence)
@@ -337,7 +331,7 @@ class TestExtractLapMetrics:
     def test_lap_statistics_calculation(self) -> None:
         """Test that lap-wide statistics are calculated correctly."""
         base_time = datetime.now(timezone.utc)
-        frames = []
+        frames: list[TelemetryFrame] = []
 
         speeds = [50.0, 60.0, 70.0, 80.0, 90.0, 85.0, 75.0, 65.0]
         for i, speed in enumerate(speeds):

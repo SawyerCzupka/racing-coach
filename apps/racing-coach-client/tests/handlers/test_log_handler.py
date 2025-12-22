@@ -1,7 +1,6 @@
 """Tests for LogHandler."""
 
 import logging
-from collections.abc import Callable
 from typing import Any
 
 import pytest
@@ -11,6 +10,8 @@ from racing_coach_core.events.base import Event, EventBus, HandlerContext, Syste
 from racing_coach_core.events.session_registry import SessionRegistry
 from racing_coach_core.schemas.events import TelemetryAndSessionId
 from racing_coach_core.schemas.telemetry import SessionFrame, TelemetryFrame
+
+from tests.factories import SessionFrameFactory, TelemetryFrameFactory
 
 
 @pytest.mark.unit
@@ -38,19 +39,19 @@ class TestLogHandlerUnit:
         self,
         running_event_bus: EventBus,
         session_registry: SessionRegistry,
-        telemetry_frame_factory: Callable[..., TelemetryFrame],
-        session_frame_factory: Callable[..., SessionFrame],
+        telemetry_frame_factory: TelemetryFrameFactory,
+        session_frame_factory: SessionFrameFactory,
     ) -> None:
         """Test that frame count increments with each event."""
         handler: LogHandler = LogHandler(running_event_bus, session_registry, log_frequency=100)
 
         # Start session in registry
-        session: SessionFrame = session_frame_factory.build()  # type: ignore[attr-defined]
+        session: SessionFrame = session_frame_factory.build()
         session_registry.start_session(session)
 
         # Send multiple frames
-        for i in range(5):
-            telem: TelemetryFrame = telemetry_frame_factory.build()  # type: ignore[attr-defined]
+        for _ in range(5):
+            telem: TelemetryFrame = telemetry_frame_factory.build()
             event: Event[TelemetryAndSessionId] = Event(
                 type=SystemEvents.TELEMETRY_EVENT,
                 data=TelemetryAndSessionId(telemetry=telem, session_id=session.session_id),
@@ -66,21 +67,21 @@ class TestLogHandlerUnit:
         self,
         running_event_bus: EventBus,
         session_registry: SessionRegistry,
-        telemetry_frame_factory: Callable[..., TelemetryFrame],
-        session_frame_factory: Callable[..., SessionFrame],
+        telemetry_frame_factory: TelemetryFrameFactory,
+        session_frame_factory: SessionFrameFactory,
         caplog: LogCaptureFixture,
     ) -> None:
         """Test that logging occurs at the specified frequency."""
         handler: LogHandler = LogHandler(running_event_bus, session_registry, log_frequency=3)
 
         # Start session in registry
-        session: SessionFrame = session_frame_factory.build()  # type: ignore[attr-defined]
+        session: SessionFrame = session_frame_factory.build()
         session_registry.start_session(session)
 
         with caplog.at_level(logging.INFO):
             # Send 10 frames
-            for i in range(10):
-                telem: TelemetryFrame = telemetry_frame_factory.build()  # type: ignore[attr-defined]
+            for _ in range(10):
+                telem: TelemetryFrame = telemetry_frame_factory.build()
                 event: Event[TelemetryAndSessionId] = Event(
                     type=SystemEvents.TELEMETRY_EVENT,
                     data=TelemetryAndSessionId(telemetry=telem, session_id=session.session_id),
@@ -106,15 +107,15 @@ class TestLogHandlerUnit:
         self,
         running_event_bus: EventBus,
         session_registry: SessionRegistry,
-        telemetry_frame_factory: Callable[..., TelemetryFrame],
-        session_frame_factory: Callable[..., SessionFrame],
+        telemetry_frame_factory: TelemetryFrameFactory,
+        session_frame_factory: SessionFrameFactory,
         caplog: LogCaptureFixture,
     ) -> None:
         """Test that logs contain actual telemetry data."""
         handler: LogHandler = LogHandler(running_event_bus, session_registry, log_frequency=1)
 
-        telem: TelemetryFrame = telemetry_frame_factory.build(speed=50.0, rpm=5000.0)  # type: ignore[attr-defined]
-        session: SessionFrame = session_frame_factory.build(track_name="Test Track")  # type: ignore[attr-defined]
+        telem: TelemetryFrame = telemetry_frame_factory.build(speed=50.0, rpm=5000.0)
+        session: SessionFrame = session_frame_factory.build(track_name="Test Track")
 
         # Start session in registry
         session_registry.start_session(session)
@@ -146,23 +147,23 @@ class TestLogHandlerIntegration:
         self,
         running_event_bus: EventBus,
         session_registry: SessionRegistry,
-        telemetry_frame_factory: Callable[..., TelemetryFrame],
-        session_frame_factory: Callable[..., SessionFrame],
+        telemetry_frame_factory: TelemetryFrameFactory,
+        session_frame_factory: SessionFrameFactory,
         caplog: LogCaptureFixture,
     ) -> None:
         """Test LogHandler integrated with event bus."""
         import asyncio
 
-        handler: LogHandler = LogHandler(running_event_bus, session_registry, log_frequency=2)
+        LogHandler(running_event_bus, session_registry, log_frequency=2)
 
         # Start session in registry
-        session: SessionFrame = session_frame_factory.build()  # type: ignore[attr-defined]
+        session: SessionFrame = session_frame_factory.build()
         session_registry.start_session(session)
 
         # Publish events through event bus
         with caplog.at_level(logging.INFO):
-            for i in range(6):
-                telem: TelemetryFrame = telemetry_frame_factory.build()  # type: ignore[attr-defined]
+            for _ in range(6):
+                telem: TelemetryFrame = telemetry_frame_factory.build()
                 event: Event[TelemetryAndSessionId] = Event(
                     type=SystemEvents.TELEMETRY_EVENT,
                     data=TelemetryAndSessionId(telemetry=telem, session_id=session.session_id),

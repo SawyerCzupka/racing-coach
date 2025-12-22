@@ -5,17 +5,18 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from sqlalchemy.pool import NullPool
+from sqlalchemy.pool import AsyncAdaptedQueuePool, NullPool
 
 from racing_coach_server.config import settings
 
 logger = logging.getLogger(__name__)
 
 # Create async engine with asyncpg
+# Use NullPool for development (debug=True), AsyncAdaptedQueuePool for production
 engine = create_async_engine(
     settings.database_url,
     echo=settings.debug,
-    poolclass=NullPool,  # Use NullPool for development, switch to QueuePool for production
+    poolclass=NullPool if settings.debug else AsyncAdaptedQueuePool,
 )
 
 # Session factory for creating AsyncSession instances

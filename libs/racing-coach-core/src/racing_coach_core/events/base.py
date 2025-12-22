@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
 
-from ..schemas.events import (
+from racing_coach_core.schemas.events import (
     LapAndSession,
     LapUploadResult,
     MetricsAndSession,
@@ -15,7 +15,7 @@ from ..schemas.events import (
     SessionStart,
     TelemetryAndSessionId,
 )
-from ..schemas.telemetry import TelemetryFrame
+from racing_coach_core.schemas.telemetry import TelemetryFrame
 
 logger = logging.getLogger(__name__)
 
@@ -243,13 +243,21 @@ class EventBus:
                 await asyncio.gather(*pending, return_exceptions=True)
 
         # Schedule the async cleanup and then stop the loop
-        def cleanup_and_stop():
+        def cleanup_and_stop() -> None:
             """Schedule async cleanup then stop the loop."""
+            if not self._loop:
+                logger.warning("Attempted to clean up and stop without a running loop.")
+                return
+
             # Create the cleanup task
             cleanup_task = self._loop.create_task(async_cleanup())
 
             # When cleanup is done, stop the loop
-            def stop_loop(task):
+            def stop_loop(task: asyncio.Task[None]) -> None:
+                if not self._loop:
+                    logger.warning("Attempted to stop loop when it is None.")
+                    return
+
                 self._loop.stop()
 
             cleanup_task.add_done_callback(stop_loop)

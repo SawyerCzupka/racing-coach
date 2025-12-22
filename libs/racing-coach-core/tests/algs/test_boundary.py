@@ -174,7 +174,7 @@ class TestVectorizedComputation:
         single_results = np.array(
             [
                 get_lateral_position(simple_track_boundary, ld, lat, lon)
-                for ld, lat, lon in zip(lap_distances, latitudes, longitudes)
+                for ld, lat, lon in zip(lap_distances, latitudes, longitudes, strict=False)
             ]
         )
 
@@ -296,7 +296,7 @@ class TestAugmentedTelemetry:
     ) -> None:
         """Test computing lateral positions for a TelemetrySequence."""
         # Create frames at different positions
-        frames = []
+        frames: list[TelemetryFrame] = []
         for i in range(5):
             frame = sample_frame.model_copy()
             frame.lap_distance_pct = i * 0.2

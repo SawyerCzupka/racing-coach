@@ -5,13 +5,13 @@ import logging
 import os
 import sys
 import threading
-from collections.abc import AsyncGenerator, Callable
+from collections.abc import AsyncGenerator
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, PropertyMock
 
 import pytest
-from pytest_factoryboy import register
+from polyfactory.pytest_plugin import register_fixture
 from racing_coach_core.events.base import (
     Event,
     EventBus,
@@ -47,10 +47,10 @@ from load_test_utils import (  # noqa: E402
 logger = logging.getLogger(__name__)
 
 # Register factories to create pytest fixtures automatically
-register(TelemetryFrameFactory)
-register(SessionFrameFactory)
-register(LapTelemetryFactory)
-register(LapAndSessionFactory)
+register_fixture(TelemetryFrameFactory)
+register_fixture(SessionFrameFactory)
+register_fixture(LapTelemetryFactory)
+register_fixture(LapAndSessionFactory)
 
 
 # ============================================================================
@@ -335,8 +335,8 @@ def _create_session_data_dict(session_data: SessionFrame) -> dict[str, Any]:
 
 @pytest.fixture
 def mock_telemetry_source(
-    telemetry_frame_factory: Callable[..., TelemetryFrame],
-    session_frame_factory: Callable[..., SessionFrame],
+    telemetry_frame_factory: TelemetryFrameFactory,
+    session_frame_factory: SessionFrameFactory,
 ) -> MagicMock:
     """
     Create a mock telemetry source that implements the TelemetrySource protocol.
@@ -353,8 +353,8 @@ def mock_telemetry_source(
     mock: MagicMock = MagicMock()
 
     # Create sample data
-    telemetry_data: TelemetryFrame = telemetry_frame_factory.build()  # type: ignore[attr-defined]
-    session_data: SessionFrame = session_frame_factory.build()  # type: ignore[attr-defined]
+    telemetry_data: TelemetryFrame = telemetry_frame_factory.build()
+    session_data: SessionFrame = session_frame_factory.build()
 
     # Create data dictionaries
     telemetry_dict = _create_telemetry_data_dict(telemetry_data)

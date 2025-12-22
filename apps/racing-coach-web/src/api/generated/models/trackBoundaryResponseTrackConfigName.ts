@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type UploadLapApiV1TelemetryLapPostParams = {
-  lap_id?: string | null;
-};
+/**
+ * Track configuration name
+ */
+export type TrackBoundaryResponseTrackConfigName = string | null;

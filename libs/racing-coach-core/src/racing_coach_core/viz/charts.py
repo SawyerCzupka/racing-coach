@@ -1,10 +1,12 @@
 """Chart building functions for lap visualization."""
 
-from typing import TYPE_CHECKING
+from typing import Sequence
 
+import numpy as np
 import plotly.graph_objects as go
 
 from .constants import MS_TO_KMH, accel_to_g, rad_to_deg
+from .protocols import MetricsProtocol, TelemetryDataProtocol, TelemetryFrameProtocol
 from .styles import (
     COLORS,
     MARKER_SIZES,
@@ -14,16 +16,10 @@ from .styles import (
     get_yaxis,
 )
 
-if TYPE_CHECKING:
-    from racing_coach_server_client.models import (
-        LapMetricsResponse,
-        LapTelemetryResponse,
-    )
-
 
 def create_track_map(
-    telemetry: "LapTelemetryResponse",
-    metrics: "LapMetricsResponse | None" = None,
+    telemetry: TelemetryDataProtocol,
+    metrics: MetricsProtocol | None = None,
 ) -> go.Figure:
     """
     Create a track map showing the driving line colored by speed.
@@ -64,7 +60,7 @@ def create_track_map(
                 },
                 "showscale": True,
             },
-            customdata=list(zip(speed_kmh, distances)),
+            customdata=list(zip(speed_kmh, distances)),  # type: ignore[arg-type]  # plotly stubs incorrect
             hovertemplate="Speed: %{customdata[0]:.1f} km/h<br>Distance: %{customdata[1]:.0f}m<extra></extra>",
             name="Driving Line",
             showlegend=False,
@@ -74,7 +70,9 @@ def create_track_map(
     # Add metric annotations if available
     if metrics:
         # Braking points with numbered labels
-        brake_lon, brake_lat, brake_labels = [], [], []
+        brake_lon: list[float] = []
+        brake_lat: list[float] = []
+        brake_labels: list[str] = []
         for i, bz in enumerate(metrics.braking_zones, 1):
             idx = _find_closest_frame_by_distance(frames, bz.braking_point_distance)
             if idx is not None:
@@ -103,7 +101,9 @@ def create_track_map(
             )
 
         # Corner apexes with numbered labels
-        apex_lon, apex_lat, apex_labels = [], [], []
+        apex_lon: list[float] = []
+        apex_lat: list[float] = []
+        apex_labels: list[str] = []
         for i, corner in enumerate(metrics.corners, 1):
             idx = _find_closest_frame_by_distance(frames, corner.apex_distance)
             if idx is not None:
@@ -149,8 +149,8 @@ def create_track_map(
 
 
 def create_speed_chart(
-    telemetry: "LapTelemetryResponse",
-    metrics: "LapMetricsResponse | None" = None,
+    telemetry: TelemetryDataProtocol,
+    metrics: MetricsProtocol | None = None,
 ) -> go.Figure:
     """
     Create a speed vs distance chart with braking zone annotations.
@@ -199,8 +199,8 @@ def create_speed_chart(
 
 
 def create_inputs_chart(
-    telemetry: "LapTelemetryResponse",
-    metrics: "LapMetricsResponse | None" = None,
+    telemetry: TelemetryDataProtocol,
+    metrics: MetricsProtocol | None = None,
 ) -> go.Figure:
     """
     Create a throttle/brake inputs vs distance chart.
@@ -267,8 +267,8 @@ def create_inputs_chart(
 
 
 def create_steering_chart(
-    telemetry: "LapTelemetryResponse",
-    metrics: "LapMetricsResponse | None" = None,
+    telemetry: TelemetryDataProtocol,
+    metrics: MetricsProtocol | None = None,
 ) -> go.Figure:
     """
     Create a steering angle vs distance chart with corner annotations.
@@ -313,8 +313,8 @@ def create_steering_chart(
 
 
 def create_gforce_chart(
-    telemetry: "LapTelemetryResponse",
-    metrics: "LapMetricsResponse | None" = None,
+    telemetry: TelemetryDataProtocol,
+    metrics: MetricsProtocol | None = None,
 ) -> go.Figure:
     """
     Create a G-force vs distance chart.
@@ -380,7 +380,7 @@ def create_gforce_chart(
     return fig
 
 
-def create_friction_circle(telemetry: "LapTelemetryResponse") -> go.Figure:
+def create_friction_circle(telemetry: TelemetryDataProtocol) -> go.Figure:
     """
     Create a G-G diagram (friction circle) showing lateral vs longitudinal G.
 
@@ -419,8 +419,6 @@ def create_friction_circle(telemetry: "LapTelemetryResponse") -> go.Figure:
     )
 
     # Add reference circles
-    import numpy as np
-
     for g_level in [1.0, 2.0, 3.0]:
         theta = np.linspace(0, 2 * np.pi, 100)
         fig.add_trace(
@@ -443,7 +441,7 @@ def create_friction_circle(telemetry: "LapTelemetryResponse") -> go.Figure:
     return fig
 
 
-def _add_braking_zone_shading(fig: go.Figure, metrics: "LapMetricsResponse") -> None:
+def _add_braking_zone_shading(fig: go.Figure, metrics: MetricsProtocol) -> None:
     """Add braking zone shading rectangles to a figure."""
     for i, bz in enumerate(metrics.braking_zones, 1):
         fig.add_vrect(
@@ -458,7 +456,7 @@ def _add_braking_zone_shading(fig: go.Figure, metrics: "LapMetricsResponse") -> 
         )
 
 
-def _add_corner_apex_markers(fig: go.Figure, metrics: "LapMetricsResponse") -> None:
+def _add_corner_apex_markers(fig: go.Figure, metrics: MetricsProtocol) -> None:
     """Add corner apex vertical line markers to a figure."""
     for i, corner in enumerate(metrics.corners, 1):
         fig.add_vline(
@@ -472,7 +470,7 @@ def _add_corner_apex_markers(fig: go.Figure, metrics: "LapMetricsResponse") -> N
         )
 
 
-def _add_corner_region_shading(fig: go.Figure, metrics: "LapMetricsResponse") -> None:
+def _add_corner_region_shading(fig: go.Figure, metrics: MetricsProtocol) -> None:
     """Add corner region shading rectangles to a figure."""
     for i, corner in enumerate(metrics.corners, 1):
         fig.add_vrect(
@@ -487,7 +485,9 @@ def _add_corner_region_shading(fig: go.Figure, metrics: "LapMetricsResponse") ->
         )
 
 
-def _find_closest_frame_by_distance(frames: list, target_distance: float) -> int | None:
+def _find_closest_frame_by_distance(
+    frames: Sequence[TelemetryFrameProtocol], target_distance: float
+) -> int | None:
     """Find the index of the frame closest to the target distance."""
     if not frames:
         return None

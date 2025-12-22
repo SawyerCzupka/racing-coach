@@ -1,10 +1,5 @@
 """HTML report generation for lap visualization."""
 
-from typing import TYPE_CHECKING
-
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
-
 from .charts import (
     create_friction_circle,
     create_gforce_chart,
@@ -14,20 +9,14 @@ from .charts import (
     create_track_map,
 )
 from .constants import MS_TO_KMH, RAD_TO_DEG
+from .protocols import MetricsProtocol, SessionInfoProtocol, TelemetryDataProtocol
 from .styles import COLORS
-
-if TYPE_CHECKING:
-    from racing_coach_server_client.models import (
-        LapMetricsResponse,
-        LapTelemetryResponse,
-        SessionDetailResponse,
-    )
 
 
 def generate_lap_report(
-    telemetry: "LapTelemetryResponse",
-    metrics: "LapMetricsResponse | None" = None,
-    session: "SessionDetailResponse | None" = None,
+    telemetry: TelemetryDataProtocol,
+    metrics: MetricsProtocol | None = None,
+    session: SessionInfoProtocol | None = None,
 ) -> str:
     """
     Generate a complete HTML report for a lap.
@@ -47,10 +36,7 @@ def generate_lap_report(
     lap_number = telemetry.lap_number
     lap_time = _format_lap_time(metrics.lap_time) if metrics and metrics.lap_time else "N/A"
 
-    if track_config:
-        track_display = f"{track_name} - {track_config}"
-    else:
-        track_display = track_name
+    track_display = f"{track_name} - {track_config}" if track_config else track_name
 
     # Generate individual charts
     track_map = create_track_map(telemetry, metrics)
@@ -297,7 +283,7 @@ def _format_lap_time(seconds: float | None) -> str:
     return f"{minutes}:{secs:06.3f}"
 
 
-def _build_metrics_summary_html(metrics: "LapMetricsResponse") -> str:
+def _build_metrics_summary_html(metrics: MetricsProtocol) -> str:
     """Build the metrics summary cards HTML."""
     max_speed_kmh = metrics.max_speed * MS_TO_KMH
     min_speed_kmh = metrics.min_speed * MS_TO_KMH
@@ -329,7 +315,7 @@ def _build_metrics_summary_html(metrics: "LapMetricsResponse") -> str:
     """
 
 
-def _build_braking_table_html(metrics: "LapMetricsResponse") -> str:
+def _build_braking_table_html(metrics: MetricsProtocol) -> str:
     """Build the braking zones table HTML."""
     if not metrics.braking_zones:
         return ""
@@ -380,7 +366,7 @@ def _build_braking_table_html(metrics: "LapMetricsResponse") -> str:
     """
 
 
-def _build_corners_table_html(metrics: "LapMetricsResponse") -> str:
+def _build_corners_table_html(metrics: MetricsProtocol) -> str:
     """Build the corners table HTML."""
     if not metrics.corners:
         return ""

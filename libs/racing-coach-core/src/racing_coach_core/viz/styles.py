@@ -1,7 +1,9 @@
 """Styling constants for lap visualization charts."""
 
+from typing import Any
+
 # Dark theme colors (matching the web app)
-COLORS = {
+COLORS: dict[str, str] = {
     "background": "#1f2937",  # gray-800
     "paper": "#111827",  # gray-900
     "text": "#f9fafb",  # gray-50
@@ -22,7 +24,7 @@ COLORS = {
 }
 
 # Speed colorscale for track map (low to high speed)
-SPEED_COLORSCALE = [
+SPEED_COLORSCALE: list[list[float | str]] = [
     [0.0, "#ef4444"],  # red - slow
     [0.25, "#f97316"],  # orange
     [0.5, "#eab308"],  # yellow
@@ -31,7 +33,7 @@ SPEED_COLORSCALE = [
 ]
 
 # Common layout settings
-LAYOUT_DEFAULTS = {
+LAYOUT_DEFAULTS: dict[str, Any] = {
     "paper_bgcolor": COLORS["paper"],
     "plot_bgcolor": COLORS["background"],
     "font": {"color": COLORS["text"], "family": "system-ui, sans-serif"},
@@ -44,7 +46,7 @@ LAYOUT_DEFAULTS = {
 }
 
 # Axis styling
-AXIS_DEFAULTS = {
+AXIS_DEFAULTS: dict[str, Any] = {
     "gridcolor": COLORS["grid"],
     "zerolinecolor": COLORS["grid"],
     "tickfont": {"color": COLORS["text_secondary"]},
@@ -52,7 +54,7 @@ AXIS_DEFAULTS = {
 }
 
 # Marker sizes
-MARKER_SIZES = {
+MARKER_SIZES: dict[str, int] = {
     "brake_point": 12,
     "apex": 10,
     "turn_in": 8,
@@ -60,25 +62,28 @@ MARKER_SIZES = {
 }
 
 
-def get_chart_layout(title: str, **kwargs) -> dict:
+def get_chart_layout(title: str, **kwargs: Any) -> dict[str, Any]:
     """Get a layout dict with defaults applied."""
-    layout = {**LAYOUT_DEFAULTS, "title": {"text": title, "font": {"color": COLORS["text"]}}}
+    layout: dict[str, Any] = {
+        **LAYOUT_DEFAULTS,
+        "title": {"text": title, "font": {"color": COLORS["text"]}},
+    }
     layout.update(kwargs)
     return layout
 
 
-def get_xaxis(title: str = "", **kwargs) -> dict:
+def get_xaxis(title: str = "", **kwargs: Any) -> dict[str, Any]:
     """Get x-axis settings with defaults."""
-    axis = {**AXIS_DEFAULTS}
+    axis: dict[str, Any] = {**AXIS_DEFAULTS}
     if title:
         axis["title"] = {"text": title, "font": {"color": COLORS["text"]}}
     axis.update(kwargs)
     return axis
 
 
-def get_yaxis(title: str = "", **kwargs) -> dict:
+def get_yaxis(title: str = "", **kwargs: Any) -> dict[str, Any]:
     """Get y-axis settings with defaults."""
-    axis = {**AXIS_DEFAULTS}
+    axis: dict[str, Any] = {**AXIS_DEFAULTS}
     if title:
         axis["title"] = {"text": title, "font": {"color": COLORS["text"]}}
     axis.update(kwargs)

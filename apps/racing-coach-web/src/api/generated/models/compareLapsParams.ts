@@ -6,7 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type CompareLapsApiV1MetricsCompareGetParams = {
+export type CompareLapsParams = {
   /**
    * UUID of the baseline lap
    */

@@ -5,7 +5,7 @@ from typing import Any
 from unittest.mock import AsyncMock
 
 import pytest
-from httpx import ASGITransport, AsyncClient, Response
+from httpx import ASGITransport, AsyncClient
 from racing_coach_server.app import app
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession

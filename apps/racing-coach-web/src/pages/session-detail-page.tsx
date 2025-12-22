@@ -11,7 +11,6 @@ import {
 } from '@/components/ui/table';
 import { LoadingState, EmptyState, ErrorState } from '@/components/ui/loading-states';
 import { formatDateTime, formatLapTime } from '@/lib/format';
-// import { useGetSessionApiV1SessionsSessionIdGet } from '@/api/generated/sessions/sessions';
 import { useGetSessionDetail } from '@/api/generated/sessions/sessions';
 import type { LapSummary } from '@/api/generated/models';
 
@@ -82,7 +81,7 @@ export function SessionDetailPage() {
         <div>
           <button
             onClick={() => navigate('/sessions')}
-            className="text-sm text-gray-400 hover:text-white mb-2 flex items-center gap-1"
+            className="flex items-center gap-1 mb-2 text-sm text-gray-400 hover:text-white"
           >
             &larr; Back to Sessions
           </button>
@@ -97,7 +96,7 @@ export function SessionDetailPage() {
       </div>
 
       {/* Session Info */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-400">Car</CardTitle>

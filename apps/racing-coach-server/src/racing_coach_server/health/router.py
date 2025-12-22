@@ -2,11 +2,10 @@
 
 import logging
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
 from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from racing_coach_server.database.engine import get_async_session
+from racing_coach_server.dependencies import AsyncSessionDep
 from racing_coach_server.health.schemas import HealthCheckResponse
 
 logger = logging.getLogger(__name__)
@@ -14,9 +13,11 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-@router.get("/health", response_model=HealthCheckResponse, tags=["health"])
+@router.get(
+    "/health", response_model=HealthCheckResponse, tags=["health"], operation_id="healthCheck"
+)
 async def health_check(
-    db: AsyncSession = Depends(get_async_session),
+    db: AsyncSessionDep,
 ) -> HealthCheckResponse:
     """
     Comprehensive health check endpoint.

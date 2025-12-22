@@ -102,7 +102,7 @@ def braking_telemetry_sequence() -> TelemetrySequence:
     - Corner (0.5-0.7): light braking, turning
     - Exit (0.7-1.0): throttle application
     """
-    frames = []
+    frames: list[TelemetryFrame] = []
     num_frames = 100
 
     for i in range(num_frames):
@@ -161,7 +161,7 @@ def braking_telemetry_sequence() -> TelemetrySequence:
 @pytest.fixture
 def cornering_telemetry_sequence() -> TelemetrySequence:
     """Create sequence with clear cornering events."""
-    frames = []
+    frames: list[TelemetryFrame] = []
     num_frames = 100
 
     for i in range(num_frames):

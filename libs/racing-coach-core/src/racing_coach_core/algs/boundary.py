@@ -15,9 +15,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Any
 
-import irsdk  # type: ignore[import-untyped]
 import numpy as np
 import pandas as pd
 
@@ -25,6 +23,10 @@ from racing_coach_core.schemas.telemetry import TelemetrySequence
 from racing_coach_core.schemas.track import (
     AugmentedTelemetrySequence,
     TrackBoundary,
+)
+from racing_coach_core.utils.telemetry import (
+    get_session_frame_from_ibt,
+    get_telemetry_sequence_from_ibt,
 )
 
 logger = logging.getLogger(__name__)
@@ -59,98 +61,69 @@ def extract_track_boundary_from_ibt(
 
     Raises:
         ValueError: If specified laps not found in IBT file
-        RuntimeError: If IBT file cannot be opened
     """
     ibt_path = Path(ibt_file_path)
 
-    # Initialize IBT reader for telemetry data
-    ibt = irsdk.IBT()
-    ibt.open(str(ibt_path))
+    # Get session metadata using utility
+    session_frame = get_session_frame_from_ibt(ibt_path)
 
-    # Initialize IRSDK for session metadata
-    ir = irsdk.IRSDK()
-    if not ir.startup(test_file=str(ibt_path)):
-        raise RuntimeError(f"Failed to open IBT file: {ibt_path}")
+    logger.info(
+        f"Processing IBT file for track: {session_frame.track_name} (ID: {session_frame.track_id})"
+    )
 
-    try:
-        # Extract session info for track metadata
-        weekend_info: dict[str, Any] = ir["WeekendInfo"]  # type: ignore[index]
-        track_id: int = weekend_info["TrackID"]
-        track_name: str = weekend_info["TrackName"]
-        track_config_name: str | None = weekend_info.get("TrackConfigName")
+    # Get all telemetry frames using utility
+    telemetry_seq = get_telemetry_sequence_from_ibt(ibt_path)
 
-        logger.info(f"Processing IBT file for track: {track_name} (ID: {track_id})")
+    if not telemetry_seq.frames:
+        raise ValueError("No lap data found in IBT file")
 
-        # Get all telemetry data
-        all_laps: list[Any] = ibt.get_all("Lap") or []
-        all_lap_dist_pct: list[Any] = ibt.get_all("LapDistPct") or []
-        all_lat: list[Any] = ibt.get_all("Lat") or []
-        all_lon: list[Any] = ibt.get_all("Lon") or []
+    # Filter frames by lap number and extract GPS data
+    left_data = _extract_lap_gps_data(telemetry_seq, left_lap_number)
+    right_data = _extract_lap_gps_data(telemetry_seq, right_lap_number)
 
-        if not all_laps:
-            raise ValueError("No lap data found in IBT file")
+    if left_data.empty:
+        raise ValueError(f"Left boundary lap {left_lap_number} not found in IBT file")
+    if right_data.empty:
+        raise ValueError(f"Right boundary lap {right_lap_number} not found in IBT file")
 
-        # Extract frames for each boundary lap
-        left_data = _extract_lap_gps_data(
-            all_laps, all_lap_dist_pct, all_lat, all_lon, left_lap_number
-        )
-        right_data = _extract_lap_gps_data(
-            all_laps, all_lap_dist_pct, all_lat, all_lon, right_lap_number
-        )
+    logger.info(
+        f"Extracted boundary data: left={len(left_data)} frames, right={len(right_data)} frames"
+    )
 
-        if left_data.empty:
-            raise ValueError(f"Left boundary lap {left_lap_number} not found in IBT file")
-        if right_data.empty:
-            raise ValueError(f"Right boundary lap {right_lap_number} not found in IBT file")
-
-        logger.info(
-            f"Extracted boundary data: left={len(left_data)} frames, right={len(right_data)} frames"
-        )
-
-        return TrackBoundary.from_boundary_laps(
-            track_id=track_id,
-            track_name=track_name,
-            track_config_name=track_config_name,
-            left_lap_data=left_data,
-            right_lap_data=right_data,
-            grid_size=grid_size,
-        )
-
-    finally:
-        ir.shutdown()
-        ibt.close()
+    return TrackBoundary.from_boundary_laps(
+        track_id=session_frame.track_id,
+        track_name=session_frame.track_name,
+        track_config_name=session_frame.track_config_name,
+        left_lap_data=left_data,
+        right_lap_data=right_data,
+        grid_size=grid_size,
+    )
 
 
 def _extract_lap_gps_data(
-    all_laps: list[Any],
-    all_lap_dist_pct: list[Any],
-    all_lat: list[Any],
-    all_lon: list[Any],
+    telemetry_seq: TelemetrySequence,
     target_lap: int,
 ) -> pd.DataFrame:
     """
-    Extract GPS data for a specific lap.
+    Extract GPS data for a specific lap from a TelemetrySequence.
 
     Args:
-        all_laps: List of lap numbers for each frame
-        all_lap_dist_pct: List of lap distance percentages
-        all_lat: List of latitudes
-        all_lon: List of longitudes
+        telemetry_seq: Sequence of telemetry frames
         target_lap: Lap number to extract
 
     Returns:
         DataFrame with lap_distance_pct, latitude, longitude columns
     """
-    indices = [i for i, lap in enumerate(all_laps) if lap == target_lap]
+    frames = [f for f in telemetry_seq.frames if f.lap_number == target_lap]
 
-    if not indices:
+    if not frames:
         return pd.DataFrame()
 
     return pd.DataFrame(
         {
-            "lap_distance_pct": [all_lap_dist_pct[i] for i in indices],
-            "latitude": [all_lat[i] for i in indices],
-            "longitude": [all_lon[i] for i in indices],
+            "lap_distance_pct": [f.lap_distance_pct for f in frames],
+            "latitude": [f.latitude for f in frames],
+            "longitude": [f.longitude for f in frames],
         }
     )
 
@@ -275,7 +248,7 @@ def compute_lateral_positions(
     Returns:
         AugmentedTelemetrySequence with lateral positions
     """
-    lateral_positions = []
+    lateral_positions: list[float] = []
 
     for frame in telemetry_sequence.frames:
         lat_pos = get_lateral_position(

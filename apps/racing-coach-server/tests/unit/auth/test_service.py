@@ -17,6 +17,8 @@ from racing_coach_server.auth.models import DeviceAuthorization, DeviceToken, Us
 from racing_coach_server.auth.service import AuthService
 from racing_coach_server.auth.utils import hash_password, hash_token
 
+from tests.polyfactories import DeviceAuthorizationFactory, UserFactory, UserSessionFactory
+
 
 @pytest.mark.unit
 class TestAuthServiceUserManagement:
@@ -71,7 +73,7 @@ class TestAuthServiceUserManagement:
     async def test_register_user_raises_if_exists(
         self,
         mock_db_session: AsyncMock,
-        user_factory,
+        user_factory: UserFactory,
     ) -> None:
         """Test that register_user raises UserAlreadyExistsError if user exists."""
         # Arrange
@@ -91,7 +93,7 @@ class TestAuthServiceUserManagement:
     async def test_authenticate_user_returns_user(
         self,
         mock_db_session: AsyncMock,
-        user_factory,
+        user_factory: UserFactory,
     ) -> None:
         """Test that authenticate_user returns user for valid credentials."""
         # Arrange
@@ -113,7 +115,7 @@ class TestAuthServiceUserManagement:
     async def test_authenticate_user_raises_for_wrong_password(
         self,
         mock_db_session: AsyncMock,
-        user_factory,
+        user_factory: UserFactory,
     ) -> None:
         """Test that authenticate_user raises InvalidCredentialsError for wrong password."""
         # Arrange
@@ -148,7 +150,7 @@ class TestAuthServiceUserManagement:
     async def test_authenticate_user_raises_for_inactive_user(
         self,
         mock_db_session: AsyncMock,
-        user_factory,
+        user_factory: UserFactory,
     ) -> None:
         """Test that authenticate_user raises InvalidCredentialsError for inactive user."""
         # Arrange
@@ -174,7 +176,7 @@ class TestAuthServiceSessionManagement:
     async def test_create_session_returns_session_and_token(
         self,
         mock_db_session: AsyncMock,
-        user_factory,
+        user_factory: UserFactory,
     ) -> None:
         """Test that create_session returns a session and raw token."""
         # Arrange
@@ -203,8 +205,8 @@ class TestAuthServiceSessionManagement:
     async def test_validate_session_returns_user(
         self,
         mock_db_session: AsyncMock,
-        user_factory,
-        user_session_factory,
+        user_factory: UserFactory,
+        user_session_factory: UserSessionFactory,
     ) -> None:
         """Test that validate_session returns user for valid session."""
         # Arrange
@@ -223,9 +225,7 @@ class TestAuthServiceSessionManagement:
         mock_result_session.scalar_one_or_none = lambda: session
         mock_result_user = AsyncMock()
         mock_result_user.scalar_one_or_none = lambda: user
-        mock_db_session.execute = AsyncMock(
-            side_effect=[mock_result_session, mock_result_user]
-        )
+        mock_db_session.execute = AsyncMock(side_effect=[mock_result_session, mock_result_user])
 
         # Act
         result = await service.validate_session(raw_token)
@@ -253,7 +253,7 @@ class TestAuthServiceSessionManagement:
     async def test_revoke_session_sets_revoked_at(
         self,
         mock_db_session: AsyncMock,
-        user_session_factory,
+        user_session_factory: UserSessionFactory,
     ) -> None:
         """Test that revoke_session sets revoked_at timestamp."""
         # Arrange
@@ -314,8 +314,8 @@ class TestAuthServiceDeviceAuthorization:
     async def test_authorize_device_sets_authorized(
         self,
         mock_db_session: AsyncMock,
-        user_factory,
-        device_authorization_factory,
+        user_factory: UserFactory,
+        device_authorization_factory: DeviceAuthorizationFactory,
     ) -> None:
         """Test that authorize_device sets status to authorized."""
         # Arrange
@@ -340,8 +340,8 @@ class TestAuthServiceDeviceAuthorization:
     async def test_authorize_device_sets_denied(
         self,
         mock_db_session: AsyncMock,
-        user_factory,
-        device_authorization_factory,
+        user_factory: UserFactory,
+        device_authorization_factory: DeviceAuthorizationFactory,
     ) -> None:
         """Test that authorize_device sets status to denied when not approved."""
         # Arrange
@@ -364,7 +364,7 @@ class TestAuthServiceDeviceAuthorization:
     async def test_poll_device_authorization_pending(
         self,
         mock_db_session: AsyncMock,
-        device_authorization_factory,
+        device_authorization_factory: DeviceAuthorizationFactory,
     ) -> None:
         """Test that poll raises DeviceAuthorizationPendingError when pending."""
         # Arrange
@@ -384,7 +384,7 @@ class TestAuthServiceDeviceAuthorization:
     async def test_poll_device_authorization_denied(
         self,
         mock_db_session: AsyncMock,
-        device_authorization_factory,
+        device_authorization_factory: DeviceAuthorizationFactory,
     ) -> None:
         """Test that poll raises DeviceAuthorizationDeniedError when denied."""
         # Arrange
@@ -404,7 +404,7 @@ class TestAuthServiceDeviceAuthorization:
     async def test_poll_device_authorization_expired(
         self,
         mock_db_session: AsyncMock,
-        device_authorization_factory,
+        device_authorization_factory: DeviceAuthorizationFactory,
     ) -> None:
         """Test that poll raises DeviceAuthorizationExpiredError when expired."""
         # Arrange
@@ -424,7 +424,7 @@ class TestAuthServiceDeviceAuthorization:
     async def test_poll_device_authorization_returns_token(
         self,
         mock_db_session: AsyncMock,
-        device_authorization_factory,
+        device_authorization_factory: DeviceAuthorizationFactory,
     ) -> None:
         """Test that poll returns device token when authorized."""
         # Arrange

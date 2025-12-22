@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { LoadingState, EmptyState } from '@/components/ui/loading-states';
 import { formatLapTime, formatDelta, getDeltaColor } from '@/lib/format';
-import { useCompareLapsApiV1MetricsCompareGet } from '@/api/generated/metrics/metrics';
+import { useCompareLaps } from '@/api/generated/metrics/metrics';
 import { useGetSessionsList, useGetSessionDetail } from '@/api/generated/sessions/sessions';
 import type {
   BrakingZoneComparison,
@@ -33,7 +33,7 @@ export function ComparePage() {
 
   // Fetch comparison data when both laps are selected
   const { data: comparison, isLoading: comparisonLoading, error: comparisonError } =
-    useCompareLapsApiV1MetricsCompareGet(
+    useCompareLaps(
       { lap_id_1: lap1, lap_id_2: lap2 },
       { query: { enabled: !!lap1 && !!lap2 } }
     );
@@ -53,7 +53,7 @@ export function ComparePage() {
           <p className="text-gray-400">Select two laps to compare their performance</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           {/* Baseline Lap Selection */}
           <Card>
             <CardHeader>
@@ -62,8 +62,8 @@ export function ComparePage() {
             </CardHeader>
             <CardContent>
               {lap1 ? (
-                <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/30">
-                  <p className="text-white font-medium">Lap Selected</p>
+                <div className="p-4 border rounded-lg bg-blue-500/10 border-blue-500/30">
+                  <p className="font-medium text-white">Lap Selected</p>
                   <p className="text-sm text-gray-400">{lap1}</p>
                   <button
                     onClick={() => handleLapSelect(1, '')}
@@ -93,8 +93,8 @@ export function ComparePage() {
             </CardHeader>
             <CardContent>
               {lap2 ? (
-                <div className="p-4 rounded-lg bg-green-500/10 border border-green-500/30">
-                  <p className="text-white font-medium">Lap Selected</p>
+                <div className="p-4 border rounded-lg bg-green-500/10 border-green-500/30">
+                  <p className="font-medium text-white">Lap Selected</p>
                   <p className="text-sm text-gray-400">{lap2}</p>
                   <button
                     onClick={() => handleLapSelect(2, '')}
@@ -145,7 +145,7 @@ export function ComparePage() {
         <Card>
           <CardContent className="py-8">
             <div className="text-center">
-              <p className="text-gray-400 mb-4">
+              <p className="mb-4 text-gray-400">
                 Could not compare these laps. Make sure both laps have metrics computed.
               </p>
               <button
@@ -192,10 +192,10 @@ export function ComparePage() {
           <CardDescription>Overall lap time and performance deltas</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
             {/* Lap Time Comparison */}
-            <div className="text-center p-4 rounded-lg bg-gray-800/50">
-              <p className="text-sm text-gray-400 mb-2">Lap Time Delta</p>
+            <div className="p-4 text-center rounded-lg bg-gray-800/50">
+              <p className="mb-2 text-sm text-gray-400">Lap Time Delta</p>
               <p className={`text-3xl font-bold ${getDeltaColor(summary.lap_time_delta ?? 0)}`}>
                 {summary.lap_time_delta != null ? formatDelta(summary.lap_time_delta) : 'N/A'}
               </p>
@@ -203,7 +203,7 @@ export function ComparePage() {
                 <span className="text-blue-400">
                   {summary.baseline_lap_time ? formatLapTime(summary.baseline_lap_time) : '--:--.---'}
                 </span>
-                <span className="text-gray-500 mx-2">vs</span>
+                <span className="mx-2 text-gray-500">vs</span>
                 <span className="text-green-400">
                   {summary.comparison_lap_time ? formatLapTime(summary.comparison_lap_time) : '--:--.---'}
                 </span>
@@ -211,16 +211,16 @@ export function ComparePage() {
             </div>
 
             {/* Max Speed Delta */}
-            <div className="text-center p-4 rounded-lg bg-gray-800/50">
-              <p className="text-sm text-gray-400 mb-2">Max Speed Delta</p>
+            <div className="p-4 text-center rounded-lg bg-gray-800/50">
+              <p className="mb-2 text-sm text-gray-400">Max Speed Delta</p>
               <p className={`text-3xl font-bold ${getDeltaColor(-(summary.max_speed_delta ?? 0))}`}>
                 {summary.max_speed_delta != null ? `${(summary.max_speed_delta * 3.6).toFixed(1)} km/h` : 'N/A'}
               </p>
             </div>
 
             {/* Corner Speed Delta */}
-            <div className="text-center p-4 rounded-lg bg-gray-800/50">
-              <p className="text-sm text-gray-400 mb-2">Avg Corner Speed Delta</p>
+            <div className="p-4 text-center rounded-lg bg-gray-800/50">
+              <p className="mb-2 text-sm text-gray-400">Avg Corner Speed Delta</p>
               <p className={`text-3xl font-bold ${getDeltaColor(-(summary.average_corner_speed_delta ?? 0))}`}>
                 {summary.average_corner_speed_delta != null
                   ? `${(summary.average_corner_speed_delta * 3.6).toFixed(1)} km/h`
@@ -229,7 +229,7 @@ export function ComparePage() {
             </div>
           </div>
 
-          <div className="mt-4 flex justify-center gap-8 text-sm text-gray-400">
+          <div className="flex justify-center gap-8 mt-4 text-sm text-gray-400">
             <span>
               Braking Zones: {summary.matched_braking_zones}/{summary.total_braking_zones_baseline} matched
             </span>
@@ -248,13 +248,13 @@ export function ComparePage() {
             <CardDescription>Zone-by-zone braking performance deltas</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
               {brakingComparisons.map((zone: BrakingZoneComparison, index: number) => (
                 <div
                   key={index}
-                  className="p-4 rounded-lg bg-gray-800/50 border border-gray-700"
+                  className="p-4 border border-gray-700 rounded-lg bg-gray-800/50"
                 >
-                  <div className="flex justify-between items-center mb-3">
+                  <div className="flex items-center justify-between mb-3">
                     <span className="text-lg font-semibold text-white">Zone {zone.zone_index + 1}</span>
                     {zone.matched_zone_index != null ? (
                       <Badge variant="success" className="text-xs">Matched</Badge>
@@ -315,13 +315,13 @@ export function ComparePage() {
             <CardDescription>Corner-by-corner performance deltas</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
               {cornerComparisons.map((corner: CornerComparison, index: number) => (
                 <div
                   key={index}
-                  className="p-4 rounded-lg bg-gray-800/50 border border-gray-700"
+                  className="p-4 border border-gray-700 rounded-lg bg-gray-800/50"
                 >
-                  <div className="flex justify-between items-center mb-3">
+                  <div className="flex items-center justify-between mb-3">
                     <span className="text-lg font-semibold text-white">Corner {corner.corner_index + 1}</span>
                     {corner.matched_corner_index != null ? (
                       <Badge variant="success" className="text-xs">Matched</Badge>
@@ -407,11 +407,11 @@ function LapSelector({
     <div className="space-y-4">
       {/* Session Selector */}
       <div>
-        <label className="block text-sm text-gray-400 mb-2">Select Session</label>
+        <label className="block mb-2 text-sm text-gray-400">Select Session</label>
         <select
           value={selectedSession ?? ''}
           onChange={(e) => onSessionSelect(e.target.value)}
-          className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full px-4 py-2 text-white bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           <option value="">Choose a session...</option>
           {sessions.map((session) => (
@@ -425,17 +425,17 @@ function LapSelector({
       {/* Lap Selector */}
       {selectedSession && sessionLaps.length > 0 && (
         <div>
-          <label className="block text-sm text-gray-400 mb-2">Select Lap</label>
-          <div className="space-y-2 max-h-48 overflow-y-auto">
+          <label className="block mb-2 text-sm text-gray-400">Select Lap</label>
+          <div className="space-y-2 overflow-y-auto max-h-48">
             {sessionLaps.filter(lap => lap.has_metrics).map((lap) => (
               <button
                 key={lap.lap_id}
                 onClick={() => onLapSelect(lap.lap_id)}
-                className="w-full p-3 text-left rounded-lg bg-gray-800 hover:bg-gray-700 border border-gray-700 hover:border-gray-600 transition-colors"
+                className="w-full p-3 text-left transition-colors bg-gray-800 border border-gray-700 rounded-lg hover:bg-gray-700 hover:border-gray-600"
               >
-                <div className="flex justify-between items-center">
-                  <span className="text-white font-medium">Lap {lap.lap_number}</span>
-                  <span className="text-gray-400 font-mono">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium text-white">Lap {lap.lap_number}</span>
+                  <span className="font-mono text-gray-400">
                     {lap.lap_time ? formatLapTime(lap.lap_time) : '--:--.---'}
                   </span>
                 </div>

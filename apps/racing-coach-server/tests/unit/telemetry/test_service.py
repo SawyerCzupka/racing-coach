@@ -4,149 +4,21 @@ from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
-from racing_coach_core.schemas.telemetry import LapTelemetry, SessionFrame
-from racing_coach_server.telemetry.models import Lap, Telemetry, TrackSession
+from racing_coach_server.telemetry.models import Telemetry
 from racing_coach_server.telemetry.service import TelemetryService
-from sqlalchemy import select
+
+from tests.polyfactories import LapTelemetryFactory, TelemetryFrameFactory
 
 
 @pytest.mark.unit
 class TestTelemetryService:
     """Unit tests for TelemetryService methods."""
 
-    async def test_add_or_get_session_creates_new(
-        self,
-        mock_db_session,
-        session_frame_factory,
-    ):
-        """Test that add_or_get_session creates a new session when none exists."""
-        # Arrange
-        session_frame: SessionFrame = session_frame_factory.build()
-        service = TelemetryService(mock_db_session)
-
-        # Mock the query to return None (no existing session)
-        mock_result = AsyncMock()
-        mock_result.scalar_one_or_none = lambda: None
-        mock_db_session.execute = AsyncMock(return_value=mock_result)
-
-        # Act
-        result = await service.add_or_get_session(session_frame)
-
-        # Assert
-        assert isinstance(result, TrackSession)
-        assert result.id == session_frame.session_id
-        assert result.track_id == session_frame.track_id
-        assert result.track_name == session_frame.track_name
-        mock_db_session.add.assert_called_once()
-        mock_db_session.flush.assert_called_once()
-
-    async def test_add_or_get_session_returns_existing(
-        self,
-        mock_db_session,
-        session_frame_factory,
-        track_session_factory,
-    ):
-        """Test that add_or_get_session returns existing session when found."""
-        # Arrange
-        session_frame: SessionFrame = session_frame_factory.build()
-        existing_session = track_session_factory.build(id=session_frame.session_id)
-        service = TelemetryService(mock_db_session)
-
-        # Mock the query to return the existing session
-        mock_result = AsyncMock()
-        mock_result.scalar_one_or_none = lambda: existing_session
-        mock_db_session.execute = AsyncMock(return_value=mock_result)
-
-        # Act
-        result = await service.add_or_get_session(session_frame)
-
-        # Assert
-        assert result == existing_session
-        mock_db_session.add.assert_not_called()
-        mock_db_session.flush.assert_not_called()
-
-    async def test_get_latest_session_returns_session(
-        self,
-        mock_db_session,
-        track_session_factory,
-    ):
-        """Test that get_latest_session returns the latest session."""
-        # Arrange
-        latest_session = track_session_factory.build()
-        service = TelemetryService(mock_db_session)
-
-        # Mock the query
-        mock_result = AsyncMock()
-        mock_result.scalar_one_or_none = lambda: latest_session
-        mock_db_session.execute = AsyncMock(return_value=mock_result)
-
-        # Act
-        result = await service.get_latest_session()
-
-        # Assert
-        assert result == latest_session
-        mock_db_session.execute.assert_called_once()
-
-    async def test_get_latest_session_returns_none_when_empty(
-        self,
-        mock_db_session,
-    ):
-        """Test that get_latest_session returns None when no sessions exist."""
-        # Arrange
-        service = TelemetryService(mock_db_session)
-
-        # Mock the query to return None
-        mock_result = AsyncMock()
-        mock_result.scalar_one_or_none = lambda: None
-        mock_db_session.execute = AsyncMock(return_value=mock_result)
-
-        # Act
-        result = await service.get_latest_session()
-
-        # Assert
-        assert result is None
-
-    @pytest.mark.parametrize(
-        "lap_number,lap_time,is_valid",
-        [
-            (1, 90.5, True),
-            (5, None, False),
-            (10, 85.3, True),
-        ],
-    )
-    async def test_add_lap(
-        self,
-        mock_db_session,
-        lap_number,
-        lap_time,
-        is_valid,
-    ):
-        """Test that add_lap creates a lap with correct parameters."""
-        # Arrange
-        session_id = uuid4()
-        service = TelemetryService(mock_db_session)
-
-        # Act
-        result = await service.add_lap(
-            track_session_id=session_id,
-            lap_number=lap_number,
-            lap_time=lap_time,
-            is_valid=is_valid,
-        )
-
-        # Assert
-        assert isinstance(result, Lap)
-        assert result.track_session_id == session_id
-        assert result.lap_number == lap_number
-        assert result.lap_time == lap_time
-        assert result.is_valid == is_valid
-        mock_db_session.add.assert_called_once()
-        mock_db_session.flush.assert_called_once()
-
     async def test_add_telemetry_sequence(
         self,
-        mock_db_session,
-        telemetry_frame_factory,
+        mock_db_session: AsyncMock,
+        telemetry_frame_factory: TelemetryFrameFactory,
+        lap_telemetry_factory: LapTelemetryFactory,
     ):
         """Test that add_telemetry_sequence creates telemetry records."""
         # Arrange
@@ -156,13 +28,7 @@ class TestTelemetryService:
 
         # Create a sequence with 10 frames
         frames = [telemetry_frame_factory.build() for _ in range(10)]
-
-        # Create a mock LapTelemetry object
-        class MockLapTelemetry:
-            def __init__(self, frames):
-                self.frames = frames
-
-        telemetry_sequence = MockLapTelemetry(frames)
+        telemetry_sequence = lap_telemetry_factory.build(frames=frames)
 
         # Act
         await service.add_telemetry_sequence(telemetry_sequence, lap_id, session_id)
@@ -177,8 +43,9 @@ class TestTelemetryService:
 
     async def test_add_telemetry_sequence_preserves_tire_data(
         self,
-        mock_db_session,
-        telemetry_frame_factory,
+        mock_db_session: AsyncMock,
+        telemetry_frame_factory: TelemetryFrameFactory,
+        lap_telemetry_factory: LapTelemetryFactory,
     ):
         """Test that add_telemetry_sequence correctly maps tire data."""
         # Arrange
@@ -203,11 +70,7 @@ class TestTelemetryService:
             brake_line_pressure={"LF": 2.5, "RF": 2.5, "LR": 2.0, "RR": 2.0},
         )
 
-        class MockLapTelemetry:
-            def __init__(self, frames):
-                self.frames = frames
-
-        telemetry_sequence = MockLapTelemetry([frame])
+        telemetry_sequence = lap_telemetry_factory.build(frames=[frame])
 
         # Act
         await service.add_telemetry_sequence(telemetry_sequence, lap_id, session_id)

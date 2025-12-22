@@ -1,5 +1,11 @@
 """CLI entry point for lap visualization.
 
+This CLI requires the racing-coach-server-client package to fetch data from the server.
+Install with: uv add racing-coach-core[viz-cli]
+
+The visualization utilities in the viz module can be used without this CLI
+by passing any data that satisfies the protocol interfaces defined in viz.protocols.
+
 Usage:
     # List all sessions
     python -m racing_coach_core.viz --server http://localhost:8000 --list-sessions
@@ -21,20 +27,30 @@ import webbrowser
 from pathlib import Path
 from uuid import UUID
 
-import httpx
-from racing_coach_server_client import Client
-from racing_coach_server_client.api.metrics import get_lap_metrics_api_v1_metrics_lap_lap_id_get
-from racing_coach_server_client.api.sessions import (
-    get_lap_telemetry,
-    get_session_detail,
-    get_sessions_list,
-)
-from racing_coach_server_client.models import (
-    LapMetricsResponse,
-    LapTelemetryResponse,
-    SessionDetailResponse,
-    SessionListResponse,
-)
+try:
+    import httpx
+    from racing_coach_server_client import Client
+    from racing_coach_server_client.api.metrics import (
+        get_lap_metrics_api_v1_metrics_lap_lap_id_get,
+    )
+    from racing_coach_server_client.api.sessions import (
+        get_lap_telemetry,
+        get_session_detail,
+        get_sessions_list,
+    )
+    from racing_coach_server_client.models import (
+        LapMetricsResponse,
+        LapTelemetryResponse,
+        SessionDetailResponse,
+        SessionListResponse,
+    )
+except ImportError:
+    print(
+        "Error: The viz CLI requires racing-coach-server-client package.",
+        file=sys.stderr,
+    )
+    print("Install with: uv add racing-coach-core[viz-cli]", file=sys.stderr)
+    sys.exit(1)
 
 from .report import generate_lap_report
 
@@ -235,10 +251,7 @@ def visualize_lap(
     html = generate_lap_report(telemetry, metrics, session_detail)
 
     # Determine output path
-    if output_path:
-        out_file = Path(output_path)
-    else:
-        out_file = Path(f"lap_{lap_id[:8]}.html")
+    out_file = Path(output_path) if output_path else Path(f"lap_{lap_id[:8]}.html")
 
     # Write file
     out_file.write_text(html)

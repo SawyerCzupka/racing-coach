@@ -13,7 +13,9 @@ from racing_coach_core.events.base import (
     HandlerContext,
     SystemEvents,
 )
-from racing_coach_core.schemas.events import TelemetryAndSession
+from racing_coach_core.schemas.telemetry import TelemetryFrame
+
+from tests.factories import TelemetryFrameFactory
 
 
 @pytest.mark.unit
@@ -239,7 +241,7 @@ class TestEventBusPublishIntegration:
     async def test_handler_receives_event(self, running_event_bus: EventBus):
         """Test that a subscribed handler receives published events."""
         event_type = EventType[str](name="TEST", data_type=str)
-        received_data = []
+        received_data: list[str] = []
 
         def handler(context: HandlerContext[str]) -> None:
             received_data.append(context.event.data)
@@ -258,8 +260,8 @@ class TestEventBusPublishIntegration:
     async def test_multiple_handlers_receive_event(self, running_event_bus: EventBus):
         """Test that multiple handlers receive the same event."""
         event_type = EventType[str](name="TEST", data_type=str)
-        received_data1 = []
-        received_data2 = []
+        received_data1: list[str] = []
+        received_data2: list[str] = []
 
         def handler1(context: HandlerContext[str]) -> None:
             received_data1.append(context.event.data)
@@ -283,7 +285,7 @@ class TestEventBusPublishIntegration:
         """Test that handlers are only called for their subscribed event types."""
         event_type1 = EventType[str](name="TYPE_1", data_type=str)
         event_type2 = EventType[str](name="TYPE_2", data_type=str)
-        received_data = []
+        received_data: list[str] = []
 
         def handler(context: HandlerContext[str]) -> None:
             received_data.append(context.event.data)
@@ -301,7 +303,7 @@ class TestEventBusPublishIntegration:
     async def test_publish_multiple_events(self, running_event_bus: EventBus):
         """Test publishing multiple events in sequence."""
         event_type = EventType[str](name="TEST", data_type=str)
-        received_data = []
+        received_data: list[str] = []
 
         def handler(context: HandlerContext[str]) -> None:
             received_data.append(context.event.data)
@@ -322,7 +324,7 @@ class TestEventBusPublishIntegration:
     async def test_handler_exception_does_not_stop_processing(self, running_event_bus: EventBus):
         """Test that an exception in one handler doesn't stop other handlers."""
         event_type = EventType[str](name="TEST", data_type=str)
-        received_data = []
+        received_data: list[str] = []
 
         def failing_handler(context: HandlerContext[str]) -> None:
             raise ValueError("Handler failed")
@@ -350,7 +352,7 @@ class TestEventBusThreadSafePublish:
     async def test_thread_safe_publish(self, running_event_bus: EventBus):
         """Test thread-safe publishing from a different thread."""
         event_type = EventType[str](name="TEST", data_type=str)
-        received_data = []
+        received_data: list[str] = []
 
         def handler(context: HandlerContext[str]) -> None:
             received_data.append(context.event.data)
@@ -381,39 +383,39 @@ class TestEventBusWithSystemEvents:
     """Integration tests using system event types."""
 
     async def test_publish_telemetry_frame_event(
-        self, running_event_bus: EventBus, telemetry_and_session_factory
+        self, running_event_bus: EventBus, telemetry_frame_factory: TelemetryFrameFactory
     ):
         """Test publishing a TELEMETRY_FRAME system event."""
-        received_events = []
+        received_events: list[Any] = []
 
-        def handler(context: HandlerContext[TelemetryAndSession]) -> None:
+        def handler(context: HandlerContext[TelemetryFrame]) -> None:
             received_events.append(context.event.data)
 
         running_event_bus.subscribe(SystemEvents.TELEMETRY_FRAME, handler)
 
-        telemetry_data = telemetry_and_session_factory()
+        telemetry_data = telemetry_frame_factory.build()
         event = Event(type=SystemEvents.TELEMETRY_FRAME, data=telemetry_data)
         await running_event_bus.publish(event)
 
         await asyncio.sleep(0.2)
 
         assert len(received_events) == 1
-        assert isinstance(received_events[0], TelemetryAndSession)
+        assert isinstance(received_events[0], TelemetryFrame)
 
     async def test_handler_accesses_telemetry_data(
-        self, running_event_bus: EventBus, telemetry_and_session_factory
+        self, running_event_bus: EventBus, telemetry_frame_factory: TelemetryFrameFactory
     ):
         """Test that handlers can access telemetry data from events."""
         accessed_data = {}
 
-        def handler(context: HandlerContext[TelemetryAndSession]) -> None:
-            telemetry = context.event.data.TelemetryFrame
+        def handler(context: HandlerContext[TelemetryFrame]) -> None:
+            telemetry = context.event.data
             accessed_data["speed"] = telemetry.speed
             accessed_data["lap_number"] = telemetry.lap_number
 
         running_event_bus.subscribe(SystemEvents.TELEMETRY_FRAME, handler)
 
-        telemetry_data = telemetry_and_session_factory()
+        telemetry_data = telemetry_frame_factory.build()
         event = Event(type=SystemEvents.TELEMETRY_FRAME, data=telemetry_data)
         await running_event_bus.publish(event)
 
@@ -421,8 +423,8 @@ class TestEventBusWithSystemEvents:
 
         assert "speed" in accessed_data
         assert "lap_number" in accessed_data
-        assert accessed_data["speed"] == telemetry_data.TelemetryFrame.speed
-        assert accessed_data["lap_number"] == telemetry_data.TelemetryFrame.lap_number
+        assert accessed_data["speed"] == telemetry_data.speed
+        assert accessed_data["lap_number"] == telemetry_data.lap_number
 
 
 @pytest.mark.integration
@@ -454,7 +456,7 @@ class TestEventBusPerformance:
     async def test_concurrent_publishing(self, running_event_bus: EventBus):
         """Test publishing events concurrently from multiple coroutines."""
         event_type = EventType[str](name="CONCURRENT", data_type=str)
-        received_data = []
+        received_data: list[str] = []
 
         def handler(context: HandlerContext[str]) -> None:
             received_data.append(context.event.data)

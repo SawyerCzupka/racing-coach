@@ -1,16 +1,15 @@
 """Integration tests for API endpoints with real database."""
 
 from typing import Any
-from uuid import uuid4
 
 import pytest
 from httpx import AsyncClient, Response
-from racing_coach_core.schemas.telemetry import LapTelemetry, SessionFrame, TelemetryFrame
+from racing_coach_core.schemas.telemetry import SessionFrame, TelemetryFrame
 from racing_coach_server.telemetry.models import Lap, Telemetry, TrackSession
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from tests.factories import SessionFrameFactory, TelemetryFrameFactory, TrackSessionFactory
+from tests.polyfactories import SessionFrameFactory, TelemetryFrameFactory, TrackSessionFactory
 
 
 @pytest.mark.integration
@@ -51,25 +50,26 @@ class TestTelemetryEndpoints:
         ]
 
         # Act
+        data = {
+            "lap": {
+                "frames": [
+                    {
+                        **frame.model_dump(),
+                        "timestamp": frame.timestamp.isoformat(),
+                    }
+                    for frame in frames
+                ],
+                "lap_time": 90.5,
+            },
+            "session": {
+                **session_frame.model_dump(),
+                "timestamp": session_frame.timestamp.isoformat(),
+                "session_id": str(session_frame.session_id),
+            },
+        }
         response: Response = await test_client.post(
             "/api/v1/telemetry/lap",
-            json={
-                "lap": {
-                    "frames": [
-                        {
-                            **frame.model_dump(),
-                            "timestamp": frame.timestamp.isoformat(),
-                        }
-                        for frame in frames
-                    ],
-                    "lap_time": 90.5,
-                },
-                "session": {
-                    **session_frame.model_dump(),
-                    "timestamp": session_frame.timestamp.isoformat(),
-                    "session_id": str(session_frame.session_id),
-                },
-            },
+            json=data,
         )
 
         # Assert
@@ -112,40 +112,42 @@ class TestTelemetryEndpoints:
 
         # Upload first lap
         frames1 = [telemetry_frame_factory.build(lap_number=1) for _ in range(5)]
+        data: dict[str, Any] = {
+            "lap": {
+                "frames": [
+                    {**f.model_dump(), "timestamp": f.timestamp.isoformat()} for f in frames1
+                ],
+                "lap_time": 90.5,
+            },
+            "session": {
+                **session_frame.model_dump(),
+                "timestamp": session_frame.timestamp.isoformat(),
+                "session_id": str(session_frame.session_id),
+            },
+        }
         await test_client.post(
             "/api/v1/telemetry/lap",
-            json={
-                "lap": {
-                    "frames": [
-                        {**f.model_dump(), "timestamp": f.timestamp.isoformat()} for f in frames1
-                    ],
-                    "lap_time": 90.5,
-                },
-                "session": {
-                    **session_frame.model_dump(),
-                    "timestamp": session_frame.timestamp.isoformat(),
-                    "session_id": str(session_frame.session_id),
-                },
-            },
+            json=data,
         )
 
         # Act - Upload second lap with same session
         frames2 = [telemetry_frame_factory.build(lap_number=2) for _ in range(5)]
+        data: dict[str, Any] = {
+            "lap": {
+                "frames": [
+                    {**f.model_dump(), "timestamp": f.timestamp.isoformat()} for f in frames2
+                ],
+                "lap_time": 88.3,
+            },
+            "session": {
+                **session_frame.model_dump(),
+                "timestamp": session_frame.timestamp.isoformat(),
+                "session_id": str(session_frame.session_id),
+            },
+        }
         response = await test_client.post(
             "/api/v1/telemetry/lap",
-            json={
-                "lap": {
-                    "frames": [
-                        {**f.model_dump(), "timestamp": f.timestamp.isoformat()} for f in frames2
-                    ],
-                    "lap_time": 88.3,
-                },
-                "session": {
-                    **session_frame.model_dump(),
-                    "timestamp": session_frame.timestamp.isoformat(),
-                    "session_id": str(session_frame.session_id),
-                },
-            },
+            json=data,
         )
 
         # Assert
@@ -227,21 +229,22 @@ class TestTransactionManagement:
         frames = [telemetry_frame_factory.build(lap_number=1) for _ in range(5)]
 
         # Act
+        data: dict[str, Any] = {
+            "lap": {
+                "frames": [
+                    {**f.model_dump(), "timestamp": f.timestamp.isoformat()} for f in frames
+                ],
+                "lap_time": 90.5,
+            },
+            "session": {
+                **session_frame.model_dump(),
+                "timestamp": session_frame.timestamp.isoformat(),
+                "session_id": str(session_frame.session_id),
+            },
+        }
         response = await test_client.post(
             "/api/v1/telemetry/lap",
-            json={
-                "lap": {
-                    "frames": [
-                        {**f.model_dump(), "timestamp": f.timestamp.isoformat()} for f in frames
-                    ],
-                    "lap_time": 90.5,
-                },
-                "session": {
-                    **session_frame.model_dump(),
-                    "timestamp": session_frame.timestamp.isoformat(),
-                    "session_id": str(session_frame.session_id),
-                },
-            },
+            json=data,
         )
 
         # Assert
@@ -313,39 +316,41 @@ class TestErrorHandling:
         frames = [telemetry_frame_factory.build(lap_number=1) for _ in range(3)]
 
         # Upload first lap
+        data: dict[str, Any] = {
+            "lap": {
+                "frames": [
+                    {**f.model_dump(), "timestamp": f.timestamp.isoformat()} for f in frames
+                ],
+                "lap_time": 90.5,
+            },
+            "session": {
+                **session_frame.model_dump(),
+                "timestamp": session_frame.timestamp.isoformat(),
+                "session_id": str(session_frame.session_id),
+            },
+        }
         await test_client.post(
             "/api/v1/telemetry/lap",
-            json={
-                "lap": {
-                    "frames": [
-                        {**f.model_dump(), "timestamp": f.timestamp.isoformat()} for f in frames
-                    ],
-                    "lap_time": 90.5,
-                },
-                "session": {
-                    **session_frame.model_dump(),
-                    "timestamp": session_frame.timestamp.isoformat(),
-                    "session_id": str(session_frame.session_id),
-                },
-            },
+            json=data,
         )
 
         # Act - Try to upload same lap number again
+        data: dict[str, Any] = {
+            "lap": {
+                "frames": [
+                    {**f.model_dump(), "timestamp": f.timestamp.isoformat()} for f in frames
+                ],
+                "lap_time": 91.2,
+            },
+            "session": {
+                **session_frame.model_dump(),
+                "timestamp": session_frame.timestamp.isoformat(),
+                "session_id": str(session_frame.session_id),
+            },
+        }
         response = await test_client.post(
             "/api/v1/telemetry/lap",
-            json={
-                "lap": {
-                    "frames": [
-                        {**f.model_dump(), "timestamp": f.timestamp.isoformat()} for f in frames
-                    ],
-                    "lap_time": 91.2,
-                },
-                "session": {
-                    **session_frame.model_dump(),
-                    "timestamp": session_frame.timestamp.isoformat(),
-                    "session_id": str(session_frame.session_id),
-                },
-            },
+            json=data,
         )
 
         # Assert

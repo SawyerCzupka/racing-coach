@@ -8,7 +8,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from racing_coach_server.telemetry.exceptions import LapNotFoundError
+from racing_coach_server.sessions.exceptions import LapNotFoundError
 from racing_coach_server.telemetry.models import (
     BrakingMetricsDB,
     CornerMetricsDB,
@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 class MetricsService:
     """Service for lap metrics operations."""
 
-    def __init__(self, db: AsyncSession):
+    def __init__(self, db: AsyncSession) -> None:
         self.db = db
 
     async def add_or_update_lap_metrics(
@@ -51,7 +51,7 @@ class MetricsService:
         lap = result.scalar_one_or_none()
 
         if not lap:
-            raise LapNotFoundError(f"Lap with ID {lap_id} not found")
+            raise LapNotFoundError(str(lap_id))
 
         # Delete existing metrics if they exist (upsert pattern)
         delete_stmt = delete(LapMetricsDB).where(LapMetricsDB.lap_id == lap_id)

@@ -8,7 +8,7 @@
 import type { LapTelemetry } from "./lapTelemetry";
 import type { SessionFrame } from "./sessionFrame";
 
-export interface BodyUploadLapApiV1TelemetryLapPost {
+export interface BodyUploadLap {
   lap: LapTelemetry;
   session: SessionFrame;
 }

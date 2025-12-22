@@ -3,7 +3,7 @@
 from datetime import datetime, timezone
 from pathlib import Path
 
-import irsdk
+import irsdk  # pyright: ignore[reportMissingTypeStubs]
 import pytest
 from racing_coach_core.algs.metrics import extract_lap_metrics
 from racing_coach_core.schemas.telemetry import LapTelemetry, TelemetryFrame
@@ -44,17 +44,17 @@ def collect_lap_telemetry(ibt_file_path: Path, target_lap: int) -> list[Telemetr
 
     # Open IBT file
     ibt = irsdk.IBT()
-    ibt.open(str(ibt_file_path))
+    ibt.open(str(ibt_file_path))  # pyright: ignore[reportUnknownMemberType]
 
     # Open IRSDK for session info
     ir = irsdk.IRSDK()
-    if not ir.startup(test_file=str(ibt_file_path)):
+    if not ir.startup(test_file=str(ibt_file_path)):  # pyright: ignore[reportUnknownMemberType]
         raise RuntimeError(f"Failed to open .ibt file: {ibt_file_path}")
 
     try:
         # Get all lap numbers to find frames for target lap
-        all_laps = ibt.get_all("Lap")
-        if all_laps is None or len(all_laps) == 0:
+        all_laps: list[int] = ibt.get_all("Lap")  # type: ignore
+        if all_laps is None or len(all_laps) == 0:  # type: ignore
             return frames
 
         # Find frame indices for the target lap
@@ -81,91 +81,91 @@ def collect_lap_telemetry(ibt_file_path: Path, target_lap: int) -> list[Telemetr
             for frame_idx in range(lap_start_frame, lap_end_frame + 1):
                 frame = TelemetryFrame(
                     timestamp=datetime.now(timezone.utc),
-                    session_time=ibt.get(frame_idx, "SessionTime"),
-                    lap_number=ibt.get(frame_idx, "Lap"),
-                    lap_distance_pct=ibt.get(frame_idx, "LapDistPct"),
-                    lap_distance=ibt.get(frame_idx, "LapDist"),
-                    current_lap_time=ibt.get(frame_idx, "LapCurrentLapTime"),
-                    last_lap_time=ibt.get(frame_idx, "LapLastLapTime"),
-                    best_lap_time=ibt.get(frame_idx, "LapBestLapTime"),
-                    speed=ibt.get(frame_idx, "Speed"),
-                    rpm=ibt.get(frame_idx, "RPM"),
-                    gear=ibt.get(frame_idx, "Gear"),
-                    throttle=ibt.get(frame_idx, "Throttle"),
-                    brake=ibt.get(frame_idx, "Brake"),
-                    clutch=ibt.get(frame_idx, "Clutch"),
-                    steering_angle=ibt.get(frame_idx, "SteeringWheelAngle"),
-                    lateral_acceleration=ibt.get(frame_idx, "LatAccel"),
-                    longitudinal_acceleration=ibt.get(frame_idx, "LongAccel"),
-                    vertical_acceleration=ibt.get(frame_idx, "VertAccel"),
-                    yaw_rate=ibt.get(frame_idx, "YawRate"),
-                    roll_rate=ibt.get(frame_idx, "RollRate"),
-                    pitch_rate=ibt.get(frame_idx, "PitchRate"),
-                    velocity_x=ibt.get(frame_idx, "VelocityX"),
-                    velocity_y=ibt.get(frame_idx, "VelocityY"),
-                    velocity_z=ibt.get(frame_idx, "VelocityZ"),
-                    latitude=ibt.get(frame_idx, "Lat"),
-                    longitude=ibt.get(frame_idx, "Lon"),
-                    altitude=ibt.get(frame_idx, "Alt"),
-                    yaw=ibt.get(frame_idx, "Yaw"),
-                    pitch=ibt.get(frame_idx, "Pitch"),
-                    roll=ibt.get(frame_idx, "Roll"),
-                    tire_temps={
+                    session_time=ibt.get(frame_idx, "SessionTime"),  # type: ignore
+                    lap_number=ibt.get(frame_idx, "Lap"),  # type: ignore
+                    lap_distance_pct=ibt.get(frame_idx, "LapDistPct"),  # type: ignore
+                    lap_distance=ibt.get(frame_idx, "LapDist"),  # type: ignore
+                    current_lap_time=ibt.get(frame_idx, "LapCurrentLapTime"),  # type: ignore
+                    last_lap_time=ibt.get(frame_idx, "LapLastLapTime"),  # type: ignore
+                    best_lap_time=ibt.get(frame_idx, "LapBestLapTime"),  # type: ignore
+                    speed=ibt.get(frame_idx, "Speed"),  # type: ignore
+                    rpm=ibt.get(frame_idx, "RPM"),  # type: ignore
+                    gear=ibt.get(frame_idx, "Gear"),  # type: ignore
+                    throttle=ibt.get(frame_idx, "Throttle"),  # type: ignore
+                    brake=ibt.get(frame_idx, "Brake"),  # type: ignore
+                    clutch=ibt.get(frame_idx, "Clutch"),  # type: ignore
+                    steering_angle=ibt.get(frame_idx, "SteeringWheelAngle"),  # type: ignore
+                    lateral_acceleration=ibt.get(frame_idx, "LatAccel"),  # type: ignore
+                    longitudinal_acceleration=ibt.get(frame_idx, "LongAccel"),  # type: ignore
+                    vertical_acceleration=ibt.get(frame_idx, "VertAccel"),  # type: ignore
+                    yaw_rate=ibt.get(frame_idx, "YawRate"),  # type: ignore
+                    roll_rate=ibt.get(frame_idx, "RollRate"),  # type: ignore
+                    pitch_rate=ibt.get(frame_idx, "PitchRate"),  # type: ignore
+                    velocity_x=ibt.get(frame_idx, "VelocityX"),  # type: ignore
+                    velocity_y=ibt.get(frame_idx, "VelocityY"),  # type: ignore
+                    velocity_z=ibt.get(frame_idx, "VelocityZ"),  # type: ignore
+                    latitude=ibt.get(frame_idx, "Lat"),  # type: ignore
+                    longitude=ibt.get(frame_idx, "Lon"),  # type: ignore
+                    altitude=ibt.get(frame_idx, "Alt"),  # type: ignore
+                    yaw=ibt.get(frame_idx, "Yaw"),  # type: ignore
+                    pitch=ibt.get(frame_idx, "Pitch"),  # type: ignore
+                    roll=ibt.get(frame_idx, "Roll"),  # type: ignore
+                    tire_temps={  # type: ignore
                         "LF": {
-                            "left": ibt.get(frame_idx, "LFtempCL"),
-                            "middle": ibt.get(frame_idx, "LFtempCM"),
-                            "right": ibt.get(frame_idx, "LFtempCR"),
+                            "left": ibt.get(frame_idx, "LFtempCL"),  # type: ignore
+                            "middle": ibt.get(frame_idx, "LFtempCM"),  # type: ignore
+                            "right": ibt.get(frame_idx, "LFtempCR"),  # type: ignore
                         },
                         "RF": {
-                            "left": ibt.get(frame_idx, "RFtempCL"),
-                            "middle": ibt.get(frame_idx, "RFtempCM"),
-                            "right": ibt.get(frame_idx, "RFtempCR"),
+                            "left": ibt.get(frame_idx, "RFtempCL"),  # type: ignore
+                            "middle": ibt.get(frame_idx, "RFtempCM"),  # type: ignore
+                            "right": ibt.get(frame_idx, "RFtempCR"),  # type: ignore
                         },
                         "LR": {
-                            "left": ibt.get(frame_idx, "LRtempCL"),
-                            "middle": ibt.get(frame_idx, "LRtempCM"),
-                            "right": ibt.get(frame_idx, "LRtempCR"),
+                            "left": ibt.get(frame_idx, "LRtempCL"),  # type: ignore
+                            "middle": ibt.get(frame_idx, "LRtempCM"),  # type: ignore
+                            "right": ibt.get(frame_idx, "LRtempCR"),  # type: ignore
                         },
                         "RR": {
-                            "left": ibt.get(frame_idx, "RRtempCL"),
-                            "middle": ibt.get(frame_idx, "RRtempCM"),
-                            "right": ibt.get(frame_idx, "RRtempCR"),
+                            "left": ibt.get(frame_idx, "RRtempCL"),  # type: ignore
+                            "middle": ibt.get(frame_idx, "RRtempCM"),  # type: ignore
+                            "right": ibt.get(frame_idx, "RRtempCR"),  # type: ignore
                         },
                     },
-                    tire_wear={
+                    tire_wear={  # type: ignore
                         "LF": {
-                            "left": ibt.get(frame_idx, "LFwearL"),
-                            "middle": ibt.get(frame_idx, "LFwearM"),
-                            "right": ibt.get(frame_idx, "LFwearR"),
+                            "left": ibt.get(frame_idx, "LFwearL"),  # type: ignore
+                            "middle": ibt.get(frame_idx, "LFwearM"),  # type: ignore
+                            "right": ibt.get(frame_idx, "LFwearR"),  # type: ignore
                         },
                         "RF": {
-                            "left": ibt.get(frame_idx, "RFwearL"),
-                            "middle": ibt.get(frame_idx, "RFwearM"),
-                            "right": ibt.get(frame_idx, "RFwearR"),
+                            "left": ibt.get(frame_idx, "RFwearL"),  # type: ignore
+                            "middle": ibt.get(frame_idx, "RFwearM"),  # type: ignore
+                            "right": ibt.get(frame_idx, "RFwearR"),  # type: ignore
                         },
                         "LR": {
-                            "left": ibt.get(frame_idx, "LRwearL"),
-                            "middle": ibt.get(frame_idx, "LRwearM"),
-                            "right": ibt.get(frame_idx, "LRwearR"),
+                            "left": ibt.get(frame_idx, "LRwearL"),  # type: ignore
+                            "middle": ibt.get(frame_idx, "LRwearM"),  # type: ignore
+                            "right": ibt.get(frame_idx, "LRwearR"),  # type: ignore
                         },
                         "RR": {
-                            "left": ibt.get(frame_idx, "RRwearL"),
-                            "middle": ibt.get(frame_idx, "RRwearM"),
-                            "right": ibt.get(frame_idx, "RRwearR"),
+                            "left": ibt.get(frame_idx, "RRwearL"),  # type: ignore
+                            "middle": ibt.get(frame_idx, "RRwearM"),  # type: ignore
+                            "right": ibt.get(frame_idx, "RRwearR"),  # type: ignore
                         },
                     },
-                    brake_line_pressure={
-                        "LF": ibt.get(frame_idx, "LFbrakeLinePress"),
-                        "RF": ibt.get(frame_idx, "RFbrakeLinePress"),
-                        "LR": ibt.get(frame_idx, "LRbrakeLinePress"),
-                        "RR": ibt.get(frame_idx, "RRbrakeLinePress"),
+                    brake_line_pressure={  # type: ignore
+                        "LF": ibt.get(frame_idx, "LFbrakeLinePress"),  # type: ignore
+                        "RF": ibt.get(frame_idx, "RFbrakeLinePress"),  # type: ignore
+                        "LR": ibt.get(frame_idx, "LRbrakeLinePress"),  # type: ignore
+                        "RR": ibt.get(frame_idx, "RRbrakeLinePress"),  # type: ignore
                     },
-                    track_temp=ibt.get(frame_idx, "TrackTempCrew"),
-                    track_wetness=ibt.get(frame_idx, "TrackWetness"),
-                    air_temp=ibt.get(frame_idx, "AirTemp"),
-                    session_flags=ibt.get(frame_idx, "SessionFlags"),
-                    track_surface=ibt.get(frame_idx, "PlayerTrackSurface"),
-                    on_pit_road=ibt.get(frame_idx, "OnPitRoad"),
+                    track_temp=ibt.get(frame_idx, "TrackTempCrew"),  # type: ignore
+                    track_wetness=ibt.get(frame_idx, "TrackWetness"),  # type: ignore
+                    air_temp=ibt.get(frame_idx, "AirTemp"),  # type: ignore
+                    session_flags=ibt.get(frame_idx, "SessionFlags"),  # type: ignore
+                    track_surface=ibt.get(frame_idx, "PlayerTrackSurface"),  # type: ignore
+                    on_pit_road=ibt.get(frame_idx, "OnPitRoad"),  # type: ignore
                 )
                 frames.append(frame)
 
@@ -221,7 +221,7 @@ class TestMetricsWithRealTelemetry:
         print(f"  Average Corner Speed: {metrics.average_corner_speed:.1f} m/s")
 
         # Detailed braking zones
-        print(f"\n  Braking Zones:")
+        print("\n  Braking Zones:")
         for i, zone in enumerate(metrics.braking_zones[:5]):  # First 5
             print(
                 f"    Zone {i + 1}: distance={zone.braking_point_distance:.3f}, "
@@ -231,7 +231,7 @@ class TestMetricsWithRealTelemetry:
             )
 
         # Detailed corners
-        print(f"\n  Corners:")
+        print("\n  Corners:")
         for i, corner in enumerate(metrics.corners[:5]):  # First 5
             print(
                 f"    Corner {i + 1}: apex={corner.apex_distance:.3f}, "
