@@ -50,7 +50,7 @@ class TestLogHandlerUnit:
         session_registry.start_session(session)
 
         # Send multiple frames
-        for i in range(5):
+        for _ in range(5):
             telem: TelemetryFrame = telemetry_frame_factory.build()
             event: Event[TelemetryAndSessionId] = Event(
                 type=SystemEvents.TELEMETRY_EVENT,
@@ -80,7 +80,7 @@ class TestLogHandlerUnit:
 
         with caplog.at_level(logging.INFO):
             # Send 10 frames
-            for i in range(10):
+            for _ in range(10):
                 telem: TelemetryFrame = telemetry_frame_factory.build()
                 event: Event[TelemetryAndSessionId] = Event(
                     type=SystemEvents.TELEMETRY_EVENT,
@@ -154,7 +154,7 @@ class TestLogHandlerIntegration:
         """Test LogHandler integrated with event bus."""
         import asyncio
 
-        handler: LogHandler = LogHandler(running_event_bus, session_registry, log_frequency=2)
+        LogHandler(running_event_bus, session_registry, log_frequency=2)
 
         # Start session in registry
         session: SessionFrame = session_frame_factory.build()
@@ -162,7 +162,7 @@ class TestLogHandlerIntegration:
 
         # Publish events through event bus
         with caplog.at_level(logging.INFO):
-            for i in range(6):
+            for _ in range(6):
                 telem: TelemetryFrame = telemetry_frame_factory.build()
                 event: Event[TelemetryAndSessionId] = Event(
                     type=SystemEvents.TELEMETRY_EVENT,

@@ -23,7 +23,8 @@ class LogHandler:
         self.event_bus = event_bus
         self.session_registry = session_registry
 
-        self.log_frequency = log_frequency  # Log the current telemetry frame if the count is a multiple of this value
+        # Log the current telemetry frame if the count is a multiple of this value
+        self.log_frequency = log_frequency
         self.frame_count = 0
 
         self._lock = threading.RLock()
@@ -39,7 +40,7 @@ class LogHandler:
             logger.warning("No Telemetry Frame data found in the event.")
             return
 
-        if self.frame_count != 0 and self.frame_count % self.log_frequency == 0:
+        if self.frame_count % self.log_frequency == 0:
             logger.info(f"Telemetry Frame: {telemetry_frame.model_dump_json(indent=2)}")
             session = self.session_registry.get_current_session()
             if session:
