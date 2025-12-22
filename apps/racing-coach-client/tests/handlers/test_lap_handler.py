@@ -1,8 +1,6 @@
 """Tests for LapHandler."""
 
 import asyncio
-from collections.abc import Callable
-from typing import Any
 
 import pytest
 from racing_coach_client.handlers.lap_handler import LapHandler
@@ -12,6 +10,7 @@ from racing_coach_core.schemas.events import LapAndSession, SessionStart, Teleme
 from racing_coach_core.schemas.telemetry import SessionFrame, TelemetryFrame
 
 from tests.conftest import EventCollector
+from tests.factories import SessionFrameFactory, TelemetryFrameFactory
 
 
 @pytest.mark.unit
@@ -32,15 +31,15 @@ class TestLapHandlerUnit:
         self,
         running_event_bus: EventBus,
         session_registry: SessionRegistry,
-        telemetry_frame_factory: Callable[..., TelemetryFrame],
-        session_frame_factory: Callable[..., SessionFrame],
+        telemetry_frame_factory: TelemetryFrameFactory,
+        session_frame_factory: SessionFrameFactory,
     ) -> None:
         """Test that first telemetry frame uses session from registry."""
         handler: LapHandler = LapHandler(running_event_bus, session_registry)
 
         # Create test data
-        telem: TelemetryFrame = telemetry_frame_factory.build(lap_number=1)  # type: ignore[attr-defined]
-        session: SessionFrame = session_frame_factory.build()  # type: ignore[attr-defined]
+        telem: TelemetryFrame = telemetry_frame_factory.build(lap_number=1)
+        session: SessionFrame = session_frame_factory.build()
 
         # Start session in registry
         session_registry.start_session(session)
@@ -63,19 +62,19 @@ class TestLapHandlerUnit:
         self,
         running_event_bus: EventBus,
         session_registry: SessionRegistry,
-        telemetry_frame_factory: Callable[..., TelemetryFrame],
-        session_frame_factory: Callable[..., SessionFrame],
+        telemetry_frame_factory: TelemetryFrameFactory,
+        session_frame_factory: SessionFrameFactory,
     ) -> None:
         """Test that telemetry frames are buffered during a lap."""
         handler: LapHandler = LapHandler(running_event_bus, session_registry)
-        session: SessionFrame = session_frame_factory.build()  # type: ignore[attr-defined]
+        session: SessionFrame = session_frame_factory.build()
 
         # Start session in registry
         session_registry.start_session(session)
 
         # Send multiple frames for lap 1
         for i in range(5):
-            telem: TelemetryFrame = telemetry_frame_factory.build(  # type: ignore[attr-defined]
+            telem: TelemetryFrame = telemetry_frame_factory.build(
                 lap_number=1, lap_distance_pct=i * 0.2
             )
             event: Event[TelemetryAndSessionId] = Event(
@@ -96,8 +95,8 @@ class TestLapHandlerUnit:
         self,
         running_event_bus: EventBus,
         session_registry: SessionRegistry,
-        telemetry_frame_factory: Callable[..., TelemetryFrame],
-        session_frame_factory: Callable[..., SessionFrame],
+        telemetry_frame_factory: TelemetryFrameFactory,
+        session_frame_factory: SessionFrameFactory,
         event_collector: EventCollector,
     ) -> None:
         """Test that lap change triggers LAP_TELEMETRY_SEQUENCE event."""
@@ -109,13 +108,13 @@ class TestLapHandlerUnit:
         running_event_bus.register_handlers([lap_handler_registration])
 
         handler: LapHandler = LapHandler(running_event_bus, session_registry)
-        session: SessionFrame = session_frame_factory.build()  # type: ignore[attr-defined]
+        session: SessionFrame = session_frame_factory.build()
 
         # Start session in registry
         session_registry.start_session(session)
 
         # Start with lap 0 (outlap), then transition to lap 1
-        telem_outlap: TelemetryFrame = telemetry_frame_factory.build(  # type: ignore[attr-defined]
+        telem_outlap: TelemetryFrame = telemetry_frame_factory.build(
             lap_number=0, lap_distance_pct=0.5
         )
         event: Event[TelemetryAndSessionId] = Event(
@@ -130,7 +129,7 @@ class TestLapHandlerUnit:
 
         # Send frames for lap 1
         for i in range(5):
-            telem: TelemetryFrame = telemetry_frame_factory.build(  # type: ignore[attr-defined]
+            telem: TelemetryFrame = telemetry_frame_factory.build(
                 lap_number=1, lap_distance_pct=i * 0.2
             )
             event = Event(
@@ -141,7 +140,7 @@ class TestLapHandlerUnit:
             handler.handle_telemetry_frame(context)
 
         # Change to lap 2 - should trigger publish
-        telem_lap2: TelemetryFrame = telemetry_frame_factory.build(  # type: ignore[attr-defined]
+        telem_lap2: TelemetryFrame = telemetry_frame_factory.build(
             lap_number=2, lap_distance_pct=0.01
         )
         event = Event(
@@ -170,18 +169,18 @@ class TestLapHandlerUnit:
         self,
         running_event_bus: EventBus,
         session_registry: SessionRegistry,
-        telemetry_frame_factory: Callable[..., TelemetryFrame],
-        session_frame_factory: Callable[..., SessionFrame],
+        telemetry_frame_factory: TelemetryFrameFactory,
+        session_frame_factory: SessionFrameFactory,
     ) -> None:
         """Test that starting first lap clears buffer without publishing."""
         handler: LapHandler = LapHandler(running_event_bus, session_registry)
-        session: SessionFrame = session_frame_factory.build()  # type: ignore[attr-defined]
+        session: SessionFrame = session_frame_factory.build()
 
         # Start session in registry
         session_registry.start_session(session)
 
         # Start from lap 0 (initial state)
-        telem_outlap: TelemetryFrame = telemetry_frame_factory.build(  # type: ignore[attr-defined]
+        telem_outlap: TelemetryFrame = telemetry_frame_factory.build(
             lap_number=0, lap_distance_pct=0.5
         )
         event: Event[TelemetryAndSessionId] = Event(
@@ -195,7 +194,7 @@ class TestLapHandlerUnit:
         handler.handle_telemetry_frame(context)
 
         # Transition to lap 1
-        telem_lap1: TelemetryFrame = telemetry_frame_factory.build(  # type: ignore[attr-defined]
+        telem_lap1: TelemetryFrame = telemetry_frame_factory.build(
             lap_number=1, lap_distance_pct=0.01
         )
         event = Event(
@@ -213,8 +212,8 @@ class TestLapHandlerUnit:
         self,
         running_event_bus: EventBus,
         session_registry: SessionRegistry,
-        telemetry_frame_factory: Callable[..., TelemetryFrame],
-        session_frame_factory: Callable[..., SessionFrame],
+        telemetry_frame_factory: TelemetryFrameFactory,
+        session_frame_factory: SessionFrameFactory,
         event_collector: EventCollector,
     ) -> None:
         """Test that incomplete laps (< LAP_COMPLETION_THRESHOLD) are ignored."""
@@ -226,13 +225,13 @@ class TestLapHandlerUnit:
         running_event_bus.register_handlers([lap_handler_registration])
 
         handler: LapHandler = LapHandler(running_event_bus, session_registry)
-        session: SessionFrame = session_frame_factory.build()  # type: ignore[attr-defined]
+        session: SessionFrame = session_frame_factory.build()
 
         # Start session in registry
         session_registry.start_session(session)
 
         # Start with lap 1
-        telem_lap1: TelemetryFrame = telemetry_frame_factory.build(  # type: ignore[attr-defined]
+        telem_lap1: TelemetryFrame = telemetry_frame_factory.build(
             lap_number=1, lap_distance_pct=0.5
         )
         event: Event[TelemetryAndSessionId] = Event(
@@ -247,7 +246,7 @@ class TestLapHandlerUnit:
 
         # Add some frames
         for i in range(3):
-            telem: TelemetryFrame = telemetry_frame_factory.build(  # type: ignore[attr-defined]
+            telem: TelemetryFrame = telemetry_frame_factory.build(
                 lap_number=1, lap_distance_pct=0.5 + i * 0.1
             )
             event = Event(
@@ -258,7 +257,7 @@ class TestLapHandlerUnit:
             handler.handle_telemetry_frame(context)
 
         # Transition to lap 0 early (incomplete lap) - should be ignored
-        telem_lap0: TelemetryFrame = telemetry_frame_factory.build(  # type: ignore[attr-defined]
+        telem_lap0: TelemetryFrame = telemetry_frame_factory.build(
             lap_number=0,
             lap_distance_pct=0.2,  # < LAP_COMPLETION_THRESHOLD
         )
@@ -305,14 +304,14 @@ class TestLapHandlerUnit:
         self,
         running_event_bus: EventBus,
         session_registry: SessionRegistry,
-        telemetry_frame_factory: Callable[..., TelemetryFrame],
+        telemetry_frame_factory: TelemetryFrameFactory,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Test that publishing without session logs warning."""
         import logging
 
         handler: LapHandler = LapHandler(running_event_bus, session_registry)
-        handler.telemetry_buffer = [telemetry_frame_factory.build()]  # type: ignore[attr-defined]
+        handler.telemetry_buffer = [telemetry_frame_factory.build()]
 
         with caplog.at_level(logging.WARNING):
             handler.publish_lap_and_flush_buffer()
@@ -326,8 +325,8 @@ class TestLapHandlerUnit:
         self,
         running_event_bus: EventBus,
         session_registry: SessionRegistry,
-        telemetry_frame_factory: Callable[..., TelemetryFrame],
-        session_frame_factory: Callable[..., SessionFrame],
+        telemetry_frame_factory: TelemetryFrameFactory,
+        session_frame_factory: SessionFrameFactory,
         event_collector: EventCollector,
     ) -> None:
         """Test that SESSION_START with new session flushes incomplete lap buffer."""
@@ -341,7 +340,7 @@ class TestLapHandlerUnit:
         handler: LapHandler = LapHandler(running_event_bus, session_registry)
 
         # First session
-        session1: SessionFrame = session_frame_factory.build()  # type: ignore[attr-defined]
+        session1: SessionFrame = session_frame_factory.build()
         session_registry.start_session(session1)
 
         # Handle session start
@@ -356,7 +355,7 @@ class TestLapHandlerUnit:
 
         # Buffer some telemetry
         for i in range(5):
-            telem: TelemetryFrame = telemetry_frame_factory.build(  # type: ignore[attr-defined]
+            telem: TelemetryFrame = telemetry_frame_factory.build(
                 lap_number=1, lap_distance_pct=i * 0.2
             )
             event: Event[TelemetryAndSessionId] = Event(
@@ -371,7 +370,7 @@ class TestLapHandlerUnit:
         assert len(handler.telemetry_buffer) == 5
 
         # Start new session - should flush buffer
-        session2: SessionFrame = session_frame_factory.build()  # type: ignore[attr-defined]
+        session2: SessionFrame = session_frame_factory.build()
         session_registry.start_session(session2)
 
         session_start_event2: Event[SessionStart] = Event(
@@ -407,8 +406,8 @@ class TestLapHandlerIntegration:
         self,
         running_event_bus: EventBus,
         session_registry: SessionRegistry,
-        telemetry_frame_factory: Callable[..., TelemetryFrame],
-        session_frame_factory: Callable[..., SessionFrame],
+        telemetry_frame_factory: TelemetryFrameFactory,
+        session_frame_factory: SessionFrameFactory,
         event_collector: EventCollector,
     ) -> None:
         """Test handling multiple lap transitions."""
@@ -420,7 +419,7 @@ class TestLapHandlerIntegration:
         running_event_bus.register_handlers([lap_handler_registration])
 
         handler: LapHandler = LapHandler(running_event_bus, session_registry)
-        session: SessionFrame = session_frame_factory.build()  # type: ignore[attr-defined]
+        session: SessionFrame = session_frame_factory.build()
 
         # Start session in registry
         session_registry.start_session(session)
@@ -429,7 +428,7 @@ class TestLapHandlerIntegration:
         for lap_num in range(1, 4):
             # Send frames for this lap
             for i in range(10):
-                telem: TelemetryFrame = telemetry_frame_factory.build(  # type: ignore[attr-defined]
+                telem: TelemetryFrame = telemetry_frame_factory.build(
                     lap_number=lap_num,
                     lap_distance_pct=i * 0.1,
                     session_time=lap_num * 100 + i,

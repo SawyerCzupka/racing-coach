@@ -1,7 +1,6 @@
 """End-to-end integration tests for racing-coach-client."""
 
 import asyncio
-from collections.abc import Callable
 from pathlib import Path
 from unittest.mock import MagicMock, PropertyMock
 
@@ -16,6 +15,7 @@ from racing_coach_core.schemas.events import LapAndSession, SessionStart, Teleme
 from racing_coach_core.schemas.telemetry import SessionFrame, TelemetryFrame
 
 from tests.conftest import EventCollector
+from tests.factories import SessionFrameFactory, TelemetryFrameFactory
 
 
 @pytest.mark.integration
@@ -87,8 +87,8 @@ class TestEventFlowWithMocks:
         self,
         running_event_bus: EventBus,
         session_registry: SessionRegistry,
-        telemetry_frame_factory: Callable[..., TelemetryFrame],
-        session_frame_factory: Callable[..., SessionFrame],
+        telemetry_frame_factory: TelemetryFrameFactory,
+        session_frame_factory: SessionFrameFactory,
         event_collector: EventCollector,
     ) -> None:
         """Test that LapHandler correctly processes telemetry frames and publishes laps."""
@@ -103,12 +103,12 @@ class TestEventFlowWithMocks:
         lap_handler: LapHandler = LapHandler(running_event_bus, session_registry)
 
         # Start session
-        session: SessionFrame = session_frame_factory.build()  # type: ignore[attr-defined]
+        session: SessionFrame = session_frame_factory.build()
         session_registry.start_session(session)
 
         # Start with outlap (lap 0)
         for i in range(5):
-            telem: TelemetryFrame = telemetry_frame_factory.build(  # type: ignore[attr-defined]
+            telem: TelemetryFrame = telemetry_frame_factory.build(
                 lap_number=0, lap_distance_pct=i * 0.2, session_time=i * 0.1
             )
             event: Event[TelemetryAndSessionId] = Event(
@@ -122,7 +122,7 @@ class TestEventFlowWithMocks:
 
         # Complete first timed lap (lap 1)
         for i in range(10):
-            telem = telemetry_frame_factory.build(  # type: ignore[attr-defined]
+            telem = telemetry_frame_factory.build(
                 lap_number=1, lap_distance_pct=i * 0.1, session_time=10 + i * 0.1
             )
             event = Event(
@@ -133,7 +133,7 @@ class TestEventFlowWithMocks:
             lap_handler.handle_telemetry_frame(context)
 
         # Start lap 2 - should trigger publish of lap 1
-        telem = telemetry_frame_factory.build(  # type: ignore[attr-defined]
+        telem = telemetry_frame_factory.build(
             lap_number=2, lap_distance_pct=0.01, session_time=20.0
         )
         event = Event(
@@ -343,8 +343,8 @@ class TestEventBusSubscriberPattern:
         self,
         running_event_bus: EventBus,
         session_registry: SessionRegistry,
-        telemetry_frame_factory: Callable[..., TelemetryFrame],
-        session_frame_factory: Callable[..., SessionFrame],
+        telemetry_frame_factory: TelemetryFrameFactory,
+        session_frame_factory: SessionFrameFactory,
         event_collector: EventCollector,
     ) -> None:
         """Test that multiple subscribers can receive the same events."""
@@ -364,11 +364,11 @@ class TestEventBusSubscriberPattern:
         running_event_bus.register_handlers([handler1, handler2])
 
         # Create a session for the test
-        session: SessionFrame = session_frame_factory.build()  # type: ignore[attr-defined]
+        session: SessionFrame = session_frame_factory.build()
 
         # Publish some events
         for _ in range(5):
-            telem: TelemetryFrame = telemetry_frame_factory.build()  # type: ignore[attr-defined]
+            telem: TelemetryFrame = telemetry_frame_factory.build()
             event: Event[TelemetryAndSessionId] = Event(
                 type=SystemEvents.TELEMETRY_EVENT,
                 data=TelemetryAndSessionId(telemetry=telem, session_id=session.session_id),

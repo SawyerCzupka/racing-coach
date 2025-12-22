@@ -73,7 +73,7 @@ class TestLapHandlerUnderLoad:
         )
 
         # Start a session
-        session: SessionFrame = SessionFrameFactory.build()  # type: ignore[attr-defined]
+        session: SessionFrame = SessionFrameFactory.build()
         session_registry.start_session(session)
 
         # Simulate 1 complete lap at 60Hz (3600 frames) + trigger lap change
@@ -81,7 +81,7 @@ class TestLapHandlerUnderLoad:
         start_time = time.perf_counter()
 
         for i in range(frames_per_lap):
-            frame: TelemetryFrame = TelemetryFrameFactory.build(  # type: ignore[attr-defined]
+            frame: TelemetryFrame = TelemetryFrameFactory.build(
                 lap_number=1,
                 lap_distance_pct=i / frames_per_lap,
                 session_time=i / 60.0,
@@ -93,7 +93,7 @@ class TestLapHandlerUnderLoad:
             running_high_capacity_bus.thread_safe_publish(event)
 
         # Trigger lap completion by starting lap 2
-        final_frame: TelemetryFrame = TelemetryFrameFactory.build(  # type: ignore[attr-defined]
+        final_frame: TelemetryFrame = TelemetryFrameFactory.build(
             lap_number=2, lap_distance_pct=0.01
         )
         final_event: Event[TelemetryAndSessionId] = Event(
@@ -145,7 +145,7 @@ class TestLapHandlerUnderLoad:
             Handler(type=SystemEvents.TELEMETRY_EVENT, fn=lap_handler.handle_telemetry_frame)
         )
 
-        session: SessionFrame = SessionFrameFactory.build()  # type: ignore[attr-defined]
+        session: SessionFrame = SessionFrameFactory.build()
         session_registry.start_session(session)
 
         # Simulate 3 complete laps
@@ -155,7 +155,7 @@ class TestLapHandlerUnderLoad:
 
         for lap in range(1, total_laps + 1):
             for i in range(frames_per_lap):
-                frame: TelemetryFrame = TelemetryFrameFactory.build(  # type: ignore[attr-defined]
+                frame: TelemetryFrame = TelemetryFrameFactory.build(
                     lap_number=lap,
                     lap_distance_pct=i / frames_per_lap,
                     session_time=(lap - 1) * 60 + i / 60.0,
@@ -167,7 +167,7 @@ class TestLapHandlerUnderLoad:
                 running_high_capacity_bus.thread_safe_publish(event)
 
         # Trigger final lap completion
-        final_frame: TelemetryFrame = TelemetryFrameFactory.build(  # type: ignore[attr-defined]
+        final_frame: TelemetryFrame = TelemetryFrameFactory.build(
             lap_number=total_laps + 1, lap_distance_pct=0.01
         )
         final_event: Event[TelemetryAndSessionId] = Event(
@@ -285,7 +285,7 @@ class TestPipelineStress:
             Handler(type=SystemEvents.LAP_TELEMETRY_SEQUENCE, fn=count_laps)
         )
 
-        session: SessionFrame = SessionFrameFactory.build()  # type: ignore[attr-defined]
+        session: SessionFrame = SessionFrameFactory.build()
         session_registry.start_session(session)
 
         # Send 2 laps worth of data
@@ -297,7 +297,7 @@ class TestPipelineStress:
 
         for lap in range(1, total_laps + 1):
             for i in range(frames_per_lap):
-                frame: TelemetryFrame = TelemetryFrameFactory.build(  # type: ignore[attr-defined]
+                frame: TelemetryFrame = TelemetryFrameFactory.build(
                     lap_number=lap,
                     lap_distance_pct=i / frames_per_lap,
                 )
@@ -308,7 +308,7 @@ class TestPipelineStress:
                 running_high_capacity_bus.thread_safe_publish(event)
 
         # Trigger final lap
-        final_frame: TelemetryFrame = TelemetryFrameFactory.build(  # type: ignore[attr-defined]
+        final_frame: TelemetryFrame = TelemetryFrameFactory.build(
             lap_number=total_laps + 1, lap_distance_pct=0.01
         )
         running_high_capacity_bus.thread_safe_publish(
@@ -363,7 +363,7 @@ class TestPipelineMemory:
             Handler(type=SystemEvents.LAP_TELEMETRY_SEQUENCE, fn=collect_lap)
         )
 
-        session: SessionFrame = SessionFrameFactory.build()  # type: ignore[attr-defined]
+        session: SessionFrame = SessionFrameFactory.build()
         session_registry.start_session(session)
 
         gc.collect()
@@ -376,7 +376,7 @@ class TestPipelineMemory:
 
         for lap in range(1, total_laps + 1):
             for i in range(frames_per_lap):
-                frame: TelemetryFrame = TelemetryFrameFactory.build(  # type: ignore[attr-defined]
+                frame: TelemetryFrame = TelemetryFrameFactory.build(
                     lap_number=lap,
                     lap_distance_pct=i / frames_per_lap,
                 )
@@ -387,7 +387,7 @@ class TestPipelineMemory:
                 running_high_capacity_bus.thread_safe_publish(event)
 
         # Trigger final lap
-        final_frame: TelemetryFrame = TelemetryFrameFactory.build(  # type: ignore[attr-defined]
+        final_frame: TelemetryFrame = TelemetryFrameFactory.build(
             lap_number=total_laps + 1, lap_distance_pct=0.01
         )
         running_high_capacity_bus.thread_safe_publish(
