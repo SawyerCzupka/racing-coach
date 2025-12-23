@@ -3,11 +3,11 @@
 import uuid
 from typing import Self
 
+from racing_coach_core.schemas.track import TrackBoundary as TrackBoundarySchema
 from sqlalchemy import Float, Index, Integer, String, UniqueConstraint
 from sqlalchemy.dialects.postgresql import ARRAY, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from racing_coach_core.schemas.track import TrackBoundary as TrackBoundarySchema
 from racing_coach_server.database.base import Base
 from racing_coach_server.database.mixins import TimestampMixin
 
@@ -23,11 +23,11 @@ class TrackBoundary(TimestampMixin, Base):
     track_config_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     # Boundary data - PostgreSQL ARRAY columns for grid points
-    grid_distance_pct: Mapped[list[float]] = mapped_column(ARRAY(Float), nullable=False)
-    left_latitude: Mapped[list[float]] = mapped_column(ARRAY(Float), nullable=False)
-    left_longitude: Mapped[list[float]] = mapped_column(ARRAY(Float), nullable=False)
-    right_latitude: Mapped[list[float]] = mapped_column(ARRAY(Float), nullable=False)
-    right_longitude: Mapped[list[float]] = mapped_column(ARRAY(Float), nullable=False)
+    grid_distance_pct: Mapped[list[float]] = mapped_column(ARRAY(Float), nullable=False)  # pyright: ignore[reportUnknownArgumentType]
+    left_latitude: Mapped[list[float]] = mapped_column(ARRAY(Float), nullable=False)  # pyright: ignore[reportUnknownArgumentType]
+    left_longitude: Mapped[list[float]] = mapped_column(ARRAY(Float), nullable=False)  # pyright: ignore[reportUnknownArgumentType]
+    right_latitude: Mapped[list[float]] = mapped_column(ARRAY(Float), nullable=False)  # pyright: ignore[reportUnknownArgumentType]
+    right_longitude: Mapped[list[float]] = mapped_column(ARRAY(Float), nullable=False)  # pyright: ignore[reportUnknownArgumentType]
 
     # Metadata
     grid_size: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -40,9 +40,7 @@ class TrackBoundary(TimestampMixin, Base):
     )
 
     __table_args__ = (
-        UniqueConstraint(
-            "track_id", "track_config_name", name="uq_track_boundary_track_config"
-        ),
+        UniqueConstraint("track_id", "track_config_name", name="uq_track_boundary_track_config"),
         Index("idx_track_boundary_track_id", "track_id"),
     )
 

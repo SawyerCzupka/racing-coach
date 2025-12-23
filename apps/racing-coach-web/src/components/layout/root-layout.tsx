@@ -4,15 +4,19 @@ import { useAuth } from '@/providers/auth-provider';
 import { Button } from '@/components/ui/button';
 
 const navigation = [
-  { name: 'Sessions', href: '/sessions' },
-  { name: 'Tracks', href: '/tracks' },
-  { name: 'Live', href: '/live' },
-  { name: 'Compare', href: '/compare' },
+  { name: 'Sessions', href: '/sessions', adminOnly: false },
+  { name: 'Tracks', href: '/tracks', adminOnly: true },
+  { name: 'Live', href: '/live', adminOnly: false },
+  { name: 'Compare', href: '/compare', adminOnly: false },
 ];
 
 export function RootLayout() {
   const location = useLocation();
-  const { user, logout } = useAuth();
+  const { user, logout, isAdmin } = useAuth();
+
+  const visibleNavigation = navigation.filter(
+    (item) => !item.adminOnly || isAdmin
+  );
 
   return (
     <div className="min-h-screen bg-gray-950">
@@ -28,7 +32,7 @@ export function RootLayout() {
                 <span className="text-xl font-bold text-white">LapEvo</span>
               </Link>
               <nav className="flex gap-4">
-                {navigation.map((item) => (
+                {visibleNavigation.map((item) => (
                   <Link
                     key={item.name}
                     to={item.href}

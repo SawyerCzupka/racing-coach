@@ -189,6 +189,7 @@ async def get_me(current_user: CurrentUserDep) -> UserResponse:
         email=current_user.email,
         display_name=current_user.display_name,
         email_verified=current_user.email_verified_at is not None,
+        is_admin=current_user.is_admin,
         created_at=current_user.created_at,
     )
 

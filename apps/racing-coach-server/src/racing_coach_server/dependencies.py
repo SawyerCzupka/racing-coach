@@ -5,12 +5,14 @@ from typing import Annotated
 from fastapi import Depends
 
 from racing_coach_server.auth.dependencies import (
+    AdminUserDep,
     AuthServiceDep,
     CurrentUserDep,
     OptionalUserDep,
     get_auth_service,
     get_current_user,
     get_current_user_optional,
+    require_admin,
 )
 from racing_coach_server.auth.service import AuthService
 from racing_coach_server.database.dependencies import AsyncSessionDep
@@ -71,6 +73,8 @@ __all__ = [
     "AuthServiceDep",
     "get_current_user",
     "get_current_user_optional",
+    "require_admin",
     "CurrentUserDep",
     "OptionalUserDep",
+    "AdminUserDep",
 ]

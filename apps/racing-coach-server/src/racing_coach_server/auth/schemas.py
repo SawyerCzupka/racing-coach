@@ -60,6 +60,7 @@ class UserResponse(BaseModel):
     email: str
     display_name: str | None
     email_verified: bool
+    is_admin: bool
     created_at: datetime
 
 

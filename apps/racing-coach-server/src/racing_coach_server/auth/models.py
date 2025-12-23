@@ -26,6 +26,7 @@ class User(TimestampMixin, Base):
         DateTime(timezone=True), nullable=True, default=None
     )
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    is_admin: Mapped[bool] = mapped_column(Boolean, default=False)
 
     # Primary key with default_factory
     id: Mapped[uuid.UUID] = mapped_column(
@@ -43,6 +44,7 @@ class User(TimestampMixin, Base):
     __table_args__ = (
         Index("idx_user_email", "email"),
         Index("idx_user_is_active", "is_active"),
+        Index("idx_user_is_admin", "is_admin"),
     )
 
 

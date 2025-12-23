@@ -95,7 +95,9 @@ class MetricsUploadHandler:
 
         except Exception as e:
             error_msg = str(e)
-            logger.error(f"✗ Failed to upload metrics for lap {lap_metrics.lap_number}: {error_msg}")
+            logger.error(
+                f"✗ Failed to upload metrics for lap {lap_metrics.lap_number}: {error_msg}"
+            )
             self.event_bus.thread_safe_publish(
                 Event(
                     type=SystemEvents.METRICS_UPLOAD_FAILED,

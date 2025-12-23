@@ -62,3 +62,18 @@ async def get_current_user(
 
 CurrentUserDep = Annotated[User, Depends(get_current_user)]
 OptionalUserDep = Annotated[User | None, Depends(get_current_user_optional)]
+
+
+async def require_admin(
+    user: Annotated[User, Depends(get_current_user)],
+) -> User:
+    """Require authenticated admin user."""
+    if not user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required",
+        )
+    return user
+
+
+AdminUserDep = Annotated[User, Depends(require_admin)]

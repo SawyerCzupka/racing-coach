@@ -402,9 +402,7 @@ class AuthService:
         Returns:
             The DeviceAuthorization object or None if not found.
         """
-        stmt = select(DeviceAuthorization).where(
-            DeviceAuthorization.user_code == user_code.upper()
-        )
+        stmt = select(DeviceAuthorization).where(DeviceAuthorization.user_code == user_code.upper())
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()
 
@@ -455,9 +453,7 @@ class AuthService:
             DeviceAuthorizationDeniedError: If authorization was denied.
             DeviceAuthorizationExpiredError: If authorization has expired.
         """
-        stmt = select(DeviceAuthorization).where(
-            DeviceAuthorization.device_code == device_code
-        )
+        stmt = select(DeviceAuthorization).where(DeviceAuthorization.device_code == device_code)
         result = await self.db.execute(stmt)
         auth = result.scalar_one_or_none()
 

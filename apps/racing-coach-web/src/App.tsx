@@ -44,6 +44,16 @@ function App() {
                 <Route path="/lap/:lapId" element={<LapDetailPage />} />
                 <Route path="/compare" element={<ComparePage />} />
                 <Route path="/live" element={<LivePage />} />
+              </Route>
+
+              {/* Admin-only routes */}
+              <Route
+                element={
+                  <ProtectedRoute requireAdmin>
+                    <RootLayout />
+                  </ProtectedRoute>
+                }
+              >
                 <Route path="/tracks" element={<TrackBoundariesPage />} />
                 <Route path="/tracks/upload" element={<TrackBoundaryUploadPage />} />
                 <Route path="/tracks/:boundaryId" element={<TrackBoundaryDetailPage />} />

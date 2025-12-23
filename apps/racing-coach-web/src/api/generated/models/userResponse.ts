@@ -15,5 +15,6 @@ export interface UserResponse {
   email: string;
   display_name: UserResponseDisplayName;
   email_verified: boolean;
+  is_admin: boolean;
   created_at: string;
 }

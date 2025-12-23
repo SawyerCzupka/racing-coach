@@ -8,7 +8,6 @@ telemetry collection thread and the GUI thread.
 import logging
 
 from PySide6.QtCore import QObject, Signal
-
 from racing_coach_core.events import EventBus, Handler, HandlerContext, SystemEvents
 from racing_coach_core.schemas.events import (
     LapUploadResult,

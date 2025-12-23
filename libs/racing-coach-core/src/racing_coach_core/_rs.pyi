@@ -67,7 +67,6 @@ class AnalysisConfig:
         throttle_threshold: float = 0.05,
         decel_window: int = 5,
     ) -> None: ...
-
     @staticmethod
     def defaults() -> AnalysisConfig:
         """Create a config with default values."""
@@ -209,7 +208,7 @@ class LapMetrics:
     lap_number: int
     """Lap number"""
 
-    lap_time: Optional[float]
+    lap_time: float | None
     """Lap time in seconds (None if not available)"""
 
     braking_zones: list[BrakingMetrics]
@@ -236,7 +235,7 @@ class LapMetrics:
     def __init__(
         self,
         lap_number: int,
-        lap_time: Optional[float],
+        lap_time: float | None,
         braking_zones: list[BrakingMetrics],
         corners: list[CornerMetrics],
         total_corners: int,
@@ -253,8 +252,8 @@ class LapMetrics:
 def py_extract_lap_metrics(
     frames: list[TelemetryFrame],
     lap_number: int = 0,
-    lap_time: Optional[float] = None,
-    config: Optional[AnalysisConfig] = None,
+    lap_time: float | None = None,
+    config: AnalysisConfig | None = None,
 ) -> LapMetrics:
     """Extract comprehensive lap metrics from telemetry frames.
 
@@ -274,7 +273,7 @@ def py_extract_lap_metrics(
 
 def py_extract_braking_zones(
     frames: list[TelemetryFrame],
-    config: Optional[AnalysisConfig] = None,
+    config: AnalysisConfig | None = None,
 ) -> list[BrakingMetrics]:
     """Extract braking zones from telemetry frames.
 
@@ -289,7 +288,7 @@ def py_extract_braking_zones(
 
 def py_extract_corners(
     frames: list[TelemetryFrame],
-    config: Optional[AnalysisConfig] = None,
+    config: AnalysisConfig | None = None,
 ) -> list[CornerMetrics]:
     """Extract corners from telemetry frames.
 
@@ -302,7 +301,7 @@ def py_extract_corners(
     """
     ...
 
-def hello_from_rust(name: Optional[str] = None) -> str:
+def hello_from_rust(name: str | None = None) -> str:
     """A simple hello world function to verify Rust + PyO3 integration works."""
     ...
 

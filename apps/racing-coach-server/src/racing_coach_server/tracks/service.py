@@ -3,10 +3,10 @@
 import logging
 from uuid import UUID
 
+from racing_coach_core.schemas.track import TrackBoundary as TrackBoundarySchema
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from racing_coach_core.schemas.track import TrackBoundary as TrackBoundarySchema
 from racing_coach_server.tracks.models import TrackBoundary
 
 logger = logging.getLogger(__name__)

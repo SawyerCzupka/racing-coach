@@ -4,10 +4,11 @@ import { Spinner } from '@/components/ui/loading-states';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
+  requireAdmin?: boolean;
 }
 
-export function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { isLoading, isAuthenticated } = useAuth();
+export function ProtectedRoute({ children, requireAdmin = false }: ProtectedRouteProps) {
+  const { isLoading, isAuthenticated, isAdmin } = useAuth();
   const location = useLocation();
 
   if (isLoading) {
@@ -21,6 +22,10 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   if (!isAuthenticated) {
     const returnUrl = encodeURIComponent(location.pathname + location.search);
     return <Navigate to={`/login?returnUrl=${returnUrl}`} replace />;
+  }
+
+  if (requireAdmin && !isAdmin) {
+    return <Navigate to="/sessions" replace />;
   }
 
   return <>{children}</>;

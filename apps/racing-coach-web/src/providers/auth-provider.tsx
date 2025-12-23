@@ -12,6 +12,7 @@ interface AuthContextType {
   user: UserResponse | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  isAdmin: boolean;
   logout: () => Promise<void>;
   refetchUser: () => Promise<void>;
 }
@@ -59,6 +60,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     user: user ?? null,
     isLoading,
     isAuthenticated: !isError && !!user,
+    isAdmin: !!user?.is_admin,
     logout,
     refetchUser,
   };

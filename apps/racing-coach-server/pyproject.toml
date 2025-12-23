@@ -16,6 +16,7 @@ dependencies = [
     "python-multipart>=0.0.9",
     "racing-coach-core",
     "sqlalchemy[asyncio]>=2.0.40",
+    "typer>=0.15.0",
     "uvicorn>=0.34.0",
     "httpx>=0.28.1",
     "psycopg2-binary>=2.9.11",
@@ -23,6 +24,9 @@ dependencies = [
 
 [tool.uv.sources]
 racing-coach-core = { path = "../../libs/racing-coach-core", editable = true }
+
+[project.scripts]
+racing-coach-admin = "racing_coach_server.cli:app"
 
 [build-system]
 requires = ["hatchling"]

@@ -6,10 +6,10 @@ import tempfile
 from uuid import UUID
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile, status
-
 from racing_coach_core.algs.boundary import extract_track_boundary_from_ibt
+
 from racing_coach_server.database.engine import transactional_session
-from racing_coach_server.dependencies import AsyncSessionDep, CurrentUserDep
+from racing_coach_server.dependencies import AdminUserDep, AsyncSessionDep
 from racing_coach_server.tracks.schemas import (
     TrackBoundaryListResponse,
     TrackBoundaryResponse,
@@ -36,6 +36,7 @@ async def get_track_boundary_service(db: AsyncSessionDep) -> TrackBoundaryServic
 )
 async def list_track_boundaries(
     db: AsyncSessionDep,
+    _admin: AdminUserDep,
 ) -> TrackBoundaryListResponse:
     """List all track boundaries."""
     service = await get_track_boundary_service(db)
@@ -65,6 +66,7 @@ async def list_track_boundaries(
 async def get_track_boundary(
     boundary_id: UUID,
     db: AsyncSessionDep,
+    _admin: AdminUserDep,
 ) -> TrackBoundaryResponse:
     """Get a track boundary by ID."""
     service = await get_track_boundary_service(db)
@@ -102,8 +104,8 @@ async def get_track_boundary(
 )
 async def upload_track_boundary(
     db: AsyncSessionDep,
-    current_user: CurrentUserDep,  # Auth required
-    file: UploadFile = File(..., description="IBT file containing boundary laps"),
+    _admin: AdminUserDep,
+    file: UploadFile = File(..., description="IBT file containing boundary laps"),  # noqa: B008
     left_lap_number: int = Form(default=1, description="Lap number for left boundary"),
     right_lap_number: int = Form(default=3, description="Lap number for right boundary"),
 ) -> TrackBoundaryUploadResponse:
@@ -195,7 +197,7 @@ async def upload_track_boundary(
 async def delete_track_boundary(
     boundary_id: UUID,
     db: AsyncSessionDep,
-    current_user: CurrentUserDep,  # Auth required
+    _admin: AdminUserDep,
 ) -> None:
     """Delete a track boundary."""
     service = await get_track_boundary_service(db)

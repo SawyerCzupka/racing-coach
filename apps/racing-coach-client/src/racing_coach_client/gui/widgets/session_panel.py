@@ -1,7 +1,6 @@
 """Session information panel widget."""
 
 from PySide6.QtWidgets import QFormLayout, QGroupBox, QLabel
-
 from racing_coach_core.schemas.telemetry import SessionFrame
 
 
