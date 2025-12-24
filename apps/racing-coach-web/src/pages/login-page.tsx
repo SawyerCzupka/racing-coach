@@ -36,7 +36,7 @@ export function LoginPage() {
       await queryClient.invalidateQueries({ queryKey: getGetCurrentUserQueryKey() });
 
       const searchParams = new URLSearchParams(location.search);
-      const returnUrl = searchParams.get('returnUrl') || '/sessions';
+      const returnUrl = searchParams.get('returnUrl') || '/dashboard';
       navigate(decodeURIComponent(returnUrl));
     } catch {
       // Error is handled by mutation state

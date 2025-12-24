@@ -23,6 +23,10 @@ import type {
 
 import type {
   BodyUploadTrackBoundary,
+  CornerSegmentBulkRequest,
+  CornerSegmentCreate,
+  CornerSegmentListResponse,
+  CornerSegmentResponse,
   HTTPValidationError,
   TrackBoundaryListResponse,
   TrackBoundaryResponse,
@@ -557,6 +561,463 @@ export const useUploadTrackBoundary = <
   TContext
 > => {
   const mutationOptions = getUploadTrackBoundaryMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+/**
+ * List all corner segments for a track boundary, ordered by corner number.
+ * @summary List Corner Segments
+ */
+export const listCornerSegments = (
+  boundaryId: string,
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
+) => {
+  return customInstance<CornerSegmentListResponse>(
+    { url: `/api/v1/tracks/${boundaryId}/corners`, method: "GET", signal },
+    options,
+  );
+};
+
+export const getListCornerSegmentsQueryKey = (boundaryId?: string) => {
+  return [`/api/v1/tracks/${boundaryId}/corners`] as const;
+};
+
+export const getListCornerSegmentsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listCornerSegments>>,
+  TError = ErrorType<HTTPValidationError>,
+>(
+  boundaryId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof listCornerSegments>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListCornerSegmentsQueryKey(boundaryId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listCornerSegments>>
+  > = ({ signal }) => listCornerSegments(boundaryId, requestOptions, signal);
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!boundaryId,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof listCornerSegments>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListCornerSegmentsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listCornerSegments>>
+>;
+export type ListCornerSegmentsQueryError = ErrorType<HTTPValidationError>;
+
+export function useListCornerSegments<
+  TData = Awaited<ReturnType<typeof listCornerSegments>>,
+  TError = ErrorType<HTTPValidationError>,
+>(
+  boundaryId: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof listCornerSegments>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listCornerSegments>>,
+          TError,
+          Awaited<ReturnType<typeof listCornerSegments>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useListCornerSegments<
+  TData = Awaited<ReturnType<typeof listCornerSegments>>,
+  TError = ErrorType<HTTPValidationError>,
+>(
+  boundaryId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof listCornerSegments>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listCornerSegments>>,
+          TError,
+          Awaited<ReturnType<typeof listCornerSegments>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useListCornerSegments<
+  TData = Awaited<ReturnType<typeof listCornerSegments>>,
+  TError = ErrorType<HTTPValidationError>,
+>(
+  boundaryId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof listCornerSegments>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary List Corner Segments
+ */
+
+export function useListCornerSegments<
+  TData = Awaited<ReturnType<typeof listCornerSegments>>,
+  TError = ErrorType<HTTPValidationError>,
+>(
+  boundaryId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof listCornerSegments>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getListCornerSegmentsQueryOptions(boundaryId, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
+/**
+ * Bulk create corner segments, replacing any existing corners.
+Corners are numbered based on their order in the request array.
+ * @summary Create Corner Segments
+ */
+export const createCornerSegments = (
+  boundaryId: string,
+  cornerSegmentBulkRequest: BodyType<CornerSegmentBulkRequest>,
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
+) => {
+  return customInstance<CornerSegmentListResponse>(
+    {
+      url: `/api/v1/tracks/${boundaryId}/corners`,
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      data: cornerSegmentBulkRequest,
+      signal,
+    },
+    options,
+  );
+};
+
+export const getCreateCornerSegmentsMutationOptions = <
+  TError = ErrorType<HTTPValidationError>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createCornerSegments>>,
+    TError,
+    { boundaryId: string; data: BodyType<CornerSegmentBulkRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customInstance>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createCornerSegments>>,
+  TError,
+  { boundaryId: string; data: BodyType<CornerSegmentBulkRequest> },
+  TContext
+> => {
+  const mutationKey = ["createCornerSegments"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createCornerSegments>>,
+    { boundaryId: string; data: BodyType<CornerSegmentBulkRequest> }
+  > = (props) => {
+    const { boundaryId, data } = props ?? {};
+
+    return createCornerSegments(boundaryId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateCornerSegmentsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createCornerSegments>>
+>;
+export type CreateCornerSegmentsMutationBody =
+  BodyType<CornerSegmentBulkRequest>;
+export type CreateCornerSegmentsMutationError = ErrorType<HTTPValidationError>;
+
+/**
+ * @summary Create Corner Segments
+ */
+export const useCreateCornerSegments = <
+  TError = ErrorType<HTTPValidationError>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createCornerSegments>>,
+      TError,
+      { boundaryId: string; data: BodyType<CornerSegmentBulkRequest> },
+      TContext
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createCornerSegments>>,
+  TError,
+  { boundaryId: string; data: BodyType<CornerSegmentBulkRequest> },
+  TContext
+> => {
+  const mutationOptions = getCreateCornerSegmentsMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+/**
+ * Update a single corner segment's boundaries.
+ * @summary Update Corner Segment
+ */
+export const updateCornerSegment = (
+  boundaryId: string,
+  cornerId: string,
+  cornerSegmentCreate: BodyType<CornerSegmentCreate>,
+  options?: SecondParameter<typeof customInstance>,
+) => {
+  return customInstance<CornerSegmentResponse>(
+    {
+      url: `/api/v1/tracks/${boundaryId}/corners/${cornerId}`,
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      data: cornerSegmentCreate,
+    },
+    options,
+  );
+};
+
+export const getUpdateCornerSegmentMutationOptions = <
+  TError = ErrorType<HTTPValidationError>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateCornerSegment>>,
+    TError,
+    {
+      boundaryId: string;
+      cornerId: string;
+      data: BodyType<CornerSegmentCreate>;
+    },
+    TContext
+  >;
+  request?: SecondParameter<typeof customInstance>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateCornerSegment>>,
+  TError,
+  { boundaryId: string; cornerId: string; data: BodyType<CornerSegmentCreate> },
+  TContext
+> => {
+  const mutationKey = ["updateCornerSegment"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateCornerSegment>>,
+    {
+      boundaryId: string;
+      cornerId: string;
+      data: BodyType<CornerSegmentCreate>;
+    }
+  > = (props) => {
+    const { boundaryId, cornerId, data } = props ?? {};
+
+    return updateCornerSegment(boundaryId, cornerId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateCornerSegmentMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateCornerSegment>>
+>;
+export type UpdateCornerSegmentMutationBody = BodyType<CornerSegmentCreate>;
+export type UpdateCornerSegmentMutationError = ErrorType<HTTPValidationError>;
+
+/**
+ * @summary Update Corner Segment
+ */
+export const useUpdateCornerSegment = <
+  TError = ErrorType<HTTPValidationError>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateCornerSegment>>,
+      TError,
+      {
+        boundaryId: string;
+        cornerId: string;
+        data: BodyType<CornerSegmentCreate>;
+      },
+      TContext
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateCornerSegment>>,
+  TError,
+  { boundaryId: string; cornerId: string; data: BodyType<CornerSegmentCreate> },
+  TContext
+> => {
+  const mutationOptions = getUpdateCornerSegmentMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+/**
+ * Delete a corner segment. Remaining corners are renumbered.
+ * @summary Delete Corner Segment
+ */
+export const deleteCornerSegment = (
+  boundaryId: string,
+  cornerId: string,
+  options?: SecondParameter<typeof customInstance>,
+) => {
+  return customInstance<void>(
+    {
+      url: `/api/v1/tracks/${boundaryId}/corners/${cornerId}`,
+      method: "DELETE",
+    },
+    options,
+  );
+};
+
+export const getDeleteCornerSegmentMutationOptions = <
+  TError = ErrorType<HTTPValidationError>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteCornerSegment>>,
+    TError,
+    { boundaryId: string; cornerId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customInstance>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteCornerSegment>>,
+  TError,
+  { boundaryId: string; cornerId: string },
+  TContext
+> => {
+  const mutationKey = ["deleteCornerSegment"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteCornerSegment>>,
+    { boundaryId: string; cornerId: string }
+  > = (props) => {
+    const { boundaryId, cornerId } = props ?? {};
+
+    return deleteCornerSegment(boundaryId, cornerId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteCornerSegmentMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteCornerSegment>>
+>;
+
+export type DeleteCornerSegmentMutationError = ErrorType<HTTPValidationError>;
+
+/**
+ * @summary Delete Corner Segment
+ */
+export const useDeleteCornerSegment = <
+  TError = ErrorType<HTTPValidationError>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof deleteCornerSegment>>,
+      TError,
+      { boundaryId: string; cornerId: string },
+      TContext
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof deleteCornerSegment>>,
+  TError,
+  { boundaryId: string; cornerId: string },
+  TContext
+> => {
+  const mutationOptions = getDeleteCornerSegmentMutationOptions(options);
 
   return useMutation(mutationOptions, queryClient);
 };

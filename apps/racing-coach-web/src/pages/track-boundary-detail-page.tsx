@@ -184,6 +184,12 @@ export function TrackBoundaryDetailPage() {
           <Badge variant="info">{boundary.grid_size} grid points</Badge>
           <Button
             variant="outline"
+            onClick={() => navigate(`/tracks/${boundaryId}/corners`)}
+          >
+            Edit Corners
+          </Button>
+          <Button
+            variant="outline"
             onClick={handleDelete}
             disabled={deleteMutation.isPending}
           >

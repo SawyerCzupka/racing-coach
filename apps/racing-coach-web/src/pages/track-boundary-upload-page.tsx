@@ -21,8 +21,6 @@ const uploadSchema = z.object({
   rightLapNumber: z.coerce.number().int().min(1, 'Must be at least 1'),
 });
 
-type UploadFormData = z.infer<typeof uploadSchema>;
-
 interface UploadResponse {
   status: string;
   message: string;
@@ -42,7 +40,7 @@ export function TrackBoundaryUploadPage() {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<UploadFormData>({
+  } = useForm<z.input<typeof uploadSchema>, unknown, z.output<typeof uploadSchema>>({
     resolver: zodResolver(uploadSchema),
     defaultValues: {
       leftLapNumber: 1,
@@ -84,7 +82,7 @@ export function TrackBoundaryUploadPage() {
     },
   });
 
-  const onSubmit = async (data: UploadFormData) => {
+  const onSubmit = async (data: z.output<typeof uploadSchema>) => {
     if (!file) {
       setFileError('Please select an IBT file');
       return;

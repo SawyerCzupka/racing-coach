@@ -8,6 +8,7 @@ import { ProtectedRoute } from './components/auth/protected-route';
 import { LandingPage } from './pages/landing-page';
 import { LoginPage } from './pages/login-page';
 import { RegisterPage } from './pages/register-page';
+import { DashboardPage } from './pages/dashboard-page';
 import { SessionsPage } from './pages/sessions-page';
 import { SessionDetailPage } from './pages/session-detail-page';
 import { LapDetailPage } from './pages/lap-detail-page';
@@ -16,6 +17,7 @@ import { LivePage } from './pages/live-page';
 import { TrackBoundariesPage } from './pages/track-boundaries-page';
 import { TrackBoundaryDetailPage } from './pages/track-boundary-detail-page';
 import { TrackBoundaryUploadPage } from './pages/track-boundary-upload-page';
+import { CornerSegmentEditorPage } from './pages/corner-segment-editor-page';
 
 function App() {
   return (
@@ -39,6 +41,7 @@ function App() {
                   </ProtectedRoute>
                 }
               >
+                <Route path="/dashboard" element={<DashboardPage />} />
                 <Route path="/sessions" element={<SessionsPage />} />
                 <Route path="/session/:sessionId" element={<SessionDetailPage />} />
                 <Route path="/lap/:lapId" element={<LapDetailPage />} />
@@ -57,6 +60,7 @@ function App() {
                 <Route path="/tracks" element={<TrackBoundariesPage />} />
                 <Route path="/tracks/upload" element={<TrackBoundaryUploadPage />} />
                 <Route path="/tracks/:boundaryId" element={<TrackBoundaryDetailPage />} />
+                <Route path="/tracks/:boundaryId/corners" element={<CornerSegmentEditorPage />} />
               </Route>
             </Routes>
           </AuthProvider>

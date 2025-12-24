@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { TrackBoundaryResponseTrackConfigName } from "./trackBoundaryResponseTrackConfigName";
+import type { TrackBoundaryResponseTrackLength } from "./trackBoundaryResponseTrackLength";
 
 /**
  * Response model for track boundary detail endpoint.
@@ -35,6 +36,8 @@ export interface TrackBoundaryResponse {
   source_left_frames: number;
   /** Original frame count for right boundary */
   source_right_frames: number;
+  /** Total track length in meters */
+  track_length: TrackBoundaryResponseTrackLength;
   /** When the boundary was created */
   created_at: string;
   /** When the boundary was last updated */

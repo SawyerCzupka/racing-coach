@@ -1,6 +1,7 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Breadcrumbs } from '@/components/ui/breadcrumbs';
 import {
   Table,
   TableBody,
@@ -79,12 +80,14 @@ export function SessionDetailPage() {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <button
-            onClick={() => navigate('/sessions')}
-            className="flex items-center gap-1 mb-2 text-sm text-gray-400 hover:text-white"
-          >
-            &larr; Back to Sessions
-          </button>
+          <Breadcrumbs
+            items={[
+              { label: 'Dashboard', href: '/dashboard' },
+              { label: 'Sessions', href: '/sessions' },
+              { label: session.track_name },
+            ]}
+            className="mb-3"
+          />
           <h2 className="text-3xl font-bold tracking-tight text-white">
             {session.track_name}
           </h2>

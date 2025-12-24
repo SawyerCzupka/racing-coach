@@ -11,12 +11,16 @@ from racing_coach_core.algs.boundary import extract_track_boundary_from_ibt
 from racing_coach_server.database.engine import transactional_session
 from racing_coach_server.dependencies import AdminUserDep, AsyncSessionDep
 from racing_coach_server.tracks.schemas import (
+    CornerSegmentBulkRequest,
+    CornerSegmentCreate,
+    CornerSegmentListResponse,
+    CornerSegmentResponse,
     TrackBoundaryListResponse,
     TrackBoundaryResponse,
     TrackBoundarySummary,
     TrackBoundaryUploadResponse,
 )
-from racing_coach_server.tracks.service import TrackBoundaryService
+from racing_coach_server.tracks.service import CornerSegmentService, TrackBoundaryService
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +30,11 @@ router = APIRouter()
 async def get_track_boundary_service(db: AsyncSessionDep) -> TrackBoundaryService:
     """Provide TrackBoundaryService with injected AsyncSession."""
     return TrackBoundaryService(db)
+
+
+async def get_corner_segment_service(db: AsyncSessionDep) -> CornerSegmentService:
+    """Provide CornerSegmentService with injected AsyncSession."""
+    return CornerSegmentService(db)
 
 
 @router.get(
@@ -49,6 +58,7 @@ async def list_track_boundaries(
             track_name=b.track_name,
             track_config_name=b.track_config_name,
             grid_size=b.grid_size,
+            track_length=b.track_length,
             created_at=b.created_at,
         )
         for b in boundaries
@@ -91,6 +101,7 @@ async def get_track_boundary(
         grid_size=boundary.grid_size,
         source_left_frames=boundary.source_left_frames,
         source_right_frames=boundary.source_right_frames,
+        track_length=boundary.track_length,
         created_at=boundary.created_at,
         updated_at=boundary.updated_at,
     )
@@ -210,3 +221,164 @@ async def delete_track_boundary(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Track boundary {boundary_id} not found",
             )
+
+
+# Corner Segment Endpoints
+
+
+@router.get(
+    "/{boundary_id}/corners",
+    response_model=CornerSegmentListResponse,
+    tags=["tracks"],
+    operation_id="listCornerSegments",
+)
+async def list_corner_segments(
+    boundary_id: UUID,
+    db: AsyncSessionDep,
+    _admin: AdminUserDep,
+) -> CornerSegmentListResponse:
+    """List all corner segments for a track boundary, ordered by corner number."""
+    # Verify boundary exists
+    boundary_service = await get_track_boundary_service(db)
+    boundary = await boundary_service.get_boundary(boundary_id)
+    if not boundary:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Track boundary {boundary_id} not found",
+        )
+
+    service = await get_corner_segment_service(db)
+    corners = await service.list_corners(boundary_id)
+
+    corner_responses = [
+        CornerSegmentResponse(
+            id=str(c.id),
+            corner_number=c.sort_order,
+            start_distance=c.start_distance,
+            end_distance=c.end_distance,
+            created_at=c.created_at,
+            updated_at=c.updated_at,
+        )
+        for c in corners
+    ]
+
+    return CornerSegmentListResponse(corners=corner_responses, total=len(corner_responses))
+
+
+@router.post(
+    "/{boundary_id}/corners",
+    response_model=CornerSegmentListResponse,
+    tags=["tracks"],
+    operation_id="createCornerSegments",
+)
+async def create_corner_segments(
+    boundary_id: UUID,
+    request: CornerSegmentBulkRequest,
+    db: AsyncSessionDep,
+    _admin: AdminUserDep,
+) -> CornerSegmentListResponse:
+    """
+    Bulk create corner segments, replacing any existing corners.
+    Corners are numbered based on their order in the request array.
+    """
+    # Verify boundary exists
+    boundary_service = await get_track_boundary_service(db)
+    boundary = await boundary_service.get_boundary(boundary_id)
+    if not boundary:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Track boundary {boundary_id} not found",
+        )
+
+    service = await get_corner_segment_service(db)
+    async with transactional_session(db):
+        corners = await service.bulk_create_corners(boundary_id, request.corners)
+
+        corner_responses = [
+            CornerSegmentResponse(
+                id=str(c.id),
+                corner_number=c.sort_order,
+                start_distance=c.start_distance,
+                end_distance=c.end_distance,
+                created_at=c.created_at,
+                updated_at=c.updated_at,
+            )
+            for c in corners
+        ]
+
+        return CornerSegmentListResponse(corners=corner_responses, total=len(corner_responses))
+
+
+@router.put(
+    "/{boundary_id}/corners/{corner_id}",
+    response_model=CornerSegmentResponse,
+    tags=["tracks"],
+    operation_id="updateCornerSegment",
+)
+async def update_corner_segment(
+    boundary_id: UUID,
+    corner_id: UUID,
+    request: CornerSegmentCreate,
+    db: AsyncSessionDep,
+    _admin: AdminUserDep,
+) -> CornerSegmentResponse:
+    """Update a single corner segment's boundaries."""
+    service = await get_corner_segment_service(db)
+
+    async with transactional_session(db):
+        corner = await service.update_corner(corner_id, request)
+
+        if not corner:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Corner segment {corner_id} not found",
+            )
+
+        # Verify corner belongs to the specified boundary
+        if corner.track_boundary_id != boundary_id:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Corner segment {corner_id} not found in boundary {boundary_id}",
+            )
+
+        return CornerSegmentResponse(
+            id=str(corner.id),
+            corner_number=corner.sort_order,
+            start_distance=corner.start_distance,
+            end_distance=corner.end_distance,
+            created_at=corner.created_at,
+            updated_at=corner.updated_at,
+        )
+
+
+@router.delete(
+    "/{boundary_id}/corners/{corner_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    tags=["tracks"],
+    operation_id="deleteCornerSegment",
+)
+async def delete_corner_segment(
+    boundary_id: UUID,
+    corner_id: UUID,
+    db: AsyncSessionDep,
+    _admin: AdminUserDep,
+) -> None:
+    """Delete a corner segment. Remaining corners are renumbered."""
+    service = await get_corner_segment_service(db)
+
+    # First get the corner to verify it belongs to the boundary
+    corner = await service.get_corner(corner_id)
+    if not corner:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Corner segment {corner_id} not found",
+        )
+
+    if corner.track_boundary_id != boundary_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Corner segment {corner_id} not found in boundary {boundary_id}",
+        )
+
+    async with transactional_session(db):
+        await service.delete_corner(corner_id)

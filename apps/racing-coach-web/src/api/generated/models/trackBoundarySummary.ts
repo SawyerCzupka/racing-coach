@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { TrackBoundarySummaryTrackConfigName } from "./trackBoundarySummaryTrackConfigName";
+import type { TrackBoundarySummaryTrackLength } from "./trackBoundarySummaryTrackLength";
 
 /**
  * Summary of a track boundary for listing purposes.
@@ -21,6 +22,8 @@ export interface TrackBoundarySummary {
   track_config_name: TrackBoundarySummaryTrackConfigName;
   /** Number of grid points in boundary data */
   grid_size: number;
+  /** Total track length in meters */
+  track_length: TrackBoundarySummaryTrackLength;
   /** When the boundary was created */
   created_at: string;
 }

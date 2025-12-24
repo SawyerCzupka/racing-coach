@@ -7,7 +7,8 @@ from racing_coach_core.schemas.track import TrackBoundary as TrackBoundarySchema
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from racing_coach_server.tracks.models import TrackBoundary
+from racing_coach_server.tracks.models import CornerSegment, TrackBoundary
+from racing_coach_server.tracks.schemas import CornerSegmentCreate
 
 logger = logging.getLogger(__name__)
 
@@ -115,6 +116,7 @@ class TrackBoundaryService:
             existing.grid_size = boundary_schema.grid_size
             existing.source_left_frames = boundary_schema.source_left_frames
             existing.source_right_frames = boundary_schema.source_right_frames
+            existing.track_length = boundary_schema.track_length
 
             logger.info(
                 f"Updated track boundary for {boundary_schema.track_name} "
@@ -153,3 +155,142 @@ class TrackBoundaryService:
 
         logger.debug(f"No track boundary found to delete with ID {boundary_id}")
         return False
+
+
+class CornerSegmentService:
+    """Service for corner segment operations."""
+
+    def __init__(self, db: AsyncSession) -> None:
+        self.db = db
+
+    async def list_corners(self, boundary_id: UUID) -> list[CornerSegment]:
+        """
+        List all corner segments for a track boundary, ordered by sort_order.
+
+        Args:
+            boundary_id: The UUID of the track boundary
+
+        Returns:
+            List of corner segments ordered by sort_order
+        """
+        stmt = (
+            select(CornerSegment)
+            .where(CornerSegment.track_boundary_id == boundary_id)
+            .order_by(CornerSegment.sort_order)
+        )
+        result = await self.db.execute(stmt)
+        corners = list(result.scalars().all())
+
+        logger.debug(f"Found {len(corners)} corner segments for boundary {boundary_id}")
+        return corners
+
+    async def get_corner(self, corner_id: UUID) -> CornerSegment | None:
+        """
+        Get a corner segment by ID.
+
+        Args:
+            corner_id: The UUID of the corner segment
+
+        Returns:
+            The corner segment or None if not found
+        """
+        stmt = select(CornerSegment).where(CornerSegment.id == corner_id)
+        result = await self.db.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def bulk_create_corners(
+        self,
+        boundary_id: UUID,
+        corners: list[CornerSegmentCreate],
+    ) -> list[CornerSegment]:
+        """
+        Replace all corner segments for a track boundary.
+
+        Deletes existing corners and creates new ones from the provided list.
+        Sort order is assigned based on the order in the list.
+
+        Args:
+            boundary_id: The UUID of the track boundary
+            corners: List of corner segment data in order
+
+        Returns:
+            List of created corner segments
+        """
+        # Delete existing corners
+        existing = await self.list_corners(boundary_id)
+        for corner in existing:
+            await self.db.delete(corner)
+
+        # Flush deletes before inserting to avoid unique constraint violations
+        await self.db.flush()
+
+        # Create new corners with sort_order based on list position
+        created_corners = []
+        for idx, corner_data in enumerate(corners):
+            corner = CornerSegment(
+                track_boundary_id=boundary_id,
+                start_distance=corner_data.start_distance,
+                end_distance=corner_data.end_distance,
+                sort_order=idx + 1,  # 1-indexed
+            )
+            self.db.add(corner)
+            created_corners.append(corner)
+
+        await self.db.flush()  # Ensure IDs are assigned
+
+        logger.info(f"Created {len(created_corners)} corner segments for boundary {boundary_id}")
+        return created_corners
+
+    async def update_corner(
+        self,
+        corner_id: UUID,
+        corner_data: CornerSegmentCreate,
+    ) -> CornerSegment | None:
+        """
+        Update a corner segment's boundaries.
+
+        Args:
+            corner_id: The UUID of the corner segment
+            corner_data: New start/end distances
+
+        Returns:
+            The updated corner segment or None if not found
+        """
+        corner = await self.get_corner(corner_id)
+        if corner:
+            corner.start_distance = corner_data.start_distance
+            corner.end_distance = corner_data.end_distance
+            logger.info(f"Updated corner segment {corner_id}")
+            return corner
+
+        logger.debug(f"No corner segment found with ID {corner_id}")
+        return None
+
+    async def delete_corner(self, corner_id: UUID) -> bool:
+        """
+        Delete a corner segment and renumber remaining corners.
+
+        Args:
+            corner_id: The UUID of the corner segment to delete
+
+        Returns:
+            True if deleted, False if not found
+        """
+        corner = await self.get_corner(corner_id)
+        if not corner:
+            logger.debug(f"No corner segment found to delete with ID {corner_id}")
+            return False
+
+        boundary_id = corner.track_boundary_id
+        deleted_sort_order = corner.sort_order
+
+        await self.db.delete(corner)
+
+        # Renumber remaining corners
+        remaining = await self.list_corners(boundary_id)
+        for remaining_corner in remaining:
+            if remaining_corner.sort_order > deleted_sort_order:
+                remaining_corner.sort_order -= 1
+
+        logger.info(f"Deleted corner segment {corner_id} and renumbered remaining corners")
+        return True
