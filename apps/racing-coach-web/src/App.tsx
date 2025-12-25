@@ -1,23 +1,23 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { ThemeProvider } from './providers/theme-provider';
-import { QueryProvider } from './providers/query-provider';
-import { AuthProvider } from './providers/auth-provider';
-import { RootLayout } from './components/layout/root-layout';
+import { BrowserRouter, Route, Routes } from 'react-router';
 import { AuthLayout } from './components/auth/auth-layout';
 import { ProtectedRoute } from './components/auth/protected-route';
+import { RootLayout } from './components/layout/root-layout';
+import { ComparePage } from './pages/compare-page';
+import { CornerSegmentEditorPage } from './pages/corner-segment-editor-page';
+import { DashboardPage } from './pages/dashboard-page';
 import { LandingPage } from './pages/landing-page';
+import { LapDetailPage } from './pages/lap-detail-page';
+import { LivePage } from './pages/live-page';
 import { LoginPage } from './pages/login-page';
 import { RegisterPage } from './pages/register-page';
-import { DashboardPage } from './pages/dashboard-page';
-import { SessionsPage } from './pages/sessions-page';
 import { SessionDetailPage } from './pages/session-detail-page';
-import { LapDetailPage } from './pages/lap-detail-page';
-import { ComparePage } from './pages/compare-page';
-import { LivePage } from './pages/live-page';
+import { SessionsPage } from './pages/sessions-page';
 import { TrackBoundariesPage } from './pages/track-boundaries-page';
 import { TrackBoundaryDetailPage } from './pages/track-boundary-detail-page';
 import { TrackBoundaryUploadPage } from './pages/track-boundary-upload-page';
-import { CornerSegmentEditorPage } from './pages/corner-segment-editor-page';
+import { AuthProvider } from './providers/auth-provider';
+import { QueryProvider } from './providers/query-provider';
+import { ThemeProvider } from './providers/theme-provider';
 
 function App() {
   return (

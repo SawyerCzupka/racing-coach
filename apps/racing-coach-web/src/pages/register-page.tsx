@@ -1,14 +1,14 @@
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { Link, useNavigate } from 'react-router-dom';
-import { useQueryClient } from '@tanstack/react-query';
-import { useRegister, getGetCurrentUserQueryKey } from '@/api/generated/auth/auth';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
+import { getGetCurrentUserQueryKey, useRegister } from '@/api/generated/auth/auth';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useQueryClient } from '@tanstack/react-query';
 import { isAxiosError } from 'axios';
+import { useForm } from 'react-hook-form';
+import { Link, useNavigate } from 'react-router';
+import { z } from 'zod';
 
 const registerSchema = z.object({
   email: z.string().email('Please enter a valid email'),

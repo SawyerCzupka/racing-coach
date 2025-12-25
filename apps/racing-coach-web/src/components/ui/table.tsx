@@ -1,87 +1,114 @@
-import type { ReactNode } from 'react';
-import { cn } from '@/lib/utils';
+import * as React from "react"
 
-interface TableProps {
-  children: ReactNode;
-  className?: string;
-}
+import { cn } from "@/lib/utils"
 
-export function Table({ children, className }: TableProps) {
+function Table({ className, ...props }: React.ComponentProps<"table">) {
   return (
-    <div className="relative w-full overflow-auto">
-      <table className={cn('w-full caption-bottom text-sm', className)}>
-        {children}
-      </table>
+    <div
+      data-slot="table-container"
+      className="relative w-full overflow-x-auto"
+    >
+      <table
+        data-slot="table"
+        className={cn("w-full caption-bottom text-sm", className)}
+        {...props}
+      />
     </div>
-  );
+  )
 }
 
-interface TableHeaderProps {
-  children: ReactNode;
-  className?: string;
+function TableHeader({ className, ...props }: React.ComponentProps<"thead">) {
+  return (
+    <thead
+      data-slot="table-header"
+      className={cn("[&_tr]:border-b", className)}
+      {...props}
+    />
+  )
 }
 
-export function TableHeader({ children, className }: TableHeaderProps) {
-  return <thead className={cn('border-b border-gray-800', className)}>{children}</thead>;
+function TableBody({ className, ...props }: React.ComponentProps<"tbody">) {
+  return (
+    <tbody
+      data-slot="table-body"
+      className={cn("[&_tr:last-child]:border-0", className)}
+      {...props}
+    />
+  )
 }
 
-interface TableBodyProps {
-  children: ReactNode;
-  className?: string;
+function TableFooter({ className, ...props }: React.ComponentProps<"tfoot">) {
+  return (
+    <tfoot
+      data-slot="table-footer"
+      className={cn(
+        "bg-muted/50 border-t font-medium [&>tr]:last:border-b-0",
+        className
+      )}
+      {...props}
+    />
+  )
 }
 
-export function TableBody({ children, className }: TableBodyProps) {
-  return <tbody className={cn('', className)}>{children}</tbody>;
-}
-
-interface TableRowProps {
-  children: ReactNode;
-  className?: string;
-  onClick?: () => void;
-}
-
-export function TableRow({ children, className, onClick }: TableRowProps) {
+function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
   return (
     <tr
-      onClick={onClick}
+      data-slot="table-row"
       className={cn(
-        'border-b border-gray-800 transition-colors',
-        onClick && 'cursor-pointer hover:bg-gray-800/50',
+        "hover:bg-muted/50 data-[state=selected]:bg-muted border-b transition-colors",
         className
       )}
-    >
-      {children}
-    </tr>
-  );
+      {...props}
+    />
+  )
 }
 
-interface TableHeadProps {
-  children: ReactNode;
-  className?: string;
-}
-
-export function TableHead({ children, className }: TableHeadProps) {
+function TableHead({ className, ...props }: React.ComponentProps<"th">) {
   return (
     <th
+      data-slot="table-head"
       className={cn(
-        'h-12 px-4 text-left align-middle font-medium text-gray-400 [&:has([role=checkbox])]:pr-0',
+        "text-foreground h-10 px-2 text-left align-middle font-medium whitespace-nowrap [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
         className
       )}
-    >
-      {children}
-    </th>
-  );
+      {...props}
+    />
+  )
 }
 
-interface TableCellProps {
-  children: ReactNode;
-  className?: string;
-}
-
-export function TableCell({ children, className }: TableCellProps) {
+function TableCell({ className, ...props }: React.ComponentProps<"td">) {
   return (
-    <td className={cn('p-4 align-middle text-gray-200 [&:has([role=checkbox])]:pr-0', className)}>
-      {children}
-    </td>
-  );
+    <td
+      data-slot="table-cell"
+      className={cn(
+        "p-2 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
+        className
+      )}
+      {...props}
+    />
+  )
+}
+
+function TableCaption({
+  className,
+  ...props
+}: React.ComponentProps<"caption">) {
+  return (
+    <caption
+      data-slot="table-caption"
+      className={cn("text-muted-foreground mt-4 text-sm", className)}
+      {...props}
+    />
+  )
+}
+
+export {
+  Table,
+  TableHeader,
+  TableBody,
+  TableFooter,
+  TableHead,
+  TableRow,
+  TableCell,
+  TableCaption,
 }

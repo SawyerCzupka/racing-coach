@@ -1,7 +1,9 @@
-import { useParams, useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import type { LapSummary } from '@/api/generated/models';
+import { useGetSessionDetail } from '@/api/generated/sessions/sessions';
 import { Badge } from '@/components/ui/badge';
 import { Breadcrumbs } from '@/components/ui/breadcrumbs';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { EmptyState, ErrorState, LoadingState } from '@/components/ui/loading-states';
 import {
   Table,
   TableBody,
@@ -10,10 +12,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { LoadingState, EmptyState, ErrorState } from '@/components/ui/loading-states';
 import { formatDateTime, formatLapTime } from '@/lib/format';
-import { useGetSessionDetail } from '@/api/generated/sessions/sessions';
-import type { LapSummary } from '@/api/generated/models';
+import { useNavigate, useParams } from 'react-router';
 
 export function SessionDetailPage() {
   const { sessionId } = useParams<{ sessionId: string }>();

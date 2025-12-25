@@ -1,12 +1,12 @@
-import { createContext, useContext, useCallback } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
 import {
+  getGetCurrentUserQueryKey,
   useGetCurrentUser,
   useLogout,
-  getGetCurrentUserQueryKey,
 } from '@/api/generated/auth/auth';
 import type { UserResponse } from '@/api/generated/models';
+import { useQueryClient } from '@tanstack/react-query';
+import { createContext, useCallback, useContext } from 'react';
+import { useNavigate } from 'react-router';
 
 interface AuthContextType {
   user: UserResponse | null;

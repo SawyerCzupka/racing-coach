@@ -1,48 +1,62 @@
-import type { ButtonHTMLAttributes, ReactNode } from 'react';
-import { cn } from '@/lib/utils';
+import * as React from "react"
+import { Slot } from "@radix-ui/react-slot"
+import { cva, type VariantProps } from "class-variance-authority"
 
-interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  children: ReactNode;
-  variant?: 'primary' | 'secondary' | 'outline' | 'ghost';
-  size?: 'sm' | 'md' | 'lg';
-  className?: string;
-}
+import { cn } from "@/lib/utils"
 
-const variantStyles = {
-  primary: 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800',
-  secondary: 'bg-gray-700 text-white hover:bg-gray-600 active:bg-gray-800',
-  outline: 'border border-gray-700 text-gray-200 hover:bg-gray-800 active:bg-gray-700',
-  ghost: 'text-gray-300 hover:bg-gray-800 active:bg-gray-700',
-};
+const buttonVariants = cva(
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
+  {
+    variants: {
+      variant: {
+        default: "bg-primary text-primary-foreground hover:bg-primary/90",
+        destructive:
+          "bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",
+        outline:
+          "border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50",
+        secondary:
+          "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+        ghost:
+          "hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50",
+        link: "text-primary underline-offset-4 hover:underline",
+      },
+      size: {
+        default: "h-9 px-4 py-2 has-[>svg]:px-3",
+        sm: "h-8 rounded-md gap-1.5 px-3 has-[>svg]:px-2.5",
+        lg: "h-10 rounded-md px-6 has-[>svg]:px-4",
+        icon: "size-9",
+        "icon-sm": "size-8",
+        "icon-lg": "size-10",
+      },
+    },
+    defaultVariants: {
+      variant: "default",
+      size: "default",
+    },
+  }
+)
 
-const sizeStyles = {
-  sm: 'px-3 py-1.5 text-sm',
-  md: 'px-4 py-2 text-base',
-  lg: 'px-6 py-3 text-lg',
-};
-
-export function Button({
-  children,
-  variant = 'primary',
-  size = 'md',
+function Button({
   className,
-  disabled,
+  variant = "default",
+  size = "default",
+  asChild = false,
   ...props
-}: ButtonProps) {
+}: React.ComponentProps<"button"> &
+  VariantProps<typeof buttonVariants> & {
+    asChild?: boolean
+  }) {
+  const Comp = asChild ? Slot : "button"
+
   return (
-    <button
-      className={cn(
-        'inline-flex items-center justify-center rounded-md font-medium transition-colors',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500',
-        'disabled:opacity-50 disabled:pointer-events-none',
-        variantStyles[variant],
-        sizeStyles[size],
-        className
-      )}
-      disabled={disabled}
+    <Comp
+      data-slot="button"
+      data-variant={variant}
+      data-size={size}
+      className={cn(buttonVariants({ variant, size, className }))}
       {...props}
-    >
-      {children}
-    </button>
-  );
+    />
+  )
 }
+
+export { Button, buttonVariants }

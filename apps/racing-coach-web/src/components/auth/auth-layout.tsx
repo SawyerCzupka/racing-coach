@@ -1,4 +1,4 @@
-import { Link, Outlet } from 'react-router-dom';
+import { Link, Outlet } from 'react-router';
 
 export function AuthLayout() {
   return (
@@ -6,7 +6,7 @@ export function AuthLayout() {
       {/* Simple header with logo */}
       <header className="p-6">
         <Link to="/" className="flex items-center gap-2 w-fit">
-          <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+          <div className="w-8 h-8 bg-linear-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
             <span className="text-white font-bold text-sm">L</span>
           </div>
           <span className="text-xl font-bold text-white">LapEvo</span>

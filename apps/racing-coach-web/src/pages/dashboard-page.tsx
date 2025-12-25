@@ -1,6 +1,8 @@
-import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { useGetSessionsList } from '@/api/generated/sessions/sessions';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { EmptyState, ErrorState, LoadingState } from '@/components/ui/loading-states';
 import {
   Table,
   TableBody,
@@ -9,11 +11,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { LoadingState, EmptyState, ErrorState } from '@/components/ui/loading-states';
-import { Button } from '@/components/ui/button';
 import { formatRelativeTime } from '@/lib/format';
-import { useGetSessionsList } from '@/api/generated/sessions/sessions';
 import { useAuth } from '@/providers/auth-provider';
+import { useNavigate } from 'react-router';
 
 export function DashboardPage() {
   const navigate = useNavigate();

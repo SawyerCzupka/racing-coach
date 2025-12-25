@@ -1,11 +1,11 @@
-import { useParams } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Breadcrumbs } from '@/components/ui/breadcrumbs';
-import { LoadingState, EmptyState } from '@/components/ui/loading-states';
-import { formatLapTime, formatSpeed, formatGForce, formatDistance } from '@/lib/format';
 import { useGetLapMetrics } from '@/api/generated/metrics/metrics';
 import type { BrakingMetrics, CornerMetrics } from '@/api/generated/models';
+import { Badge } from '@/components/ui/badge';
+import { Breadcrumbs } from '@/components/ui/breadcrumbs';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { EmptyState, LoadingState } from '@/components/ui/loading-states';
+import { formatDistance, formatGForce, formatLapTime, formatSpeed } from '@/lib/format';
+import { useParams } from 'react-router';
 
 export function LapDetailPage() {
   const { lapId } = useParams<{ lapId: string }>();

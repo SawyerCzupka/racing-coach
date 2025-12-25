@@ -1,7 +1,7 @@
-import { Link, Outlet, useLocation } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/providers/auth-provider';
-import { Button } from '@/components/ui/button';
+import { Link, Outlet, useLocation } from 'react-router';
 
 const mainNavigation = [
   { name: 'Dashboard', href: '/dashboard' },

@@ -1,6 +1,6 @@
-import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/providers/auth-provider';
+import { Link } from 'react-router';
 
 export function LandingPage() {
   const { isAuthenticated } = useAuth();

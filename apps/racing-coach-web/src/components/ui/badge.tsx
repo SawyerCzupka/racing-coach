@@ -1,30 +1,54 @@
-import type { ReactNode } from 'react';
-import { cn } from '@/lib/utils';
+import * as React from "react"
+import { Slot } from "@radix-ui/react-slot"
+import { cva, type VariantProps } from "class-variance-authority"
 
-interface BadgeProps {
-  children: ReactNode;
-  variant?: 'default' | 'success' | 'warning' | 'danger' | 'info';
-  className?: string;
-}
+import { cn } from "@/lib/utils"
 
-const variantStyles = {
-  default: 'bg-gray-800 text-gray-200',
-  success: 'bg-green-900/30 text-green-400 border-green-800',
-  warning: 'bg-yellow-900/30 text-yellow-400 border-yellow-800',
-  danger: 'bg-red-900/30 text-red-400 border-red-800',
-  info: 'bg-blue-900/30 text-blue-400 border-blue-800',
-};
+const badgeVariants = cva(
+  "inline-flex items-center justify-center rounded-full border px-2 py-0.5 text-xs font-medium w-fit whitespace-nowrap shrink-0 [&>svg]:size-3 gap-1 [&>svg]:pointer-events-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive transition-[color,box-shadow] overflow-hidden",
+  {
+    variants: {
+      variant: {
+        default:
+          "border-transparent bg-primary text-primary-foreground [a&]:hover:bg-primary/90",
+        secondary:
+          "border-transparent bg-secondary text-secondary-foreground [a&]:hover:bg-secondary/90",
+        destructive:
+          "border-transparent bg-destructive text-white [a&]:hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",
+        outline:
+          "text-foreground [a&]:hover:bg-accent [a&]:hover:text-accent-foreground",
+        success:
+          "border-transparent bg-green-600 text-white [a&]:hover:bg-green-600/90",
+        warning:
+          "border-transparent bg-yellow-600 text-white [a&]:hover:bg-yellow-600/90",
+        danger:
+          "border-transparent bg-red-600 text-white [a&]:hover:bg-red-600/90",
+        info:
+          "border-transparent bg-blue-600 text-white [a&]:hover:bg-blue-600/90",
+      },
+    },
+    defaultVariants: {
+      variant: "default",
+    },
+  }
+)
 
-export function Badge({ children, variant = 'default', className }: BadgeProps) {
+function Badge({
+  className,
+  variant,
+  asChild = false,
+  ...props
+}: React.ComponentProps<"span"> &
+  VariantProps<typeof badgeVariants> & { asChild?: boolean }) {
+  const Comp = asChild ? Slot : "span"
+
   return (
-    <span
-      className={cn(
-        'inline-flex items-center rounded-md px-2 py-1 text-xs font-medium border',
-        variantStyles[variant],
-        className
-      )}
-    >
-      {children}
-    </span>
-  );
+    <Comp
+      data-slot="badge"
+      className={cn(badgeVariants({ variant }), className)}
+      {...props}
+    />
+  )
 }
+
+export { Badge, badgeVariants }

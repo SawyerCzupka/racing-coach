@@ -1,13 +1,13 @@
-import { useParams, useNavigate } from 'react-router-dom';
+import { useDeleteTrackBoundary, useGetTrackBoundary } from '@/api/generated/tracks/tracks';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ErrorState, LoadingState } from '@/components/ui/loading-states';
+import { formatDateTime } from '@/lib/format';
+import { useQueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import Plot from 'react-plotly.js';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { LoadingState, ErrorState } from '@/components/ui/loading-states';
-import { formatDateTime } from '@/lib/format';
-import { useGetTrackBoundary, useDeleteTrackBoundary } from '@/api/generated/tracks/tracks';
-import { useQueryClient } from '@tanstack/react-query';
+import { useNavigate, useParams } from 'react-router';
 
 export function TrackBoundaryDetailPage() {
   const { boundaryId } = useParams<{ boundaryId: string }>();
