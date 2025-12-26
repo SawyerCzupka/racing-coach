@@ -1,3 +1,4 @@
+import { useUploadTrackBoundary } from '@/api/generated/tracks/tracks';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -10,7 +11,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router';
@@ -19,16 +20,8 @@ import { z } from 'zod';
 const uploadSchema = z.object({
   leftLapNumber: z.coerce.number().int().min(1, 'Must be at least 1'),
   rightLapNumber: z.coerce.number().int().min(1, 'Must be at least 1'),
+  gridSize: z.coerce.number().int().min(100, 'Must be at least 100'),
 });
-
-interface UploadResponse {
-  status: string;
-  message: string;
-  boundary_id: string;
-  track_name: string;
-  track_config_name: string | null;
-  replaced_existing: boolean;
-}
 
 export function TrackBoundaryUploadPage() {
   const navigate = useNavigate();
@@ -45,40 +38,16 @@ export function TrackBoundaryUploadPage() {
     defaultValues: {
       leftLapNumber: 1,
       rightLapNumber: 3,
+      gridSize: 1000,
     },
   });
 
-  const uploadMutation = useMutation({
-    mutationFn: async ({
-      file,
-      leftLapNumber,
-      rightLapNumber,
-    }: {
-      file: File;
-      leftLapNumber: number;
-      rightLapNumber: number;
-    }): Promise<UploadResponse> => {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('left_lap_number', leftLapNumber.toString());
-      formData.append('right_lap_number', rightLapNumber.toString());
-
-      const response = await fetch('/api/v1/tracks/upload', {
-        method: 'POST',
-        body: formData,
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.detail || `Upload failed: ${response.statusText}`);
-      }
-
-      return response.json();
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/v1/tracks'] });
-      navigate(`/tracks/${data.boundary_id}`);
+  const uploadMutation = useUploadTrackBoundary({
+    mutation: {
+      onSuccess: (data) => {
+        queryClient.invalidateQueries({ queryKey: ['/api/v1/tracks'] });
+        navigate(`/tracks/${data.boundary_id}`);
+      },
     },
   });
 
@@ -90,9 +59,12 @@ export function TrackBoundaryUploadPage() {
 
     setFileError(null);
     await uploadMutation.mutateAsync({
-      file,
-      leftLapNumber: data.leftLapNumber,
-      rightLapNumber: data.rightLapNumber,
+      data: {
+        file,
+        left_lap_number: data.leftLapNumber,
+        right_lap_number: data.rightLapNumber,
+        grid_size: data.gridSize,
+      },
     });
   };
 
@@ -142,9 +114,7 @@ export function TrackBoundaryUploadPage() {
           <CardContent className="space-y-6">
             {uploadMutation.isError && (
               <div className="p-3 text-sm text-red-400 border border-red-800 rounded-md bg-red-900/20">
-                {uploadMutation.error instanceof Error
-                  ? uploadMutation.error.message
-                  : 'Failed to upload file'}
+                {uploadMutation.error?.message ?? 'Failed to upload file'}
               </div>
             )}
 
@@ -187,6 +157,17 @@ export function TrackBoundaryUploadPage() {
                   The lap where you drove along the right edge
                 </p>
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="gridSize">Grid Size</Label>
+              <Input id="gridSize" type="number" min={100} {...register('gridSize')} />
+              {errors.gridSize && (
+                <p className="text-sm text-red-400">{errors.gridSize.message}</p>
+              )}
+              <p className="text-xs text-gray-500">
+                Resolution of the boundary grid (default: 1000)
+              </p>
             </div>
           </CardContent>
           <CardFooter>

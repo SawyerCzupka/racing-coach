@@ -119,6 +119,7 @@ async def upload_track_boundary(
     file: UploadFile = File(..., description="IBT file containing boundary laps"),  # noqa: B008
     left_lap_number: int = Form(default=1, description="Lap number for left boundary"),
     right_lap_number: int = Form(default=3, description="Lap number for right boundary"),
+    grid_size: int = Form(default=1000, description="Resolution of the boundary"),
 ) -> TrackBoundaryUploadResponse:
     """
     Upload an IBT file to generate and store a track boundary.
@@ -159,6 +160,7 @@ async def upload_track_boundary(
                 tmp_path,
                 left_lap_number=left_lap_number,
                 right_lap_number=right_lap_number,
+                grid_size=grid_size,
             )
         except ValueError as e:
             raise HTTPException(

@@ -480,6 +480,9 @@ export const uploadTrackBoundary = (
       bodyUploadTrackBoundary.right_lap_number.toString(),
     );
   }
+  if (bodyUploadTrackBoundary.grid_size !== undefined) {
+    formData.append(`grid_size`, bodyUploadTrackBoundary.grid_size.toString());
+  }
 
   return customInstance<TrackBoundaryUploadResponse>(
     {
