@@ -2,8 +2,8 @@
 name = "racing-coach-server-client"
 version = "0.1.0"
 description = "A client library for accessing Racing Coach Server"
-authors = [{ name = "Sawyer", email = "sawyerczupka@gmail.com" }]
-requires-python = ">=3.12"
+authors = []
+requires-python = ">=3.10"
 readme = "README.md"
 dependencies = [
     "httpx>=0.23.0,<0.29.0",
@@ -11,20 +11,16 @@ dependencies = [
     "python-dateutil>=2.8.0,<3",
 ]
 
+[tool.uv.build-backend]
+module-name = "racing_coach_server_client"
+module-root = ""
+
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-
-[tool.hatch.build.targets.wheel]
-packages = ["racing_coach_server_client"]
-
-[dependency-groups]
-dev = [
-    "openapi-python-client>=0.27.1",
-]
+requires = ["uv_build>=0.9.0,<0.10.0"]
+build-backend = "uv_build"
 
 [tool.ruff]
-line-length = 100
+line-length = 120
 
 [tool.ruff.lint]
 select = ["F", "I", "UP"]

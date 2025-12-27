@@ -5,6 +5,7 @@ import { RootLayout } from './components/layout/root-layout';
 import { ComparePage } from './pages/compare-page';
 import { CornerSegmentEditorPage } from './pages/corner-segment-editor-page';
 import { DashboardPage } from './pages/dashboard-page';
+import { DeviceAuthPage } from './pages/device-auth-page';
 import { LandingPage } from './pages/landing-page';
 import { LapDetailPage } from './pages/lap-detail-page';
 import { LivePage } from './pages/live-page';
@@ -31,6 +32,18 @@ function App() {
               <Route element={<AuthLayout />}>
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/register" element={<RegisterPage />} />
+              </Route>
+
+              {/* Device authorization (requires auth, uses simple layout) */}
+              <Route
+                path="/auth/device"
+                element={
+                  <ProtectedRoute>
+                    <AuthLayout />
+                  </ProtectedRoute>
+                }
+              >
+                <Route index element={<DeviceAuthPage />} />
               </Route>
 
               {/* Protected routes */}

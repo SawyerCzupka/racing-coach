@@ -1,21 +1,25 @@
 from http import HTTPStatus
 from typing import Any
+from urllib.parse import quote
+from uuid import UUID
 
 import httpx
 
 from ... import errors
 from ...client import AuthenticatedClient, Client
+from ...models.corner_segment_list_response import CornerSegmentListResponse
 from ...models.http_validation_error import HTTPValidationError
-from ...models.lap_metrics_response import LapMetricsResponse
 from ...types import Response
 
 
 def _get_kwargs(
-    lap_id: str,
+    boundary_id: UUID,
 ) -> dict[str, Any]:
     _kwargs: dict[str, Any] = {
         "method": "get",
-        "url": f"/api/v1/metrics/lap/{lap_id}",
+        "url": "/api/v1/tracks/{boundary_id}/corners".format(
+            boundary_id=quote(str(boundary_id), safe=""),
+        ),
     }
 
     return _kwargs
@@ -23,9 +27,9 @@ def _get_kwargs(
 
 def _parse_response(
     *, client: AuthenticatedClient | Client, response: httpx.Response
-) -> HTTPValidationError | LapMetricsResponse | None:
+) -> CornerSegmentListResponse | HTTPValidationError | None:
     if response.status_code == 200:
-        response_200 = LapMetricsResponse.from_dict(response.json())
+        response_200 = CornerSegmentListResponse.from_dict(response.json())
 
         return response_200
 
@@ -42,7 +46,7 @@ def _parse_response(
 
 def _build_response(
     *, client: AuthenticatedClient | Client, response: httpx.Response
-) -> Response[HTTPValidationError | LapMetricsResponse]:
+) -> Response[CornerSegmentListResponse | HTTPValidationError]:
     return Response(
         status_code=HTTPStatus(response.status_code),
         content=response.content,
@@ -52,29 +56,27 @@ def _build_response(
 
 
 def sync_detailed(
-    lap_id: str,
+    boundary_id: UUID,
     *,
-    client: AuthenticatedClient | Client,
-) -> Response[HTTPValidationError | LapMetricsResponse]:
-    """Get Lap Metrics
+    client: AuthenticatedClient,
+) -> Response[CornerSegmentListResponse | HTTPValidationError]:
+    """List Corner Segments
 
-     Get metrics for a specific lap.
-
-    Returns all metrics including braking zones and corner analysis.
+     List all corner segments for a track boundary, ordered by corner number.
 
     Args:
-        lap_id (str):
+        boundary_id (UUID):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Response[HTTPValidationError | LapMetricsResponse]
+        Response[CornerSegmentListResponse | HTTPValidationError]
     """
 
     kwargs = _get_kwargs(
-        lap_id=lap_id,
+        boundary_id=boundary_id,
     )
 
     response = client.get_httpx_client().request(
@@ -85,57 +87,53 @@ def sync_detailed(
 
 
 def sync(
-    lap_id: str,
+    boundary_id: UUID,
     *,
-    client: AuthenticatedClient | Client,
-) -> HTTPValidationError | LapMetricsResponse | None:
-    """Get Lap Metrics
+    client: AuthenticatedClient,
+) -> CornerSegmentListResponse | HTTPValidationError | None:
+    """List Corner Segments
 
-     Get metrics for a specific lap.
-
-    Returns all metrics including braking zones and corner analysis.
+     List all corner segments for a track boundary, ordered by corner number.
 
     Args:
-        lap_id (str):
+        boundary_id (UUID):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        HTTPValidationError | LapMetricsResponse
+        CornerSegmentListResponse | HTTPValidationError
     """
 
     return sync_detailed(
-        lap_id=lap_id,
+        boundary_id=boundary_id,
         client=client,
     ).parsed
 
 
 async def asyncio_detailed(
-    lap_id: str,
+    boundary_id: UUID,
     *,
-    client: AuthenticatedClient | Client,
-) -> Response[HTTPValidationError | LapMetricsResponse]:
-    """Get Lap Metrics
+    client: AuthenticatedClient,
+) -> Response[CornerSegmentListResponse | HTTPValidationError]:
+    """List Corner Segments
 
-     Get metrics for a specific lap.
-
-    Returns all metrics including braking zones and corner analysis.
+     List all corner segments for a track boundary, ordered by corner number.
 
     Args:
-        lap_id (str):
+        boundary_id (UUID):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Response[HTTPValidationError | LapMetricsResponse]
+        Response[CornerSegmentListResponse | HTTPValidationError]
     """
 
     kwargs = _get_kwargs(
-        lap_id=lap_id,
+        boundary_id=boundary_id,
     )
 
     response = await client.get_async_httpx_client().request(**kwargs)
@@ -144,30 +142,28 @@ async def asyncio_detailed(
 
 
 async def asyncio(
-    lap_id: str,
+    boundary_id: UUID,
     *,
-    client: AuthenticatedClient | Client,
-) -> HTTPValidationError | LapMetricsResponse | None:
-    """Get Lap Metrics
+    client: AuthenticatedClient,
+) -> CornerSegmentListResponse | HTTPValidationError | None:
+    """List Corner Segments
 
-     Get metrics for a specific lap.
-
-    Returns all metrics including braking zones and corner analysis.
+     List all corner segments for a track boundary, ordered by corner number.
 
     Args:
-        lap_id (str):
+        boundary_id (UUID):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        HTTPValidationError | LapMetricsResponse
+        CornerSegmentListResponse | HTTPValidationError
     """
 
     return (
         await asyncio_detailed(
-            lap_id=lap_id,
+            boundary_id=boundary_id,
             client=client,
         )
     ).parsed

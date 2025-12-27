@@ -2,6 +2,10 @@
 default:
     @just --list
 
+docker-up:
+    @echo "Starting up docker compose w/ force-recreate & build..."
+    docker compose up -d --force-recreate --build
+
 format:
     cd apps/racing-coach-client && uvx ruff format src/ tests/
     cd apps/racing-coach-server && uvx ruff format src/ tests/
@@ -15,6 +19,14 @@ sort:
 sf:
     just sort
     just format
+
+generate_server_sdk:
+    @echo "Generating server SDK with openapi-python-client..."
+    uvx openapi-python-client generate \
+        --url http://localhost:8000/openapi.json \
+        --output-path libs/racing-coach-api-client \
+        --overwrite \
+        --meta uv
 
 
 testapp app subdir="tests/" *args:

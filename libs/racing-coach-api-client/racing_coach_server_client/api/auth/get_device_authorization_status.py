@@ -1,26 +1,23 @@
 from http import HTTPStatus
 from typing import Any
 from urllib.parse import quote
-from uuid import UUID
 
 import httpx
 
 from ... import errors
 from ...client import AuthenticatedClient, Client
+from ...models.device_authorization_status import DeviceAuthorizationStatus
 from ...models.http_validation_error import HTTPValidationError
-from ...models.lap_telemetry_response import LapTelemetryResponse
 from ...types import Response
 
 
 def _get_kwargs(
-    session_id: UUID,
-    lap_id: UUID,
+    user_code: str,
 ) -> dict[str, Any]:
     _kwargs: dict[str, Any] = {
         "method": "get",
-        "url": "/api/v1/sessions/{session_id}/laps/{lap_id}/telemetry".format(
-            session_id=quote(str(session_id), safe=""),
-            lap_id=quote(str(lap_id), safe=""),
+        "url": "/api/v1/auth/device/status/{user_code}".format(
+            user_code=quote(str(user_code), safe=""),
         ),
     }
 
@@ -29,9 +26,9 @@ def _get_kwargs(
 
 def _parse_response(
     *, client: AuthenticatedClient | Client, response: httpx.Response
-) -> HTTPValidationError | LapTelemetryResponse | None:
+) -> DeviceAuthorizationStatus | HTTPValidationError | None:
     if response.status_code == 200:
-        response_200 = LapTelemetryResponse.from_dict(response.json())
+        response_200 = DeviceAuthorizationStatus.from_dict(response.json())
 
         return response_200
 
@@ -48,7 +45,7 @@ def _parse_response(
 
 def _build_response(
     *, client: AuthenticatedClient | Client, response: httpx.Response
-) -> Response[HTTPValidationError | LapTelemetryResponse]:
+) -> Response[DeviceAuthorizationStatus | HTTPValidationError]:
     return Response(
         status_code=HTTPStatus(response.status_code),
         content=response.content,
@@ -58,33 +55,29 @@ def _build_response(
 
 
 def sync_detailed(
-    session_id: UUID,
-    lap_id: UUID,
+    user_code: str,
     *,
-    client: AuthenticatedClient | Client,
-) -> Response[HTTPValidationError | LapTelemetryResponse]:
-    """Get Lap Telemetry
+    client: AuthenticatedClient,
+) -> Response[DeviceAuthorizationStatus | HTTPValidationError]:
+    """Get Device Authorization Status
 
-     Get all telemetry frames for a specific lap.
+     Get the status of a device authorization.
 
-    Returns telemetry data including position, speed, inputs, and dynamics
-    for visualization and analysis.
+    Used by the web UI to show device details before confirming.
 
     Args:
-        session_id (UUID):
-        lap_id (UUID):
+        user_code (str):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Response[HTTPValidationError | LapTelemetryResponse]
+        Response[DeviceAuthorizationStatus | HTTPValidationError]
     """
 
     kwargs = _get_kwargs(
-        session_id=session_id,
-        lap_id=lap_id,
+        user_code=user_code,
     )
 
     response = client.get_httpx_client().request(
@@ -95,65 +88,57 @@ def sync_detailed(
 
 
 def sync(
-    session_id: UUID,
-    lap_id: UUID,
+    user_code: str,
     *,
-    client: AuthenticatedClient | Client,
-) -> HTTPValidationError | LapTelemetryResponse | None:
-    """Get Lap Telemetry
+    client: AuthenticatedClient,
+) -> DeviceAuthorizationStatus | HTTPValidationError | None:
+    """Get Device Authorization Status
 
-     Get all telemetry frames for a specific lap.
+     Get the status of a device authorization.
 
-    Returns telemetry data including position, speed, inputs, and dynamics
-    for visualization and analysis.
+    Used by the web UI to show device details before confirming.
 
     Args:
-        session_id (UUID):
-        lap_id (UUID):
+        user_code (str):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        HTTPValidationError | LapTelemetryResponse
+        DeviceAuthorizationStatus | HTTPValidationError
     """
 
     return sync_detailed(
-        session_id=session_id,
-        lap_id=lap_id,
+        user_code=user_code,
         client=client,
     ).parsed
 
 
 async def asyncio_detailed(
-    session_id: UUID,
-    lap_id: UUID,
+    user_code: str,
     *,
-    client: AuthenticatedClient | Client,
-) -> Response[HTTPValidationError | LapTelemetryResponse]:
-    """Get Lap Telemetry
+    client: AuthenticatedClient,
+) -> Response[DeviceAuthorizationStatus | HTTPValidationError]:
+    """Get Device Authorization Status
 
-     Get all telemetry frames for a specific lap.
+     Get the status of a device authorization.
 
-    Returns telemetry data including position, speed, inputs, and dynamics
-    for visualization and analysis.
+    Used by the web UI to show device details before confirming.
 
     Args:
-        session_id (UUID):
-        lap_id (UUID):
+        user_code (str):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Response[HTTPValidationError | LapTelemetryResponse]
+        Response[DeviceAuthorizationStatus | HTTPValidationError]
     """
 
     kwargs = _get_kwargs(
-        session_id=session_id,
-        lap_id=lap_id,
+        user_code=user_code,
     )
 
     response = await client.get_async_httpx_client().request(**kwargs)
@@ -162,34 +147,30 @@ async def asyncio_detailed(
 
 
 async def asyncio(
-    session_id: UUID,
-    lap_id: UUID,
+    user_code: str,
     *,
-    client: AuthenticatedClient | Client,
-) -> HTTPValidationError | LapTelemetryResponse | None:
-    """Get Lap Telemetry
+    client: AuthenticatedClient,
+) -> DeviceAuthorizationStatus | HTTPValidationError | None:
+    """Get Device Authorization Status
 
-     Get all telemetry frames for a specific lap.
+     Get the status of a device authorization.
 
-    Returns telemetry data including position, speed, inputs, and dynamics
-    for visualization and analysis.
+    Used by the web UI to show device details before confirming.
 
     Args:
-        session_id (UUID):
-        lap_id (UUID):
+        user_code (str):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        HTTPValidationError | LapTelemetryResponse
+        DeviceAuthorizationStatus | HTTPValidationError
     """
 
     return (
         await asyncio_detailed(
-            session_id=session_id,
-            lap_id=lap_id,
+            user_code=user_code,
             client=client,
         )
     ).parsed

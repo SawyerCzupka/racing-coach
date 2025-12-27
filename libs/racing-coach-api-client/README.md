@@ -1,28 +1,7 @@
 # racing-coach-server-client
-
-Auto-generated Python client for the Racing Coach Server API.
-
-## Regenerating the Client
-
-This client is generated from the server's OpenAPI spec using [openapi-python-client](https://github.com/openapi-generators/openapi-python-client).
-
-To regenerate after API changes:
-
-```bash
-# Ensure the server is running (from project root)
-docker compose up racing-coach-server
-
-# Regenerate the client (from this directory)
-cd libs/racing-coach-api-client
-uv run --group dev openapi-python-client generate \
-    --url http://localhost:8000/openapi.json \
-    --meta none \
-    --output-path . \
-    --overwrite
-```
+A client library for accessing Racing Coach Server
 
 ## Usage
-
 First, create a client:
 
 ```python
@@ -68,7 +47,7 @@ By default, when you're calling an HTTPS API it will attempt to verify that SSL 
 
 ```python
 client = AuthenticatedClient(
-    base_url="https://internal_api.example.com",
+    base_url="https://internal_api.example.com", 
     token="SuperSecretToken",
     verify_ssl="/path/to/certificate_bundle.pem",
 )
@@ -78,20 +57,18 @@ You can also disable certificate validation altogether, but beware that **this i
 
 ```python
 client = AuthenticatedClient(
-    base_url="https://internal_api.example.com",
-    token="SuperSecretToken",
+    base_url="https://internal_api.example.com", 
+    token="SuperSecretToken", 
     verify_ssl=False
 )
 ```
 
 Things to know:
-
 1. Every path/method combo becomes a Python module with four functions:
-
-   1. `sync`: Blocking request that returns parsed data (if successful) or `None`
-   1. `sync_detailed`: Blocking request that always returns a `Request`, optionally with `parsed` set if the request was successful.
-   1. `asyncio`: Like `sync` but async instead of blocking
-   1. `asyncio_detailed`: Like `sync_detailed` but async instead of blocking
+    1. `sync`: Blocking request that returns parsed data (if successful) or `None`
+    1. `sync_detailed`: Blocking request that always returns a `Request`, optionally with `parsed` set if the request was successful.
+    1. `asyncio`: Like `sync` but async instead of blocking
+    1. `asyncio_detailed`: Like `sync_detailed` but async instead of blocking
 
 1. All path/query params, and bodies become method arguments.
 1. If your endpoint had any tags on it, the first tag will be used as a module name for the function (my_tag above)
@@ -133,17 +110,14 @@ client.set_httpx_client(httpx.Client(base_url="https://api.example.com", proxies
 ```
 
 ## Building / publishing this package
-
 This project uses [uv](https://github.com/astral-sh/uv) to manage dependencies and packaging. Here are the basics:
-
 1. Update the metadata in `pyproject.toml` (e.g. authors, version).
 2. If you're using a private repository: https://docs.astral.sh/uv/guides/integration/alternative-indexes/
 3. Build a distribution with `uv build`, builds `sdist` and `wheel` by default.
-4. Publish the client with `uv publish`, see documentation for publishing to private indexes.
+1. Publish the client with `uv publish`, see documentation for publishing to private indexes.
 
 If you want to install this client into another project without publishing it (e.g. for development) then:
-
 1. If that project **is using uv**, you can simply do `uv add <path-to-this-client>` from that project
 1. If that project is not using uv:
-   1. Build a wheel with `uv build --wheel`.
-   1. Install that wheel from the other project `pip install <path-to-wheel>`.
+    1. Build a wheel with `uv build --wheel`.
+    1. Install that wheel from the other project `pip install <path-to-wheel>`.

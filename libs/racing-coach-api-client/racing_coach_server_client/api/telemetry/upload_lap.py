@@ -6,7 +6,7 @@ import httpx
 
 from ... import errors
 from ...client import AuthenticatedClient, Client
-from ...models.body_upload_lap_api_v1_telemetry_lap_post import BodyUploadLapApiV1TelemetryLapPost
+from ...models.body_upload_lap import BodyUploadLap
 from ...models.http_validation_error import HTTPValidationError
 from ...models.lap_upload_response import LapUploadResponse
 from ...types import UNSET, Response, Unset
@@ -14,7 +14,7 @@ from ...types import UNSET, Response, Unset
 
 def _get_kwargs(
     *,
-    body: BodyUploadLapApiV1TelemetryLapPost,
+    body: BodyUploadLap,
     lap_id: None | Unset | UUID = UNSET,
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
@@ -79,7 +79,7 @@ def _build_response(
 def sync_detailed(
     *,
     client: AuthenticatedClient | Client,
-    body: BodyUploadLapApiV1TelemetryLapPost,
+    body: BodyUploadLap,
     lap_id: None | Unset | UUID = UNSET,
 ) -> Response[HTTPValidationError | LapUploadResponse]:
     """Upload Lap
@@ -97,7 +97,7 @@ def sync_detailed(
 
     Args:
         lap_id (None | Unset | UUID):
-        body (BodyUploadLapApiV1TelemetryLapPost):
+        body (BodyUploadLap):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -122,7 +122,7 @@ def sync_detailed(
 def sync(
     *,
     client: AuthenticatedClient | Client,
-    body: BodyUploadLapApiV1TelemetryLapPost,
+    body: BodyUploadLap,
     lap_id: None | Unset | UUID = UNSET,
 ) -> HTTPValidationError | LapUploadResponse | None:
     """Upload Lap
@@ -140,7 +140,7 @@ def sync(
 
     Args:
         lap_id (None | Unset | UUID):
-        body (BodyUploadLapApiV1TelemetryLapPost):
+        body (BodyUploadLap):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -160,7 +160,7 @@ def sync(
 async def asyncio_detailed(
     *,
     client: AuthenticatedClient | Client,
-    body: BodyUploadLapApiV1TelemetryLapPost,
+    body: BodyUploadLap,
     lap_id: None | Unset | UUID = UNSET,
 ) -> Response[HTTPValidationError | LapUploadResponse]:
     """Upload Lap
@@ -178,7 +178,7 @@ async def asyncio_detailed(
 
     Args:
         lap_id (None | Unset | UUID):
-        body (BodyUploadLapApiV1TelemetryLapPost):
+        body (BodyUploadLap):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -201,7 +201,7 @@ async def asyncio_detailed(
 async def asyncio(
     *,
     client: AuthenticatedClient | Client,
-    body: BodyUploadLapApiV1TelemetryLapPost,
+    body: BodyUploadLap,
     lap_id: None | Unset | UUID = UNSET,
 ) -> HTTPValidationError | LapUploadResponse | None:
     """Upload Lap
@@ -219,7 +219,7 @@ async def asyncio(
 
     Args:
         lap_id (None | Unset | UUID):
-        body (BodyUploadLapApiV1TelemetryLapPost):
+        body (BodyUploadLap):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.

@@ -8,19 +8,17 @@ import httpx
 from ... import errors
 from ...client import AuthenticatedClient, Client
 from ...models.http_validation_error import HTTPValidationError
-from ...models.lap_telemetry_response import LapTelemetryResponse
+from ...models.revoke_device_token_response_revokedevicetoken import RevokeDeviceTokenResponseRevokedevicetoken
 from ...types import Response
 
 
 def _get_kwargs(
-    session_id: UUID,
-    lap_id: UUID,
+    token_id: UUID,
 ) -> dict[str, Any]:
     _kwargs: dict[str, Any] = {
-        "method": "get",
-        "url": "/api/v1/sessions/{session_id}/laps/{lap_id}/telemetry".format(
-            session_id=quote(str(session_id), safe=""),
-            lap_id=quote(str(lap_id), safe=""),
+        "method": "delete",
+        "url": "/api/v1/auth/devices/{token_id}".format(
+            token_id=quote(str(token_id), safe=""),
         ),
     }
 
@@ -29,9 +27,9 @@ def _get_kwargs(
 
 def _parse_response(
     *, client: AuthenticatedClient | Client, response: httpx.Response
-) -> HTTPValidationError | LapTelemetryResponse | None:
+) -> HTTPValidationError | RevokeDeviceTokenResponseRevokedevicetoken | None:
     if response.status_code == 200:
-        response_200 = LapTelemetryResponse.from_dict(response.json())
+        response_200 = RevokeDeviceTokenResponseRevokedevicetoken.from_dict(response.json())
 
         return response_200
 
@@ -48,7 +46,7 @@ def _parse_response(
 
 def _build_response(
     *, client: AuthenticatedClient | Client, response: httpx.Response
-) -> Response[HTTPValidationError | LapTelemetryResponse]:
+) -> Response[HTTPValidationError | RevokeDeviceTokenResponseRevokedevicetoken]:
     return Response(
         status_code=HTTPStatus(response.status_code),
         content=response.content,
@@ -58,33 +56,27 @@ def _build_response(
 
 
 def sync_detailed(
-    session_id: UUID,
-    lap_id: UUID,
+    token_id: UUID,
     *,
-    client: AuthenticatedClient | Client,
-) -> Response[HTTPValidationError | LapTelemetryResponse]:
-    """Get Lap Telemetry
+    client: AuthenticatedClient,
+) -> Response[HTTPValidationError | RevokeDeviceTokenResponseRevokedevicetoken]:
+    """Revoke Device
 
-     Get all telemetry frames for a specific lap.
-
-    Returns telemetry data including position, speed, inputs, and dynamics
-    for visualization and analysis.
+     Revoke a device token.
 
     Args:
-        session_id (UUID):
-        lap_id (UUID):
+        token_id (UUID):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Response[HTTPValidationError | LapTelemetryResponse]
+        Response[HTTPValidationError | RevokeDeviceTokenResponseRevokedevicetoken]
     """
 
     kwargs = _get_kwargs(
-        session_id=session_id,
-        lap_id=lap_id,
+        token_id=token_id,
     )
 
     response = client.get_httpx_client().request(
@@ -95,65 +87,53 @@ def sync_detailed(
 
 
 def sync(
-    session_id: UUID,
-    lap_id: UUID,
+    token_id: UUID,
     *,
-    client: AuthenticatedClient | Client,
-) -> HTTPValidationError | LapTelemetryResponse | None:
-    """Get Lap Telemetry
+    client: AuthenticatedClient,
+) -> HTTPValidationError | RevokeDeviceTokenResponseRevokedevicetoken | None:
+    """Revoke Device
 
-     Get all telemetry frames for a specific lap.
-
-    Returns telemetry data including position, speed, inputs, and dynamics
-    for visualization and analysis.
+     Revoke a device token.
 
     Args:
-        session_id (UUID):
-        lap_id (UUID):
+        token_id (UUID):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        HTTPValidationError | LapTelemetryResponse
+        HTTPValidationError | RevokeDeviceTokenResponseRevokedevicetoken
     """
 
     return sync_detailed(
-        session_id=session_id,
-        lap_id=lap_id,
+        token_id=token_id,
         client=client,
     ).parsed
 
 
 async def asyncio_detailed(
-    session_id: UUID,
-    lap_id: UUID,
+    token_id: UUID,
     *,
-    client: AuthenticatedClient | Client,
-) -> Response[HTTPValidationError | LapTelemetryResponse]:
-    """Get Lap Telemetry
+    client: AuthenticatedClient,
+) -> Response[HTTPValidationError | RevokeDeviceTokenResponseRevokedevicetoken]:
+    """Revoke Device
 
-     Get all telemetry frames for a specific lap.
-
-    Returns telemetry data including position, speed, inputs, and dynamics
-    for visualization and analysis.
+     Revoke a device token.
 
     Args:
-        session_id (UUID):
-        lap_id (UUID):
+        token_id (UUID):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Response[HTTPValidationError | LapTelemetryResponse]
+        Response[HTTPValidationError | RevokeDeviceTokenResponseRevokedevicetoken]
     """
 
     kwargs = _get_kwargs(
-        session_id=session_id,
-        lap_id=lap_id,
+        token_id=token_id,
     )
 
     response = await client.get_async_httpx_client().request(**kwargs)
@@ -162,34 +142,28 @@ async def asyncio_detailed(
 
 
 async def asyncio(
-    session_id: UUID,
-    lap_id: UUID,
+    token_id: UUID,
     *,
-    client: AuthenticatedClient | Client,
-) -> HTTPValidationError | LapTelemetryResponse | None:
-    """Get Lap Telemetry
+    client: AuthenticatedClient,
+) -> HTTPValidationError | RevokeDeviceTokenResponseRevokedevicetoken | None:
+    """Revoke Device
 
-     Get all telemetry frames for a specific lap.
-
-    Returns telemetry data including position, speed, inputs, and dynamics
-    for visualization and analysis.
+     Revoke a device token.
 
     Args:
-        session_id (UUID):
-        lap_id (UUID):
+        token_id (UUID):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        HTTPValidationError | LapTelemetryResponse
+        HTTPValidationError | RevokeDeviceTokenResponseRevokedevicetoken
     """
 
     return (
         await asyncio_detailed(
-            session_id=session_id,
-            lap_id=lap_id,
+            token_id=token_id,
             client=client,
         )
     ).parsed

@@ -10,12 +10,10 @@ from dataclasses import asdict
 from racing_coach_core.events import Event, EventBus, HandlerContext, SystemEvents
 from racing_coach_core.events.checking import method_handles
 from racing_coach_core.schemas.events import MetricsAndSession, MetricsUploadResult
-from racing_coach_server_client import Client
-from racing_coach_server_client.api.metrics import upload_lap_metrics_api_v1_metrics_lap_post
+from racing_coach_server_client import AuthenticatedClient, Client
+from racing_coach_server_client.api.metrics import upload_lap_metrics
 from racing_coach_server_client.models import LapMetrics as ApiLapMetrics
 from racing_coach_server_client.models import MetricsUploadRequest, MetricsUploadResponse
-
-from racing_coach_client.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -23,14 +21,15 @@ logger = logging.getLogger(__name__)
 class MetricsUploadHandler:
     """Handler for uploading lap metrics to the server."""
 
-    def __init__(self, event_bus: EventBus):
+    def __init__(self, event_bus: EventBus, api_client: AuthenticatedClient | Client):
         """Initialize the metrics upload handler.
 
         Args:
             event_bus: The event bus for subscribing to events
+            api_client: The API client for server communication
         """
         self.event_bus = event_bus
-        self.api_client = Client(base_url=settings.SERVER_URL)
+        self.api_client = api_client
 
     @method_handles(SystemEvents.LAP_METRICS_EXTRACTED)
     def handle_metrics_extracted(self, context: HandlerContext[MetricsAndSession]):
@@ -57,15 +56,15 @@ class MetricsUploadHandler:
             )
 
             # Upload the lap metrics to the server
-            response = upload_lap_metrics_api_v1_metrics_lap_post.sync(
+            response = upload_lap_metrics.sync(
                 client=self.api_client,
                 body=body,
             )
 
             if isinstance(response, MetricsUploadResponse):
-                logger.info(
-                    f"✓ Lap {lap_metrics.lap_number} metrics uploaded (id: {response.lap_metrics_id})"
-                )
+                lap_num = lap_metrics.lap_number
+                metrics_id = response.lap_metrics_id
+                logger.info(f"✓ Lap {lap_num} metrics uploaded (id: {metrics_id})")
                 self.event_bus.thread_safe_publish(
                     Event(
                         type=SystemEvents.METRICS_UPLOAD_SUCCESS,
