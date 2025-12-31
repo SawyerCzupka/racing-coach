@@ -3,7 +3,8 @@
 from datetime import datetime, timedelta, timezone
 
 import pytest
-from racing_coach_core.algs.metrics import extract_lap_metrics
+from racing_coach_core.algs.events import CornerSegmentInput
+from racing_coach_core.algs.metrics import CornerDetectionMode, extract_lap_metrics
 from racing_coach_core.schemas.telemetry import LapTelemetry, TelemetryFrame, TelemetrySequence
 
 
@@ -417,3 +418,241 @@ class TestExtractLapMetrics:
             track_surface=0,
             on_pit_road=False,
         )
+
+
+class TestSegmentBasedCornerExtraction:
+    """Test suite for segment-based corner extraction."""
+
+    def test_extract_corners_from_segments_basic(
+        self, telemetry_frame_factory: type
+    ) -> None:
+        """Test that segments correctly define corner entry/exit points."""
+        base_time = datetime.now(timezone.utc)
+        frames: list[TelemetryFrame] = []
+        track_length = 1000.0  # 1000 meters
+
+        # Create 20 frames spanning the track
+        for i in range(20):
+            lap_pct = i / 20  # 0.0, 0.05, 0.10, ... 0.95
+            steering = 0.3 if 0.15 <= lap_pct <= 0.35 else 0.0
+            speed = 60.0 if 0.15 <= lap_pct <= 0.35 else 80.0
+
+            frame = telemetry_frame_factory.build(
+                timestamp=base_time + timedelta(seconds=i * 0.5),
+                lap_distance_pct=lap_pct,
+                lap_distance=lap_pct,
+                steering_angle=steering,
+                speed=speed,
+                lateral_acceleration=1.5 if steering > 0 else 0.0,
+                lap_number=1,
+            )
+            frames.append(frame)
+
+        sequence = TelemetrySequence(frames=frames)
+
+        # Define a segment from 150m to 350m (0.15 to 0.35 of track)
+        segments = [
+            CornerSegmentInput(corner_number=1, start_distance=150.0, end_distance=350.0)
+        ]
+
+        metrics = extract_lap_metrics(
+            sequence,
+            corner_segments=segments,
+            track_length=track_length,
+            corner_mode=CornerDetectionMode.SEGMENTS,
+        )
+
+        assert metrics.total_corners == 1
+        corner = metrics.corners[0]
+        # Turn-in should be at segment start (0.15)
+        assert corner.turn_in_distance == pytest.approx(0.15, abs=0.01)  # type: ignore
+        # Exit should be at segment end (0.35)
+        assert corner.exit_distance == pytest.approx(0.35, abs=0.01)  # type: ignore
+
+    def test_apex_detection_left_corner(self, telemetry_frame_factory: type) -> None:
+        """Test that apex is at minimum lateral position for left corners."""
+        base_time = datetime.now(timezone.utc)
+        frames: list[TelemetryFrame] = []
+        track_length = 1000.0
+
+        # Create frames with varying lateral positions for a left corner
+        # Left corner = negative steering
+        lateral_positions = [0.0, -0.2, -0.5, -0.8, -0.6, -0.3, 0.0]  # Apex at index 3
+        for i, lat_pos in enumerate(lateral_positions):
+            lap_pct = 0.10 + i * 0.05  # 0.10 to 0.40
+
+            frame = telemetry_frame_factory.build(
+                timestamp=base_time + timedelta(seconds=i * 0.5),
+                lap_distance_pct=lap_pct,
+                lap_distance=lap_pct,
+                steering_angle=-0.3,  # Left turn (negative steering)
+                speed=50.0 + i * 2,
+                lateral_acceleration=1.0,
+                lap_number=1,
+            )
+            frames.append(frame)
+
+        sequence = TelemetrySequence(frames=frames)
+        segments = [
+            CornerSegmentInput(corner_number=1, start_distance=100.0, end_distance=400.0)
+        ]
+
+        metrics = extract_lap_metrics(
+            sequence,
+            corner_segments=segments,
+            lateral_positions=lateral_positions,
+            track_length=track_length,
+            corner_mode=CornerDetectionMode.SEGMENTS,
+        )
+
+        assert metrics.total_corners == 1
+        corner = metrics.corners[0]
+        # Apex should be at index 3 (lap_pct = 0.25)
+        assert corner.apex_distance == pytest.approx(0.25, abs=0.01)  # type: ignore
+
+    def test_apex_detection_right_corner(self, telemetry_frame_factory: type) -> None:
+        """Test that apex is at maximum lateral position for right corners."""
+        base_time = datetime.now(timezone.utc)
+        frames: list[TelemetryFrame] = []
+        track_length = 1000.0
+
+        # Create frames with varying lateral positions for a right corner
+        # Right corner = positive steering
+        lateral_positions = [0.0, 0.2, 0.5, 0.9, 0.7, 0.3, 0.0]  # Apex at index 3
+        for i, lat_pos in enumerate(lateral_positions):
+            lap_pct = 0.10 + i * 0.05  # 0.10 to 0.40
+
+            frame = telemetry_frame_factory.build(
+                timestamp=base_time + timedelta(seconds=i * 0.5),
+                lap_distance_pct=lap_pct,
+                lap_distance=lap_pct,
+                steering_angle=0.3,  # Right turn (positive steering)
+                speed=50.0 + i * 2,
+                lateral_acceleration=1.0,
+                lap_number=1,
+            )
+            frames.append(frame)
+
+        sequence = TelemetrySequence(frames=frames)
+        segments = [
+            CornerSegmentInput(corner_number=1, start_distance=100.0, end_distance=400.0)
+        ]
+
+        metrics = extract_lap_metrics(
+            sequence,
+            corner_segments=segments,
+            lateral_positions=lateral_positions,
+            track_length=track_length,
+            corner_mode=CornerDetectionMode.SEGMENTS,
+        )
+
+        assert metrics.total_corners == 1
+        corner = metrics.corners[0]
+        # Apex should be at index 3 (lap_pct = 0.25)
+        assert corner.apex_distance == pytest.approx(0.25, abs=0.01)  # type: ignore
+
+    def test_apex_fallback_to_lateral_g(self, telemetry_frame_factory: type) -> None:
+        """Test that apex falls back to max lateral G when no lateral positions."""
+        base_time = datetime.now(timezone.utc)
+        frames: list[TelemetryFrame] = []
+        track_length = 1000.0
+
+        # Create frames where max lateral G is at specific index
+        lateral_gs = [0.5, 1.0, 1.8, 1.2, 0.8]  # Max at index 2
+        for i, lat_g in enumerate(lateral_gs):
+            lap_pct = 0.10 + i * 0.05
+
+            frame = telemetry_frame_factory.build(
+                timestamp=base_time + timedelta(seconds=i * 0.5),
+                lap_distance_pct=lap_pct,
+                lap_distance=lap_pct,
+                steering_angle=0.3,
+                speed=50.0,
+                lateral_acceleration=lat_g,
+                lap_number=1,
+            )
+            frames.append(frame)
+
+        sequence = TelemetrySequence(frames=frames)
+        segments = [
+            CornerSegmentInput(corner_number=1, start_distance=100.0, end_distance=300.0)
+        ]
+
+        # No lateral_positions provided - should fall back to lateral G
+        metrics = extract_lap_metrics(
+            sequence,
+            corner_segments=segments,
+            lateral_positions=None,
+            track_length=track_length,
+            corner_mode=CornerDetectionMode.SEGMENTS,
+        )
+
+        assert metrics.total_corners == 1
+        corner = metrics.corners[0]
+        # Apex should be at index 2 (lap_pct = 0.20) where lateral G is max
+        assert corner.apex_distance == pytest.approx(0.20, abs=0.01)  # type: ignore
+
+    def test_corner_mode_segments_only_no_fallback(
+        self, telemetry_frame_factory: type
+    ) -> None:
+        """Test that SEGMENTS mode returns empty corners when no segments provided."""
+        base_time = datetime.now(timezone.utc)
+        frames: list[TelemetryFrame] = []
+
+        # Create frames with steering that would be detected by auto-detection
+        for i in range(10):
+            steering = 0.3 if 3 <= i <= 7 else 0.0
+
+            frame = telemetry_frame_factory.build(
+                timestamp=base_time + timedelta(seconds=i * 0.1),
+                lap_distance_pct=i * 0.1,
+                lap_distance=i * 0.1,
+                steering_angle=steering,
+                speed=60.0,
+                lateral_acceleration=1.0 if steering > 0 else 0.0,
+                lap_number=1,
+            )
+            frames.append(frame)
+
+        sequence = TelemetrySequence(frames=frames)
+
+        # SEGMENTS mode with no segments - should return empty
+        metrics = extract_lap_metrics(
+            sequence,
+            corner_segments=None,
+            corner_mode=CornerDetectionMode.SEGMENTS,
+        )
+
+        assert metrics.total_corners == 0
+
+    def test_corner_mode_with_fallback(self, telemetry_frame_factory: type) -> None:
+        """Test that SEGMENTS_WITH_FALLBACK uses auto-detection when no segments."""
+        base_time = datetime.now(timezone.utc)
+        frames: list[TelemetryFrame] = []
+
+        # Create frames with steering that would be detected by auto-detection
+        for i in range(10):
+            steering = 0.3 if 3 <= i <= 7 else 0.0
+
+            frame = telemetry_frame_factory.build(
+                timestamp=base_time + timedelta(seconds=i * 0.1),
+                lap_distance_pct=i * 0.1,
+                lap_distance=i * 0.1,
+                steering_angle=steering,
+                speed=60.0,
+                lateral_acceleration=1.0 if steering > 0 else 0.0,
+                lap_number=1,
+            )
+            frames.append(frame)
+
+        sequence = TelemetrySequence(frames=frames)
+
+        # SEGMENTS_WITH_FALLBACK with no segments - should use auto-detection
+        metrics = extract_lap_metrics(
+            sequence,
+            corner_segments=None,
+            corner_mode=CornerDetectionMode.SEGMENTS_WITH_FALLBACK,
+        )
+
+        # Auto-detection should find the corner
+        assert metrics.total_corners >= 1

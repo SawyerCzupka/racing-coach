@@ -28,6 +28,7 @@ from racing_coach_client.handlers import (
     MetricsUploadHandler,
 )
 from racing_coach_client.logging_config import setup_logging
+from racing_coach_client.services import TrackService
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +59,9 @@ class RacingCoachClient:
 
         # Create session registry
         self.session_registry = SessionRegistry()
+
+        # Create track service for fetching corner segments and boundaries
+        self.track_service = TrackService(api_client)
 
         # Create telemetry source based on configuration
         logger.info(f"Initializing telemetry source (mode: {settings.TELEMETRY_MODE})")
@@ -107,8 +111,8 @@ class RacingCoachClient:
                 )
             )
 
-        # Metrics extraction handler
-        metrics_handler = MetricsHandler(self.event_bus)
+        # Metrics extraction handler (with track service for segment-based corner extraction)
+        metrics_handler = MetricsHandler(self.event_bus, track_service=self.track_service)
         handlers.append(
             Handler[LapAndSession](
                 SystemEvents.LAP_TELEMETRY_SEQUENCE,
