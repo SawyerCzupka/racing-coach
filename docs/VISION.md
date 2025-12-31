@@ -7,11 +7,13 @@ Transform sim racing coaching from expensive proprietary tools into an accessibl
 ## Target Audience
 
 **Primary**: Competitive iRacing drivers seeking laptime improvements
+
 - Skill level: Intermediate to advanced (assumes racing fundamentals understood)
 - Goals: Shave tenths/seconds off laptimes, identify specific weaknesses, master new car/track combinations
 - Willingness: Ready to analyze data and iterate on technique
 
 **Secondary**: Racing teams and leagues needing telemetry analysis tools
+
 - Team coaches wanting data-driven feedback for drivers
 - League organizers seeking competitive analysis tools
 - Esports teams training drivers systematically
@@ -31,6 +33,7 @@ Transform sim racing coaching from expensive proprietary tools into an accessibl
 **Trophi.ai Strengths**: Real-time voice coaching, multi-lap analysis, track acclimatization, established user base, supports multiple sims (iRacing, F1, ACC, Le Mans Ultimate)
 
 **Our Differentiators**:
+
 - **Open source**: Self-hosted option for privacy-conscious users who want data ownership
 - **Novel ML**: AGI-native coaching models that learn from data (not just rule-based comparison systems)
 - **Research-driven**: Continuous innovation in ML techniques, potential academic contributions
@@ -53,9 +56,11 @@ Transform sim racing coaching from expensive proprietary tools into an accessibl
 ## Product Evolution
 
 ### Phase 1: MVP - Live Coaching Foundation
+
 Drivers receive real-time voice coaching during iRacing sessions. Simple auth, rule-based feedback comparing current lap to reference lap via TTS. Goal: Launch public beta to crowdsource telemetry data for future ML training.
 
 ### Phase 2: ML-Powered Coaching (Core Innovation)
+
 Train ML models on crowdsourced telemetry data. Intelligent coaching that learns optimal racing technique from expert laps, identifies performance anomalies, generates nuanced feedback beyond simple comparisons. Start with single car/track combo, validate superiority over rule-based approach.
 
 **ML "AGI Native" Philosophy**: Train models end-to-end with all coaching capabilities. Don't build complex logic atop less-capable models. Balance proven techniques (supervised learning, anomaly detection) with novel research (physics-informed NNs, RL).
@@ -63,9 +68,11 @@ Train ML models on crowdsourced telemetry data. Intelligent coaching that learns
 **Pipeline**: Telemetry → ML Model → Structured Feedback → LLM → Natural Language → TTS → Audio
 
 ### Phase 3: Advanced ML & Scale
+
 Expand to top 10+ car/track combinations. Hierarchical models (general physics base + specialized fine-tuning). Real-time ML inference (<500ms), predictive coaching, advanced anomaly detection. Community reference lap marketplace.
 
 ### Phase 4: Commercial Maturity
+
 Production-grade infrastructure, premium tiers (Free/Pro/Enterprise), team features, mobile app, esports integration. Sustainable revenue, active community, recognized as leading FOSS sim racing coaching platform.
 
 ## Technical Challenges
@@ -109,6 +116,7 @@ Production-grade infrastructure, premium tiers (Free/Pro/Enterprise), team featu
 ## Conclusion
 
 Racing Coach aims to become the leading open-source, AI-powered sim racing coaching platform by combining:
+
 1. **Accessibility**: Freemium pricing and self-hosted option vs. expensive proprietary tools
 2. **Intelligence**: Novel ML coaching models that learn from data, not just rule-based systems
 3. **Community**: Open source ecosystem with network effects (more users → better models)
