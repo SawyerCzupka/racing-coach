@@ -4,10 +4,14 @@ This handler listens to LAP_TELEMETRY_SEQUENCE events and extracts comprehensive
 performance metrics including braking points, corner analysis, and lap statistics.
 """
 
+from __future__ import annotations
+
 import logging
 import time
+from typing import TYPE_CHECKING
 
-from racing_coach_core.algs.metrics import extract_lap_metrics
+from racing_coach_core.algs.boundary import compute_lateral_positions
+from racing_coach_core.algs.metrics import CornerDetectionMode, extract_lap_metrics
 from racing_coach_core.events import (
     Event,
     EventBus,
@@ -17,19 +21,33 @@ from racing_coach_core.events import (
 from racing_coach_core.events.checking import method_handles
 from racing_coach_core.schemas.events import LapAndSession, MetricsAndSession
 
+if TYPE_CHECKING:
+    from racing_coach_client.services.track_service import TrackService
+
 logger = logging.getLogger(__name__)
 
 
 class MetricsHandler:
     """Handler for extracting performance metrics from lap telemetry."""
 
-    def __init__(self, event_bus: EventBus):
+    def __init__(
+        self,
+        event_bus: EventBus,
+        track_service: TrackService | None = None,
+        corner_mode: CornerDetectionMode = CornerDetectionMode.SEGMENTS_WITH_FALLBACK,
+    ):
         """Initialize the metrics handler.
 
         Args:
             event_bus: The event bus for publishing extracted metrics
+            track_service: Optional service for fetching corner segments and track boundaries.
+                If provided, enables segment-based corner extraction.
+            corner_mode: How to detect corners (AUTO, SEGMENTS, or SEGMENTS_WITH_FALLBACK).
+                Only used when track_service is provided.
         """
         self.event_bus = event_bus
+        self.track_service = track_service
+        self.corner_mode = corner_mode
 
     @method_handles(SystemEvents.LAP_TELEMETRY_SEQUENCE)
     def handle_lap_telemetry(self, context: HandlerContext[LapAndSession]):
@@ -43,11 +61,44 @@ class MetricsHandler:
         session_frame = data.SessionFrame
 
         try:
+            # Fetch track data if service available
+            corner_segments = None
+            lateral_positions = None
+            track_length = None
+
+            if self.track_service:
+                track_id = session_frame.track_id
+                track_config = session_frame.track_config_name
+
+                corner_segments = self.track_service.get_corner_segments(track_id, track_config)
+
+                if corner_segments:
+                    # Fetch track boundary for lateral position computation
+                    boundary = self.track_service.get_track_boundary(track_id, track_config)
+                    if boundary:
+                        augmented = compute_lateral_positions(boundary, lap_telemetry)
+                        lateral_positions = augmented.lateral_positions
+                        track_length = boundary.track_length
+                        logger.debug(
+                            f"Using {len(corner_segments)} corner segments with lateral positions"
+                        )
+                    else:
+                        # Have segments but no boundary - can still use segments with lateral G apex
+                        track_length = None  # Will fall back to auto-detection
+                        logger.debug(
+                            f"Have {len(corner_segments)} segments but no boundary - "
+                            "will use lateral G for apex detection"
+                        )
+
             # Extract comprehensive metrics from the lap
             start_time = time.time()
             lap_metrics = extract_lap_metrics(
                 sequence=lap_telemetry,
                 lap_number=lap_telemetry.frames[0].lap_number if lap_telemetry.frames else None,
+                corner_segments=corner_segments,
+                lateral_positions=lateral_positions,
+                track_length=track_length,
+                corner_mode=self.corner_mode,
             )
             extraction_time = time.time() - start_time
 

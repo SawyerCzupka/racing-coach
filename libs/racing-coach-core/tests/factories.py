@@ -2,7 +2,12 @@
 
 from polyfactory.factories.dataclass_factory import DataclassFactory
 from polyfactory.factories.pydantic_factory import ModelFactory
-from racing_coach_core.algs.events import BrakingMetrics, CornerMetrics, LapMetrics
+from racing_coach_core.algs.events import (
+    BrakingMetrics,
+    CornerMetrics,
+    CornerSegmentInput,
+    LapMetrics,
+)
 from racing_coach_core.schemas.events import LapAndSession, TelemetryAndSession
 from racing_coach_core.schemas.telemetry import (
     LapTelemetry,
@@ -39,6 +44,9 @@ class BrakingMetricsFactory(DataclassFactory[BrakingMetrics]): ...
 
 
 class CornerMetricsFactory(DataclassFactory[CornerMetrics]): ...
+
+
+class CornerSegmentInputFactory(DataclassFactory[CornerSegmentInput]): ...
 
 
 class LapMetricsFactory(DataclassFactory[LapMetrics]): ...

@@ -13,6 +13,7 @@ class TrackBoundarySummary(BaseModel):
     track_name: str = Field(description="Name of the track")
     track_config_name: str | None = Field(description="Track configuration name")
     grid_size: int = Field(description="Number of grid points in boundary data")
+    track_length: float | None = Field(description="Total track length in meters")
     created_at: datetime = Field(description="When the boundary was created")
 
 
@@ -44,6 +45,7 @@ class TrackBoundaryResponse(BaseModel):
     grid_size: int = Field(description="Number of grid points")
     source_left_frames: int = Field(description="Original frame count for left boundary")
     source_right_frames: int = Field(description="Original frame count for right boundary")
+    track_length: float | None = Field(description="Total track length in meters")
 
     created_at: datetime = Field(description="When the boundary was created")
     updated_at: datetime = Field(description="When the boundary was last updated")
@@ -59,4 +61,40 @@ class TrackBoundaryUploadResponse(BaseModel):
     track_config_name: str | None = Field(description="Track configuration name")
     replaced_existing: bool = Field(
         default=False, description="Whether an existing boundary was replaced"
+    )
+
+
+# Corner Segment Schemas
+
+
+class CornerSegmentCreate(BaseModel):
+    """Schema for creating a corner segment."""
+
+    start_distance: float = Field(description="Start distance in meters from S/F line")
+    end_distance: float = Field(description="End distance in meters from S/F line")
+
+
+class CornerSegmentResponse(BaseModel):
+    """Response schema for a corner segment."""
+
+    id: str = Field(description="UUID of the corner segment")
+    corner_number: int = Field(description="Corner number (1-indexed, derived from sort order)")
+    start_distance: float = Field(description="Start distance in meters from S/F line")
+    end_distance: float = Field(description="End distance in meters from S/F line")
+    created_at: datetime = Field(description="When the corner segment was created")
+    updated_at: datetime = Field(description="When the corner segment was last updated")
+
+
+class CornerSegmentListResponse(BaseModel):
+    """Response for listing corner segments."""
+
+    corners: list[CornerSegmentResponse] = Field(description="List of corner segments")
+    total: int = Field(description="Total number of corner segments")
+
+
+class CornerSegmentBulkRequest(BaseModel):
+    """Request for bulk creating/replacing corner segments."""
+
+    corners: list[CornerSegmentCreate] = Field(
+        description="List of corner segments in order (corner 1, 2, 3...)"
     )

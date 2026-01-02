@@ -322,9 +322,8 @@ async def initiate_device_authorization(
     async with transactional_session(db):
         auth = await auth_service.initiate_device_authorization(request_body.device_name)
 
-        # Build verification URI based on request
-        base_url = str(request.base_url).rstrip("/")
-        verification_uri = f"{base_url}/auth/device"
+        # Build verification URI pointing to web app
+        verification_uri = f"{settings.web_app_url}/auth/device"
 
         return DeviceAuthorizationResponse(
             device_code=auth.device_code,

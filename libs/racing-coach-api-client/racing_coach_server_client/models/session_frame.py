@@ -26,6 +26,7 @@ class SessionFrame:
         car_name (str): Car name
         car_class_id (int): Car class ID
         series_id (int): Series ID
+        session_type (str): Session type
         timestamp (datetime.datetime | Unset): Timestamp of the session frame
         session_id (UUID | Unset): Session ID
         track_type (str | Unset): Track type Default: 'road course'.
@@ -38,6 +39,7 @@ class SessionFrame:
     car_name: str
     car_class_id: int
     series_id: int
+    session_type: str
     timestamp: datetime.datetime | Unset = UNSET
     session_id: UUID | Unset = UNSET
     track_type: str | Unset = "road course"
@@ -58,6 +60,8 @@ class SessionFrame:
         car_class_id = self.car_class_id
 
         series_id = self.series_id
+
+        session_type = self.session_type
 
         timestamp: str | Unset = UNSET
         if not isinstance(self.timestamp, Unset):
@@ -80,6 +84,7 @@ class SessionFrame:
                 "car_name": car_name,
                 "car_class_id": car_class_id,
                 "series_id": series_id,
+                "session_type": session_type,
             }
         )
         if timestamp is not UNSET:
@@ -113,6 +118,8 @@ class SessionFrame:
 
         series_id = d.pop("series_id")
 
+        session_type = d.pop("session_type")
+
         _timestamp = d.pop("timestamp", UNSET)
         timestamp: datetime.datetime | Unset
         if isinstance(_timestamp, Unset):
@@ -137,6 +144,7 @@ class SessionFrame:
             car_name=car_name,
             car_class_id=car_class_id,
             series_id=series_id,
+            session_type=session_type,
             timestamp=timestamp,
             session_id=session_id,
             track_type=track_type,

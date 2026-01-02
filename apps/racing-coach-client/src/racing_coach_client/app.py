@@ -14,7 +14,9 @@ from racing_coach_core.schemas.events import (
     SessionStart,
     TelemetryAndSessionId,
 )
+from racing_coach_server_client import AuthenticatedClient
 
+from racing_coach_client.auth import get_authenticated_client
 from racing_coach_client.collectors.factory import create_telemetry_source
 from racing_coach_client.collectors.iracing import TelemetryCollector
 from racing_coach_client.config import settings
@@ -26,6 +28,7 @@ from racing_coach_client.handlers import (
     MetricsUploadHandler,
 )
 from racing_coach_client.logging_config import setup_logging
+from racing_coach_client.services import TrackService
 
 logger = logging.getLogger(__name__)
 
@@ -38,19 +41,27 @@ class RacingCoachClient:
     communication with the Racing Coach server.
     """
 
-    def __init__(self):
+    def __init__(self, api_client: AuthenticatedClient):
         """
         Initialize the Racing Coach Client.
 
         Creates the event bus, telemetry source, collector, and handlers.
         The telemetry source type (live or replay) is determined by the
         application configuration.
+
+        Args:
+            api_client: Authenticated API client for server communication.
         """
+        self.api_client = api_client
+
         # Create event bus
         self.event_bus = EventBus(max_queue_size=100_000)
 
         # Create session registry
         self.session_registry = SessionRegistry()
+
+        # Create track service for fetching corner segments and boundaries
+        self.track_service = TrackService(api_client)
 
         # Create telemetry source based on configuration
         logger.info(f"Initializing telemetry source (mode: {settings.TELEMETRY_MODE})")
@@ -92,7 +103,7 @@ class RacingCoachClient:
         )
 
         if upload:
-            lap_upload_handler = LapUploadHandler(self.event_bus)
+            lap_upload_handler = LapUploadHandler(self.event_bus, self.api_client)
             handlers.append(
                 Handler[LapAndSession](
                     SystemEvents.LAP_TELEMETRY_SEQUENCE,
@@ -100,8 +111,8 @@ class RacingCoachClient:
                 )
             )
 
-        # Metrics extraction handler
-        metrics_handler = MetricsHandler(self.event_bus)
+        # Metrics extraction handler (with track service for segment-based corner extraction)
+        metrics_handler = MetricsHandler(self.event_bus, track_service=self.track_service)
         handlers.append(
             Handler[LapAndSession](
                 SystemEvents.LAP_TELEMETRY_SEQUENCE,
@@ -111,7 +122,7 @@ class RacingCoachClient:
 
         # Metrics upload handler
         if upload:
-            metrics_upload_handler = MetricsUploadHandler(self.event_bus)
+            metrics_upload_handler = MetricsUploadHandler(self.event_bus, self.api_client)
             handlers.append(
                 Handler(
                     type=SystemEvents.LAP_METRICS_EXTRACTED,
@@ -148,7 +159,19 @@ class RacingCoachClient:
 
 
 def main():
-    client = RacingCoachClient()
+    # Configure logging first
+    setup_logging(
+        level=settings.LOG_LEVEL,
+        use_color=settings.LOG_COLOR,
+        show_module=settings.LOG_SHOW_MODULE,
+    )
+
+    # Authenticate with server (may prompt user for device authorization)
+    logger.info("Authenticating with server...")
+    api_client = get_authenticated_client(settings.SERVER_URL)
+
+    # Create the racing coach client
+    client = RacingCoachClient(api_client)
 
     # Graceful shutdown handling
     import signal
@@ -168,10 +191,4 @@ def main():
 
 
 if __name__ == "__main__":
-    # Configure logging based on settings
-    setup_logging(
-        level=settings.LOG_LEVEL,
-        use_color=settings.LOG_COLOR,
-        show_module=settings.LOG_SHOW_MODULE,
-    )
     main()

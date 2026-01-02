@@ -3,10 +3,10 @@ import logging
 from racing_coach_core.events import Event, EventBus, HandlerContext, SystemEvents
 from racing_coach_core.events.checking import method_handles
 from racing_coach_core.schemas.events import LapAndSession, LapUploadResult
-from racing_coach_server_client import Client
-from racing_coach_server_client.api.telemetry import upload_lap_api_v1_telemetry_lap_post
+from racing_coach_server_client import AuthenticatedClient, Client
+from racing_coach_server_client.api.telemetry import upload_lap
 from racing_coach_server_client.models import (
-    BodyUploadLapApiV1TelemetryLapPost,
+    BodyUploadLap,
     LapUploadResponse,
 )
 from racing_coach_server_client.models import (
@@ -16,15 +16,13 @@ from racing_coach_server_client.models import (
     SessionFrame as ApiSessionFrame,
 )
 
-from racing_coach_client.config import settings
-
 logger = logging.getLogger(__name__)
 
 
 class LapUploadHandler:
-    def __init__(self, event_bus: EventBus):
+    def __init__(self, event_bus: EventBus, api_client: AuthenticatedClient | Client):
         self.event_bus = event_bus
-        self.api_client = Client(base_url=settings.SERVER_URL)
+        self.api_client = api_client
 
     @method_handles(SystemEvents.LAP_TELEMETRY_SEQUENCE)
     def handle_lap_complete_event(self, context: HandlerContext[LapAndSession]):
@@ -39,13 +37,13 @@ class LapUploadHandler:
 
         try:
             # Convert Pydantic models to API client models
-            body = BodyUploadLapApiV1TelemetryLapPost(
+            body = BodyUploadLap(
                 lap=ApiLapTelemetry.from_dict(data.LapTelemetry.model_dump(mode="json")),
                 session=ApiSessionFrame.from_dict(data.SessionFrame.model_dump(mode="json")),
             )
 
             # Upload the lap telemetry to the server with client-generated lap_id
-            response = upload_lap_api_v1_telemetry_lap_post.sync(
+            response = upload_lap.sync(
                 client=self.api_client,
                 body=body,
                 lap_id=data.lap_id,

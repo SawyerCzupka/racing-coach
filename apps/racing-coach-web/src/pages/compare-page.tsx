@@ -1,17 +1,17 @@
-import { useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { LoadingState, EmptyState } from '@/components/ui/loading-states';
-import { formatLapTime, formatDelta, getDeltaColor } from '@/lib/format';
 import { useCompareLaps } from '@/api/generated/metrics/metrics';
-import { useGetSessionsList, useGetSessionDetail } from '@/api/generated/sessions/sessions';
 import type {
   BrakingZoneComparison,
   CornerComparison,
-  SessionSummary,
   LapSummary,
+  SessionSummary,
 } from '@/api/generated/models';
+import { useGetSessionDetail, useGetSessionsList } from '@/api/generated/sessions/sessions';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { EmptyState, LoadingState } from '@/components/ui/loading-states';
+import { formatDelta, formatLapTime, getDeltaColor } from '@/lib/format';
+import { useState } from 'react';
+import { useSearchParams } from 'react-router';
 
 export function ComparePage() {
   const [searchParams, setSearchParams] = useSearchParams();

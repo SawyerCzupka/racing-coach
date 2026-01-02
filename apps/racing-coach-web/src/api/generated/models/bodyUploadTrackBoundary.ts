@@ -13,4 +13,6 @@ export interface BodyUploadTrackBoundary {
   left_lap_number?: number;
   /** Lap number for right boundary */
   right_lap_number?: number;
+  /** Resolution of the boundary */
+  grid_size?: number;
 }

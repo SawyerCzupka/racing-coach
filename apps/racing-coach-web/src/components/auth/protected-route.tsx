@@ -1,6 +1,6 @@
-import { Navigate, useLocation } from 'react-router-dom';
-import { useAuth } from '@/providers/auth-provider';
 import { Spinner } from '@/components/ui/loading-states';
+import { useAuth } from '@/providers/auth-provider';
+import { Navigate, useLocation } from 'react-router';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -25,7 +25,7 @@ export function ProtectedRoute({ children, requireAdmin = false }: ProtectedRout
   }
 
   if (requireAdmin && !isAdmin) {
-    return <Navigate to="/sessions" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   return <>{children}</>;

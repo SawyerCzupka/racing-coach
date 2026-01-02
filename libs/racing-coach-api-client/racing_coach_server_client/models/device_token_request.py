@@ -1,42 +1,33 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import TYPE_CHECKING, Any, TypeVar
+from typing import Any, TypeVar
 
 from attrs import define as _attrs_define
 from attrs import field as _attrs_field
 
-if TYPE_CHECKING:
-    from ..models.lap_telemetry import LapTelemetry
-    from ..models.session_frame import SessionFrame
-
-
-T = TypeVar("T", bound="BodyUploadLapApiV1TelemetryLapPost")
+T = TypeVar("T", bound="DeviceTokenRequest")
 
 
 @_attrs_define
-class BodyUploadLapApiV1TelemetryLapPost:
-    """
+class DeviceTokenRequest:
+    """Request model for polling device token.
+
     Attributes:
-        lap (LapTelemetry):
-        session (SessionFrame): Frame of data pertaining to a session.
+        device_code (str):
     """
 
-    lap: LapTelemetry
-    session: SessionFrame
+    device_code: str
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
-        lap = self.lap.to_dict()
-
-        session = self.session.to_dict()
+        device_code = self.device_code
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
         field_dict.update(
             {
-                "lap": lap,
-                "session": session,
+                "device_code": device_code,
             }
         )
 
@@ -44,21 +35,15 @@ class BodyUploadLapApiV1TelemetryLapPost:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.lap_telemetry import LapTelemetry
-        from ..models.session_frame import SessionFrame
-
         d = dict(src_dict)
-        lap = LapTelemetry.from_dict(d.pop("lap"))
+        device_code = d.pop("device_code")
 
-        session = SessionFrame.from_dict(d.pop("session"))
-
-        body_upload_lap_api_v1_telemetry_lap_post = cls(
-            lap=lap,
-            session=session,
+        device_token_request = cls(
+            device_code=device_code,
         )
 
-        body_upload_lap_api_v1_telemetry_lap_post.additional_properties = d
-        return body_upload_lap_api_v1_telemetry_lap_post
+        device_token_request.additional_properties = d
+        return device_token_request
 
     @property
     def additional_keys(self) -> list[str]:

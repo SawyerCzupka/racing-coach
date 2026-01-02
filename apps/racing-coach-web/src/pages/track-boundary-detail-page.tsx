@@ -1,13 +1,13 @@
-import { useParams, useNavigate } from 'react-router-dom';
+import { useDeleteTrackBoundary, useGetTrackBoundary } from '@/api/generated/tracks/tracks';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ErrorState, LoadingState } from '@/components/ui/loading-states';
+import { formatDateTime } from '@/lib/format';
+import { useQueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import Plot from 'react-plotly.js';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { LoadingState, ErrorState } from '@/components/ui/loading-states';
-import { formatDateTime } from '@/lib/format';
-import { useGetTrackBoundary, useDeleteTrackBoundary } from '@/api/generated/tracks/tracks';
-import { useQueryClient } from '@tanstack/react-query';
+import { useNavigate, useParams } from 'react-router';
 
 export function TrackBoundaryDetailPage() {
   const { boundaryId } = useParams<{ boundaryId: string }>();
@@ -96,6 +96,7 @@ export function TrackBoundaryDetailPage() {
         },
       ],
       layout: {
+        uirevision: 'preserve-zoom',
         height: 700,
         paper_bgcolor: 'rgba(0,0,0,0)',
         plot_bgcolor: 'rgba(17, 24, 39, 0.5)',
@@ -104,12 +105,14 @@ export function TrackBoundaryDetailPage() {
           family: 'system-ui, -apple-system, sans-serif',
         },
         xaxis: {
+          uirevision: 'preserve-zoom',
           showticklabels: false,
           showgrid: false,
           zeroline: false,
           title: '',
         },
         yaxis: {
+          uirevision: 'preserve-zoom',
           showticklabels: false,
           showgrid: false,
           zeroline: false,
@@ -124,6 +127,7 @@ export function TrackBoundaryDetailPage() {
         },
         margin: { t: 20, b: 20, l: 20, r: 20 },
         hovermode: 'closest' as const,
+        dragmode: 'pan' as const,
       },
     };
   }, [boundary]);
@@ -184,6 +188,12 @@ export function TrackBoundaryDetailPage() {
           <Badge variant="info">{boundary.grid_size} grid points</Badge>
           <Button
             variant="outline"
+            onClick={() => navigate(`/tracks/${boundaryId}/corners`)}
+          >
+            Edit Corners
+          </Button>
+          <Button
+            variant="outline"
             onClick={handleDelete}
             disabled={deleteMutation.isPending}
           >
@@ -240,7 +250,13 @@ export function TrackBoundaryDetailPage() {
             <Plot
               data={plotData.traces as any}
               layout={plotData.layout as any}
-              config={{ responsive: true, displayModeBar: true, displaylogo: false }}
+              config={{
+                responsive: true,
+                displayModeBar: true,
+                displaylogo: false,
+                modeBarButtonsToRemove: ['lasso2d', 'select2d'],
+                scrollZoom: true,
+              }}
               className="w-full"
             />
           )}

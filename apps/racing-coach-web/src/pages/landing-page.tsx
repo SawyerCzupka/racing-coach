@@ -1,7 +1,10 @@
-import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/providers/auth-provider';
+import { Link } from 'react-router';
 
 export function LandingPage() {
+  const { isAuthenticated } = useAuth();
+
   return (
     <div className="flex flex-col min-h-screen bg-gray-950">
       {/* Header */}
@@ -14,12 +17,20 @@ export function LandingPage() {
             <span className="text-xl font-bold text-white">LapEvo</span>
           </Link>
           <div className="flex items-center gap-4">
-            <Link to="/login">
-              <Button variant="ghost">Sign in</Button>
-            </Link>
-            <Link to="/register">
-              <Button>Get Started</Button>
-            </Link>
+            {isAuthenticated ? (
+              <Link to="/dashboard">
+                <Button>Go to Dashboard</Button>
+              </Link>
+            ) : (
+              <>
+                <Link to="/login">
+                  <Button variant="ghost">Sign in</Button>
+                </Link>
+                <Link to="/register">
+                  <Button>Get Started</Button>
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </header>
@@ -39,16 +50,26 @@ export function LandingPage() {
           </div>
 
           <div className="flex flex-col items-center justify-center gap-4 pt-4 sm:flex-row">
-            <Link to="/register">
-              <Button size="lg" className="px-8">
-                Start Free
-              </Button>
-            </Link>
-            <Link to="/login">
-              <Button variant="outline" size="lg">
-                Sign in to Dashboard
-              </Button>
-            </Link>
+            {isAuthenticated ? (
+              <Link to="/dashboard">
+                <Button size="lg" className="px-8">
+                  Go to Dashboard
+                </Button>
+              </Link>
+            ) : (
+              <>
+                <Link to="/register">
+                  <Button size="lg" className="px-8">
+                    Start Free
+                  </Button>
+                </Link>
+                <Link to="/login">
+                  <Button variant="outline" size="lg">
+                    Sign in to Dashboard
+                  </Button>
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Feature highlights */}

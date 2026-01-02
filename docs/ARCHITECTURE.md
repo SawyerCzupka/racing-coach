@@ -23,7 +23,7 @@ This document describes the technical architecture of Racing Coach, covering bot
 
 ### High-Level Architecture
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────┐
 │                         User's Machine                               │
 │  ┌──────────────────────────────────────────────────────────────┐  │
@@ -80,12 +80,14 @@ This document describes the technical architecture of Racing Coach, covering bot
 ### 1. Client Application (Desktop)
 
 **Technology Stack**:
+
 - **Language**: Python 3.11+
 - **GUI Framework**: PySide6 (Qt for Python)
 - **iRacing Integration**: `pyirsdk` (telemetry SDK)
 - **Event System**: `racing-coach-core` event bus
 
 **Architecture**:
+
 - **Collectors**: Gather telemetry from iRacing (60 Hz polling loop)
   - `IracingCollector`: Live telemetry via shared memory
   - `ReplayCollector`: Offline telemetry via IBT file parsing
@@ -99,6 +101,7 @@ This document describes the technical architecture of Racing Coach, covering bot
 - **API Client**: HTTP client for server communication (`racing-coach-core.client`)
 
 **Data Flow**:
+
 1. `IracingCollector` polls iRacing SDK (60 Hz)
 2. Telemetry frames emitted as `TelemetryFrameEvent`
 3. On lap completion, `LapCompletedEvent` fired
@@ -106,6 +109,7 @@ This document describes the technical architecture of Racing Coach, covering bot
 5. Upload lap telemetry + metrics to server via `POST /api/v1/telemetry/lap`
 
 **Live Coaching Flow** (Future):
+
 1. `LiveCoachingHandler` subscribes to `TelemetryFrameEvent`
 2. Send telemetry to server via WebSocket or HTTP polling
 3. Server responds with coaching messages
@@ -113,6 +117,7 @@ This document describes the technical architecture of Racing Coach, covering bot
 5. Audio played to driver during session
 
 **Deployment**:
+
 - **Packaged**: PyInstaller or Nuitka (single executable for Windows)
 - **Auto-Update**: Check server for new versions, download and install
 - **Config**: Local YAML/TOML file (server URL, TTS settings, coaching aggressiveness)
@@ -122,6 +127,7 @@ This document describes the technical architecture of Racing Coach, covering bot
 ### 2. Server Application (FastAPI)
 
 **Technology Stack**:
+
 - **Language**: Python 3.11+
 - **Framework**: FastAPI (async ASGI)
 - **ORM**: SQLAlchemy 2.0 (async)
@@ -131,7 +137,7 @@ This document describes the technical architecture of Racing Coach, covering bot
 
 **Architecture**: Feature-First (Vertical Slices)
 
-```
+```shell
 apps/racing-coach-server/src/racing_coach_server/
 ├── auth/                 # User authentication and authorization
 │   ├── router.py         # Endpoints: /api/v1/auth/register, /login, /refresh
@@ -262,37 +268,45 @@ CREATE TABLE corners (
 **API Endpoints**:
 
 **Authentication**:
+
 - `POST /api/v1/auth/register` - Create new user account
 - `POST /api/v1/auth/login` - Login, receive JWT tokens
 - `POST /api/v1/auth/refresh` - Refresh access token
 - `POST /api/v1/auth/logout` - Invalidate refresh token
 
 **Telemetry**:
+
 - `POST /api/v1/telemetry/lap` - Upload lap telemetry and session metadata
 - `GET /api/v1/telemetry/sessions/latest` - Get user's latest session
 
 **Sessions**:
+
 - `GET /api/v1/sessions` - List user's sessions (paginated)
 - `GET /api/v1/sessions/{id}` - Get session details with all laps
 
 **Metrics**:
+
 - `POST /api/v1/metrics/lap` - Upload extracted metrics (braking zones, corners)
 - `GET /api/v1/metrics/lap/{lap_id}` - Get metrics for a specific lap
 - `GET /api/v1/metrics/compare?lap1={id}&lap2={id}` - Compare two laps
 
 **ML Coaching** (Future):
+
 - `POST /api/v1/ml/score-lap` - Score a lap, return structured feedback
 - `GET /api/v1/ml/models` - List available ML models (per car/track)
 
 **Live Coaching** (Future):
+
 - `WebSocket /api/v1/coaching/live` - Real-time telemetry streaming + coaching messages
 
 **Authorization**:
+
 - All endpoints (except `/auth/*` and `/health`) require JWT in `Authorization: Bearer <token>` header
 - FastAPI dependency `get_current_user()` validates JWT and extracts `user_id`
 - All database queries filtered by `user_id` (user isolation)
 
 **Performance Optimizations**:
+
 - Connection pooling: AsyncPG pool (min=5, max=20 connections)
 - Query optimization: Indexes on `user_id`, `lap_id`, `time` (TimescaleDB)
 - Compression: TimescaleDB automatic compression for old telemetry (>7 days)
@@ -303,12 +317,14 @@ CREATE TABLE corners (
 ### 3. ML Model Service (Future)
 
 **Technology Stack**:
+
 - **Language**: Python 3.11+
 - **Framework**: FastAPI (separate microservice)
 - **ML Libraries**: PyTorch or TensorFlow, ONNX Runtime
 - **Serving**: NVIDIA Triton Inference Server (optional, for high scale)
 
 **Architecture**:
+
 - **Model Repository**: S3 bucket with versioned models (e.g., `skippy-limerock-v1.onnx`)
 - **Model Loader**: Download model on startup, keep in memory
 - **Inference Endpoint**: `POST /ml/score-lap` (input: telemetry JSON, output: structured feedback)
@@ -318,6 +334,7 @@ CREATE TABLE corners (
 **API Contract**:
 
 **Request**:
+
 ```json
 {
   "lap_id": "uuid",
@@ -332,18 +349,19 @@ CREATE TABLE corners (
 ```
 
 **Response**:
+
 ```json
 {
   "lap_id": "uuid",
   "model_version": "skippy-limerock-v1",
-  "overall_score": 0.85,  // 0-1, higher is better
+  "overall_score": 0.85, // 0-1, higher is better
   "feedback": [
     {
       "corner": "Turn 3",
-      "distance": 0.42,  // 42% lap distance
+      "distance": 0.42, // 42% lap distance
       "type": "braking",
       "severity": "high",
-      "delta": {"brake_point": -10.5, "unit": "meters"},
+      "delta": { "brake_point": -10.5, "unit": "meters" },
       "description": "Braking too late"
     },
     {
@@ -351,7 +369,7 @@ CREATE TABLE corners (
       "distance": 0.43,
       "type": "speed",
       "severity": "medium",
-      "delta": {"apex_speed": -5.2, "unit": "km/h"},
+      "delta": { "apex_speed": -5.2, "unit": "km/h" },
       "description": "Apex speed slow"
     }
   ]
@@ -359,6 +377,7 @@ CREATE TABLE corners (
 ```
 
 **Deployment**:
+
 - **Container**: Docker image with model baked in (or download on startup)
 - **GPU**: Deploy on GPU instance (AWS P3, GCP T4) for <100ms inference
 - **Horizontal Scaling**: Multiple instances behind load balancer
@@ -369,6 +388,7 @@ CREATE TABLE corners (
 ### 4. Web Dashboard (React)
 
 **Technology Stack**:
+
 - **Language**: TypeScript
 - **Framework**: React 19
 - **Build Tool**: Vite
@@ -378,6 +398,7 @@ CREATE TABLE corners (
 - **API Client**: Auto-generated from OpenAPI spec via Orval
 
 **Architecture**:
+
 ```
 apps/racing-coach-web/src/
 ├── api/
@@ -401,6 +422,7 @@ apps/racing-coach-web/src/
 ```
 
 **Key Features**:
+
 - **Authentication**: JWT stored in HttpOnly cookie or localStorage
 - **Protected Routes**: Redirect to login if unauthenticated
 - **Session Browser**: List sessions with filters (car, track, date)
@@ -409,6 +431,7 @@ apps/racing-coach-web/src/
 - **Live Coaching** (Future): Real-time session status, coaching messages received
 
 **API Client Generation**:
+
 ```bash
 # Server must be running on localhost:8000
 npm run generate:api
@@ -417,6 +440,7 @@ npm run generate:api
 ```
 
 **Deployment**:
+
 - **Build**: `npm run build` → static files in `dist/`
 - **Hosting**: CDN (Cloudflare, Vercel, Netlify) or S3 + CloudFront
 - **Environment Variables**: API base URL (injected at build time)
@@ -426,27 +450,32 @@ npm run generate:api
 ### 5. Database (PostgreSQL + TimescaleDB)
 
 **Technology Stack**:
+
 - **Database**: PostgreSQL 15+
 - **Extension**: TimescaleDB (time-series optimization)
 - **Hosting**: Managed service (AWS RDS, Timescale Cloud, Supabase)
 
 **TimescaleDB Hypertables**:
+
 - `telemetry_frames`: Partitioned by time (1-day chunks)
 - **Compression**: Automatic after 7 days (10x storage reduction)
 - **Retention**: Raw telemetry kept for 90 days, then aggregated or archived
 
 **Indexes**:
+
 - `idx_telemetry_lap`: (lap_id, time DESC) - Fast lap telemetry retrieval
 - `idx_telemetry_user`: (user_id, time DESC) - User isolation queries
 - `idx_sessions_user`: (user_id, started_at DESC) - Session list pagination
 - `idx_laps_session`: (session_id, lap_number) - Session lap retrieval
 
 **Backups**:
+
 - Daily automated backups (managed service or pg_dump)
 - Retention: 30 days
 - Point-in-time recovery (PITR) for disaster recovery
 
 **Scaling**:
+
 - **Vertical**: Increase CPU/RAM (16 vCPU, 64 GB RAM for 1M+ laps)
 - **Horizontal**: TimescaleDB distributed hypertables (multi-node, future)
 - **Read Replicas**: Offload analytics queries to read replicas
@@ -456,12 +485,14 @@ npm run generate:api
 ### 6. Object Storage (S3)
 
 **Use Cases**:
+
 - **ML Models**: Versioned model files (e.g., `models/skippy-limerock-v1.onnx`)
 - **Data Exports**: CSV/Parquet exports for ML training
 - **Backups**: Database backups, session replays
 - **Static Assets**: Web dashboard assets (if not using CDN)
 
 **Structure**:
+
 ```
 racing-coach-production/
 ├── models/
@@ -537,6 +568,7 @@ racing-coach-production/
 ### Authentication (JWT-Based)
 
 **Registration Flow**:
+
 1. User submits email + password to `POST /api/v1/auth/register`
 2. Server hashes password (bcrypt or argon2)
 3. Server creates user record, returns JWT tokens:
@@ -545,16 +577,19 @@ racing-coach-production/
 4. Client stores tokens (HttpOnly cookie or localStorage)
 
 **Login Flow**:
+
 1. User submits email + password to `POST /api/v1/auth/login`
 2. Server verifies password hash
 3. Server returns JWT tokens (same as registration)
 
 **Authorization**:
+
 - All protected endpoints require `Authorization: Bearer <access_token>` header
 - FastAPI dependency `get_current_user()` validates JWT signature and expiration
 - Extract `user_id` from JWT claims, inject into request context
 
 **Token Refresh**:
+
 1. Access token expires (15 minutes)
 2. Client sends refresh token to `POST /api/v1/auth/refresh`
 3. Server validates refresh token, issues new access token
@@ -563,11 +598,13 @@ racing-coach-production/
 ### Authorization (Multi-Tenancy)
 
 **User Isolation**:
+
 - All database queries filtered by `user_id` (extracted from JWT)
 - Users can only access their own sessions, laps, and telemetry
 - Admin role (future): can access all user data for moderation
 
 **Data Privacy**:
+
 - Telemetry sharing is opt-in (checkbox during registration)
 - Anonymization pipeline strips PII before ML training
 - Self-hosted users keep all data local (never sent to cloud)
@@ -575,26 +612,32 @@ racing-coach-production/
 ### Security Best Practices
 
 **HTTPS Everywhere**:
+
 - Enforce HTTPS in production (Let's Encrypt SSL)
 - HSTS header: `Strict-Transport-Security: max-age=31536000`
 
 **CORS Configuration**:
+
 - Allow only web dashboard origin: `https://app.racingcoach.io`
 - Credentials allowed for cookies
 
 **Input Validation**:
+
 - Pydantic schemas validate all API inputs
 - Reject malformed requests (400 Bad Request)
 
 **Rate Limiting**:
+
 - Prevent abuse: 100 requests/minute per user (via API key or JWT)
 - DDoS protection: Cloudflare or AWS Shield
 
 **Error Handling**:
+
 - Never leak sensitive info in error responses (no stack traces in production)
 - Generic errors: `{"detail": "Internal server error"}` (log details server-side)
 
 **Secrets Management**:
+
 - Environment variables for sensitive config (database password, JWT secret)
 - Never commit secrets to Git (use `.env` files, gitignored)
 - Rotate secrets periodically (JWT secret every 90 days)
@@ -606,6 +649,7 @@ racing-coach-production/
 ### Development (Local)
 
 **Docker Compose**:
+
 ```yaml
 services:
   timescaledb:
@@ -636,6 +680,7 @@ services:
 ```
 
 **Run**:
+
 ```bash
 docker compose up
 # Server: http://localhost:8000
@@ -646,12 +691,14 @@ docker compose up
 ### Production (Managed Service)
 
 **Cloud Provider Options**:
+
 - **AWS**: ECS Fargate (server), RDS PostgreSQL (db), S3 (storage), CloudFront (web CDN)
 - **GCP**: Cloud Run (server), Cloud SQL (db), GCS (storage), Cloud CDN (web)
 - **DigitalOcean**: App Platform (server + web), Managed PostgreSQL (db), Spaces (storage)
 - **Fly.io**: Fly Machines (server), Supabase (db + auth), Cloudflare R2 (storage)
 
 **Recommended Stack (Cost-Optimized)**:
+
 - **Server**: Fly.io or Railway ($10-50/month for 2-4 instances)
 - **Database**: Supabase or Timescale Cloud ($25-100/month for 10 GB)
 - **Storage**: Cloudflare R2 ($0.015/GB, cheaper than S3)
@@ -659,6 +706,7 @@ docker compose up
 - **Total**: $50-200/month for 100-1,000 users
 
 **High-Scale Stack (1,000+ Users)**:
+
 - **Server**: AWS ECS Fargate (auto-scaling, 4-16 instances)
 - **Database**: AWS RDS TimescaleDB (db.m5.xlarge, 100 GB SSD)
 - **Storage**: S3 Standard (with Glacier archival)
@@ -667,6 +715,7 @@ docker compose up
 - **Total**: $500-2,000/month
 
 **CI/CD Pipeline**:
+
 ```yaml
 # .github/workflows/deploy.yml
 name: Deploy to Production
@@ -710,11 +759,13 @@ jobs:
 ### Logging
 
 **Server Logs**:
+
 - **Level**: INFO in production, DEBUG in development
 - **Format**: JSON structured logs (timestamp, level, message, user_id, request_id)
 - **Storage**: Cloudwatch Logs, Datadog, or Loki
 
 **Example Log**:
+
 ```json
 {
   "timestamp": "2025-12-01T12:34:56Z",
@@ -730,6 +781,7 @@ jobs:
 ### Metrics
 
 **Application Metrics** (Prometheus format):
+
 - `http_requests_total{method, endpoint, status}` - Request count
 - `http_request_duration_seconds{method, endpoint}` - Request latency histogram
 - `db_query_duration_seconds{query}` - Database query latency
@@ -737,11 +789,13 @@ jobs:
 - `active_users` - Current WebSocket connections (live coaching)
 
 **Infrastructure Metrics**:
+
 - CPU, memory, disk usage
 - Database connections (active, idle)
 - Network I/O
 
 **Alerting**:
+
 - Error rate >1% → Slack/PagerDuty alert
 - P95 latency >1s → Warning
 - Database connections >80% capacity → Scale up
@@ -749,6 +803,7 @@ jobs:
 ### Tracing
 
 **Distributed Tracing** (OpenTelemetry):
+
 - Trace requests across services (server → ML service → database)
 - Identify bottlenecks (slow queries, ML inference latency)
 - Tools: Jaeger, Zipkin, Datadog APM
@@ -758,6 +813,7 @@ jobs:
 ## Self-Hosted Deployment
 
 **Target Users**:
+
 - Privacy-conscious users who want full data ownership
 - Cost-sensitive users who can self-host cheaper than paying subscription
 - Power users who want to customize/extend the system
@@ -765,6 +821,7 @@ jobs:
 **Deployment Options**:
 
 **Option 1: Docker Compose (Simplest)**:
+
 ```bash
 git clone https://github.com/sawyer/racing-coach
 cd racing-coach
@@ -775,15 +832,18 @@ docker compose -f docker-compose.prod.yml up -d
 ```
 
 **Option 2: Kubernetes (Advanced)**:
+
 - Helm chart provided (future)
 - Deploy to local k3s cluster or cloud Kubernetes
 
 **Requirements**:
+
 - 4 CPU cores, 8 GB RAM (minimum)
 - 50 GB disk space (grows with telemetry data)
 - Docker or Kubernetes
 
 **Updates**:
+
 - `git pull && docker compose up -d` (automatic migrations)
 
 ---
@@ -793,16 +853,19 @@ docker compose -f docker-compose.prod.yml up -d
 ### Horizontal Scaling
 
 **Server**:
+
 - Stateless design (no in-memory sessions)
 - Scale horizontally behind load balancer (2-16 instances)
 - Session affinity not required
 
 **Database**:
+
 - TimescaleDB compression (10x storage reduction)
 - Read replicas for analytics queries (future)
 - Distributed hypertables for multi-node (future, 10M+ laps)
 
 **ML Service**:
+
 - Model loaded in memory (1-2 GB per instance)
 - Scale horizontally (4-8 GPU instances for high load)
 - Inference batching (process multiple laps in parallel)
@@ -810,16 +873,19 @@ docker compose -f docker-compose.prod.yml up -d
 ### Performance Optimization
 
 **API**:
+
 - Response caching (Redis for session metadata)
 - Database query optimization (indexes, EXPLAIN ANALYZE)
 - Async I/O (FastAPI async, SQLAlchemy async)
 
 **ML Inference**:
+
 - Model quantization (FP16, INT8)
 - ONNX Runtime (2-5x faster than PyTorch)
 - GPU batching (process 8-16 laps in parallel)
 
 **Web Dashboard**:
+
 - Code splitting (lazy load pages)
 - API response caching (React Query)
 - CDN for static assets
@@ -833,6 +899,7 @@ docker compose -f docker-compose.prod.yml up -d
 **Use Case**: High-throughput telemetry ingestion (1,000+ concurrent users)
 
 **Architecture**:
+
 ```
 Client → Kafka Producer → Kafka Topic → Stream Processor → TimescaleDB
                                       ↓
@@ -842,6 +909,7 @@ Client → Kafka Producer → Kafka Topic → Stream Processor → TimescaleDB
 ### Caching Layer (Redis)
 
 **Use Cases**:
+
 - Session metadata (avoid repeated DB queries)
 - Reference laps (frequently accessed)
 - ML model predictions (cache common laps)
@@ -851,6 +919,7 @@ Client → Kafka Producer → Kafka Topic → Stream Processor → TimescaleDB
 **Use Case**: Serve telemetry charts as pre-rendered images (reduce client-side rendering)
 
 **Architecture**:
+
 - Server generates PNG charts on lap upload
 - Store in S3, serve via CloudFront CDN
 - Web dashboard embeds images (faster load times)

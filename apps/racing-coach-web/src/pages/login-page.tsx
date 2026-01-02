@@ -1,13 +1,13 @@
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { useQueryClient } from '@tanstack/react-query';
-import { useLogin, getGetCurrentUserQueryKey } from '@/api/generated/auth/auth';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
+import { getGetCurrentUserQueryKey, useLogin } from '@/api/generated/auth/auth';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useQueryClient } from '@tanstack/react-query';
+import { useForm } from 'react-hook-form';
+import { Link, useLocation, useNavigate } from 'react-router';
+import { z } from 'zod';
 
 const loginSchema = z.object({
   email: z.string().email('Please enter a valid email'),
@@ -36,7 +36,7 @@ export function LoginPage() {
       await queryClient.invalidateQueries({ queryKey: getGetCurrentUserQueryKey() });
 
       const searchParams = new URLSearchParams(location.search);
-      const returnUrl = searchParams.get('returnUrl') || '/sessions';
+      const returnUrl = searchParams.get('returnUrl') || '/dashboard';
       navigate(decodeURIComponent(returnUrl));
     } catch {
       // Error is handled by mutation state

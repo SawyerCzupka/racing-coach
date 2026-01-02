@@ -13,6 +13,37 @@ from .telemetry import TelemetryFrame, TelemetrySequence
 
 logger = logging.getLogger(__name__)
 
+# Earth radius in meters
+EARTH_RADIUS_M = 6_371_000
+
+
+def _calculate_track_length(latitudes: np.ndarray, longitudes: np.ndarray) -> float:
+    """
+    Calculate total track length from centerline coordinates using Haversine formula.
+
+    Args:
+        latitudes: Array of latitude values in degrees
+        longitudes: Array of longitude values in degrees
+
+    Returns:
+        Total track length in meters
+    """
+    # Convert to radians
+    lat_rad = np.radians(latitudes)
+    lon_rad = np.radians(longitudes)
+
+    # Calculate differences between consecutive points
+    dlat = np.diff(lat_rad)
+    dlon = np.diff(lon_rad)
+
+    # Haversine formula for distance between consecutive points
+    a = np.sin(dlat / 2) ** 2 + np.cos(lat_rad[:-1]) * np.cos(lat_rad[1:]) * np.sin(dlon / 2) ** 2
+    c = 2 * np.arctan2(np.sqrt(a), np.sqrt(1 - a))
+    distances = EARTH_RADIUS_M * c
+
+    # Sum all segment distances
+    return float(np.sum(distances))
+
 
 class TrackBoundary(BaseModel):
     """
@@ -44,6 +75,10 @@ class TrackBoundary(BaseModel):
     grid_size: int = Field(description="Number of grid points")
     source_left_frames: int = Field(description="Original frame count for left boundary lap")
     source_right_frames: int = Field(description="Original frame count for right boundary lap")
+    track_length: float | None = Field(
+        default=None,
+        description="Total track length in meters, calculated from centerline"
+    )
 
     @classmethod
     def from_boundary_laps(
@@ -100,10 +135,15 @@ class TrackBoundary(BaseModel):
         right_lat_interp = np.interp(grid, right_dist, right_lat)
         right_lon_interp = np.interp(grid, right_dist, right_lon)
 
+        # Calculate centerline and track length
+        center_lat = (left_lat_interp + right_lat_interp) / 2
+        center_lon = (left_lon_interp + right_lon_interp) / 2
+        track_length = _calculate_track_length(center_lat, center_lon)
+
         logger.info(
             f"Created TrackBoundary for {track_name}: "
             f"left={len(left_lap_data)} frames, right={len(right_lap_data)} frames, "
-            f"grid_size={grid_size}"
+            f"grid_size={grid_size}, track_length={track_length:.0f}m"
         )
 
         return cls(
@@ -118,6 +158,7 @@ class TrackBoundary(BaseModel):
             grid_size=grid_size,
             source_left_frames=len(left_lap_data),
             source_right_frames=len(right_lap_data),
+            track_length=track_length,
         )
 
     def to_parquet(self, file_path: str | Path) -> None:
@@ -149,6 +190,7 @@ class TrackBoundary(BaseModel):
             b"grid_size": str(self.grid_size).encode(),
             b"source_left_frames": str(self.source_left_frames).encode(),
             b"source_right_frames": str(self.source_right_frames).encode(),
+            b"track_length": str(self.track_length or "").encode(),
         }
 
         # Merge with existing metadata and create new schema
@@ -181,6 +223,8 @@ class TrackBoundary(BaseModel):
             return value.decode() if isinstance(value, bytes) else value
 
         track_config_name = get_meta("track_config_name")
+        track_length_str = get_meta("track_length")
+        track_length = float(track_length_str) if track_length_str else None
 
         return cls(
             track_id=int(get_meta("track_id", "0")),
@@ -194,6 +238,7 @@ class TrackBoundary(BaseModel):
             grid_size=int(get_meta("grid_size", str(len(df)))),
             source_left_frames=int(get_meta("source_left_frames", "0")),
             source_right_frames=int(get_meta("source_right_frames", "0")),
+            track_length=track_length,
         )
 
 

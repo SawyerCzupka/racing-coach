@@ -937,9 +937,6 @@ requires-dist = [
     { name = "python-dateutil", specifier = ">=2.8.0,<3" },
 ]
 
-[package.metadata.requires-dev]
-dev = [{ name = "openapi-python-client", specifier = ">=0.27.1" }]
-
 [[package]]
 name = "rich"
 version = "14.2.0"

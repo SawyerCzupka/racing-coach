@@ -4,9 +4,9 @@ import uuid
 from typing import Self
 
 from racing_coach_core.schemas.track import TrackBoundary as TrackBoundarySchema
-from sqlalchemy import Float, Index, Integer, String, UniqueConstraint
+from sqlalchemy import Float, ForeignKey, Index, Integer, String, UniqueConstraint
 from sqlalchemy.dialects.postgresql import ARRAY, UUID
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from racing_coach_server.database.base import Base
 from racing_coach_server.database.mixins import TimestampMixin
@@ -33,10 +33,20 @@ class TrackBoundary(TimestampMixin, Base):
     grid_size: Mapped[int] = mapped_column(Integer, nullable=False)
     source_left_frames: Mapped[int] = mapped_column(Integer, nullable=False)
     source_right_frames: Mapped[int] = mapped_column(Integer, nullable=False)
+    track_length: Mapped[float | None] = mapped_column(Float, nullable=True, default=None)
 
     # Default field (must come after non-default fields)
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default_factory=uuid.uuid4
+    )
+
+    # Relationships
+    corner_segments: Mapped[list["CornerSegment"]] = relationship(
+        "CornerSegment",
+        back_populates="track_boundary",
+        cascade="all, delete-orphan",
+        order_by="CornerSegment.sort_order",
+        init=False,
     )
 
     __table_args__ = (
@@ -58,6 +68,7 @@ class TrackBoundary(TimestampMixin, Base):
             grid_size=self.grid_size,
             source_left_frames=self.source_left_frames,
             source_right_frames=self.source_right_frames,
+            track_length=self.track_length,
         )
 
     @classmethod
@@ -75,4 +86,42 @@ class TrackBoundary(TimestampMixin, Base):
             grid_size=schema.grid_size,
             source_left_frames=schema.source_left_frames,
             source_right_frames=schema.source_right_frames,
+            track_length=schema.track_length,
         )
+
+
+class CornerSegment(TimestampMixin, Base):
+    """Model representing a corner segment on a track."""
+
+    __tablename__ = "corner_segment"
+
+    # Foreign key to track boundary (non-default field first)
+    track_boundary_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("track_boundary.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+
+    # Corner boundaries in meters
+    start_distance: Mapped[float] = mapped_column(Float, nullable=False)
+    end_distance: Mapped[float] = mapped_column(Float, nullable=False)
+
+    # Sort order for corner numbering (1-indexed corner number)
+    sort_order: Mapped[int] = mapped_column(Integer, nullable=False)
+
+    # Default field (must come after non-default fields)
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default_factory=uuid.uuid4
+    )
+
+    # Relationships
+    track_boundary: Mapped["TrackBoundary"] = relationship(
+        "TrackBoundary",
+        back_populates="corner_segments",
+        init=False,
+    )
+
+    __table_args__ = (
+        Index("idx_corner_segment_boundary", "track_boundary_id"),
+        UniqueConstraint("track_boundary_id", "sort_order", name="uq_corner_segment_order"),
+    )

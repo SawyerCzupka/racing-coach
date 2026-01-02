@@ -1,18 +1,91 @@
 """Comprehensive metrics extraction for racing telemetry data."""
 
 import logging
-from typing import Literal
+from dataclasses import dataclass
+from enum import Enum
 
 from racing_coach_core.schemas.telemetry import TelemetryFrame, TelemetrySequence
+from racing_coach_core.utils.track import normalize_lap_distance_delta
 
-from .events import BrakingMetrics, CornerMetrics, LapMetrics
+from .events import (
+    BrakingMetrics,
+    CornerMetrics,
+    CornerSegmentInput,
+    LapMetrics,
+    TrailBrakingInfo,
+)
 
 logger = logging.getLogger(__name__)
+
+
+class CornerDetectionMode(Enum):
+    """Controls how corners are detected during metric extraction."""
+
+    AUTO = "auto"  # Auto-detect from steering threshold (current behavior)
+    SEGMENTS = "segments"  # Use provided segments only, return empty if none
+    SEGMENTS_WITH_FALLBACK = "segments_with_fallback"  # Use segments if available, else auto
+
 
 # Thresholds for detection
 BRAKE_THRESHOLD = 0.05  # 5% brake application
 STEERING_THRESHOLD = 0.15  # 15% steering angle (absolute value)
 THROTTLE_THRESHOLD = 0.05  # 5% throttle application
+
+
+@dataclass
+class FrameRangeStats:
+    """Statistics computed over a range of telemetry frames."""
+
+    min_speed: float
+    max_lateral_g: float
+    max_steering_angle: float
+    throttle_application_idx: int
+
+
+def _compute_frame_range_stats(
+    frames: list[TelemetryFrame],
+    start_idx: int,
+    end_idx: int,
+    throttle_threshold: float,
+) -> FrameRangeStats:
+    """Compute corner statistics in a single pass over the frame range."""
+    min_speed = float("inf")
+    max_lateral_g = 0.0
+    max_steering = 0.0
+    throttle_idx = start_idx
+    throttle_found = False
+
+    for i in range(start_idx, end_idx + 1):
+        frame = frames[i]
+        min_speed = min(min_speed, frame.speed)
+        max_lateral_g = max(max_lateral_g, abs(frame.lateral_acceleration))
+        max_steering = max(max_steering, abs(frame.steering_angle))
+        if not throttle_found and frame.throttle > throttle_threshold:
+            throttle_idx = i
+            throttle_found = True
+
+    return FrameRangeStats(min_speed, max_lateral_g, max_steering, throttle_idx)
+
+
+def _find_corner_exit(
+    frames: list[TelemetryFrame],
+    start_idx: int,
+    steering_threshold: float,
+) -> int:
+    """Find the exit index of a corner starting at start_idx."""
+    for i in range(start_idx, len(frames)):
+        if abs(frames[i].steering_angle) < steering_threshold:
+            return i
+    return len(frames) - 1
+
+
+def _find_max_lateral_g_idx(
+    frames: list[TelemetryFrame],
+    start_idx: int,
+    end_idx: int,
+) -> int:
+    """Find index of maximum lateral G in range."""
+    return max(range(start_idx, end_idx + 1), key=lambda i: abs(frames[i].lateral_acceleration))
 
 
 def extract_lap_metrics(
@@ -21,6 +94,10 @@ def extract_lap_metrics(
     brake_threshold: float = BRAKE_THRESHOLD,
     steering_threshold: float = STEERING_THRESHOLD,
     throttle_threshold: float = THROTTLE_THRESHOLD,
+    corner_segments: list[CornerSegmentInput] | None = None,
+    lateral_positions: list[float] | None = None,
+    track_length: float | None = None,
+    corner_mode: CornerDetectionMode = CornerDetectionMode.SEGMENTS_WITH_FALLBACK,
 ) -> LapMetrics:
     """
     Extract comprehensive metrics from a lap's telemetry sequence.
@@ -31,6 +108,10 @@ def extract_lap_metrics(
         brake_threshold: Minimum brake application to consider as braking
         steering_threshold: Minimum steering angle to consider as turning
         throttle_threshold: Minimum throttle application to consider as acceleration
+        corner_segments: Optional predefined corner boundaries for segment-based extraction
+        lateral_positions: Optional lateral positions for apex detection (-1=left, +1=right)
+        track_length: Track length in meters (required when using corner_segments)
+        corner_mode: How to detect corners (AUTO, SEGMENTS, or SEGMENTS_WITH_FALLBACK)
 
     Returns:
         LapMetrics containing all extracted performance data
@@ -44,16 +125,32 @@ def extract_lap_metrics(
     if lap_number is None:
         lap_number = frames[0].lap_number
 
-    # Get lap time if available
-    lap_time = None
-    if hasattr(sequence, "lap_time"):
-        lap_time = sequence.lap_time
+    # Get lap time if available (some sequence types have this attribute)
+    lap_time: float | None = getattr(sequence, "lap_time", None)
 
     # Extract braking zones
     braking_zones = _extract_braking_zones(frames, brake_threshold, steering_threshold)
 
-    # Extract corners
-    corners = _extract_corners(frames, steering_threshold, throttle_threshold)
+    # Determine corner extraction method based on mode and available data
+    can_use_segments = (
+        corner_mode != CornerDetectionMode.AUTO
+        and corner_segments is not None
+        and len(corner_segments) > 0
+        and track_length is not None
+    )
+
+    if can_use_segments and corner_segments is not None and track_length is not None:
+        corners = _extract_corners_from_segments(
+            frames, corner_segments, track_length, lateral_positions, throttle_threshold
+        )
+        logger.debug(f"Extracted {len(corners)} corners from {len(corner_segments)} segments")
+    elif corner_mode == CornerDetectionMode.SEGMENTS:
+        # SEGMENTS mode but no segments available - return empty
+        corners = []
+        logger.debug("SEGMENTS mode with no segments available - returning empty corners list")
+    else:
+        # AUTO mode or SEGMENTS_WITH_FALLBACK with no segments - use auto-detection
+        corners = _extract_corners(frames, steering_threshold, throttle_threshold)
 
     # Calculate lap-wide statistics
     speeds = [frame.speed for frame in frames]
@@ -137,9 +234,9 @@ def _extract_braking_zones(
             initial_deceleration=initial_decel,
             average_deceleration=avg_decel,
             braking_efficiency=efficiency,
-            has_trail_braking=trail_braking_info["has_trail_braking"],
-            trail_brake_distance=trail_braking_info["distance"],
-            trail_brake_percentage=trail_braking_info["percentage"],
+            has_trail_braking=trail_braking_info.has_trail_braking,
+            trail_brake_distance=trail_braking_info.distance,
+            trail_brake_percentage=trail_braking_info.percentage,
         )
 
         braking_zones.append(braking_metrics)
@@ -152,7 +249,7 @@ def _extract_corners(
     steering_threshold: float,
     throttle_threshold: float,
 ) -> list[CornerMetrics]:
-    """Extract detailed corner metrics from telemetry frames."""
+    """Extract detailed corner metrics from telemetry frames using auto-detection."""
     corners: list[CornerMetrics] = []
 
     i = 0
@@ -162,72 +259,29 @@ def _extract_corners(
             i += 1
             continue
 
-        # Corner detected
+        # Corner detected - find key points
         turn_in_idx = i
-        turn_in_frame = frames[turn_in_idx]
+        exit_idx = _find_corner_exit(frames, turn_in_idx, steering_threshold)
+        apex_idx = _find_max_lateral_g_idx(frames, turn_in_idx, exit_idx)
 
-        # Track apex (max lateral G), exit, and throttle application points
-        max_lateral_g = abs(frames[i].lateral_acceleration)
-        apex_idx = i
-        min_speed = frames[i].speed
-        min_speed_idx = i
-        max_steering = abs(frames[i].steering_angle)
-        exit_idx = turn_in_idx
-        throttle_idx = turn_in_idx
-
-        throttle_applied = False
-
-        # Scan through the corner
-        while i < len(frames):
-            current_steering = abs(frames[i].steering_angle)
-
-            # Track maximum lateral G (apex)
-            if abs(frames[i].lateral_acceleration) > max_lateral_g:
-                max_lateral_g = abs(frames[i].lateral_acceleration)
-                apex_idx = i
-
-            # Track minimum speed
-            if frames[i].speed < min_speed:
-                min_speed = frames[i].speed
-                min_speed_idx = i
-
-            # Track maximum steering angle
-            if current_steering > max_steering:
-                max_steering = current_steering
-
-            # Detect throttle application point (first time throttle is applied in corner)
-            if not throttle_applied and frames[i].throttle > throttle_threshold:
-                throttle_idx = i
-                throttle_applied = True
-
-            # Check for corner exit (steering returns below threshold)
-            if current_steering < steering_threshold:
-                exit_idx = i
-                break
-
-            i += 1
-
-        # If we didn't find an exit, use the last frame we processed
-        if i >= len(frames):
-            exit_idx = len(frames) - 1
+        # Get all stats in single pass
+        stats = _compute_frame_range_stats(frames, turn_in_idx, exit_idx, throttle_threshold)
 
         # Get frames at key points
+        turn_in_frame = frames[turn_in_idx]
         apex_frame = frames[apex_idx]
         exit_frame = frames[exit_idx]
-        throttle_frame = frames[throttle_idx]
+        throttle_frame = frames[stats.throttle_application_idx]
 
-        # Calculate time in corner
+        # Calculate time and distance
         time_in_corner = (exit_frame.timestamp - turn_in_frame.timestamp).total_seconds()
-
-        # Calculate corner distance
-        corner_distance = exit_frame.lap_distance - turn_in_frame.lap_distance
-        # Handle lap wrap-around
-        if corner_distance < 0:
-            corner_distance += 1.0  # Assuming lap_distance is normalized to 0-1
+        corner_distance = normalize_lap_distance_delta(
+            exit_frame.lap_distance - turn_in_frame.lap_distance
+        )
 
         # Calculate speed deltas
-        speed_loss = turn_in_frame.speed - min_speed
-        speed_gain = exit_frame.speed - min_speed
+        speed_loss = turn_in_frame.speed - stats.min_speed
+        speed_gain = exit_frame.speed - stats.min_speed
 
         corner_metrics = CornerMetrics(
             turn_in_distance=turn_in_frame.lap_distance,
@@ -235,20 +289,18 @@ def _extract_corners(
             exit_distance=exit_frame.lap_distance,
             throttle_application_distance=throttle_frame.lap_distance,
             turn_in_speed=turn_in_frame.speed,
-            apex_speed=min_speed,  # Use minimum speed as apex speed
+            apex_speed=stats.min_speed,
             exit_speed=exit_frame.speed,
             throttle_application_speed=throttle_frame.speed,
-            max_lateral_g=max_lateral_g,
+            max_lateral_g=stats.max_lateral_g,
             time_in_corner=time_in_corner,
             corner_distance=corner_distance,
-            max_steering_angle=max_steering,
+            max_steering_angle=stats.max_steering_angle,
             speed_loss=speed_loss,
             speed_gain=speed_gain,
         )
 
         corners.append(corner_metrics)
-
-        # Move past this corner
         i = exit_idx + 1
 
     return corners
@@ -289,19 +341,16 @@ def _detect_trail_braking(
     brake_end_idx: int,
     steering_threshold: float,
     brake_threshold: float,
-) -> dict[str, float | bool]:
+) -> TrailBrakingInfo:
     """
     Detect if trail braking was used (braking while turning).
 
-    Returns a dictionary with:
-    - has_trail_braking: bool
-    - distance: float (track distance of trail braking overlap)
-    - percentage: float (percentage of brake pressure during turn-in)
+    Returns:
+        TrailBrakingInfo with detection results
     """
     trail_brake_distance = 0.0
     trail_brake_pressure_sum = 0.0
     trail_brake_frames = 0
-
     has_trail_braking = False
 
     for i in range(brake_start_idx, min(brake_end_idx + 1, len(frames))):
@@ -317,18 +366,160 @@ def _detect_trail_braking(
             if i + 1 < len(frames):
                 next_frame = frames[i + 1]
                 distance_delta = next_frame.lap_distance - frame.lap_distance
-                # Handle lap wrap
-                if distance_delta < 0:
-                    distance_delta += 1.0
-                trail_brake_distance += distance_delta
+                trail_brake_distance += normalize_lap_distance_delta(distance_delta)
 
     # Calculate average trail brake percentage
     trail_brake_percentage = (
         trail_brake_pressure_sum / trail_brake_frames if trail_brake_frames > 0 else 0.0
     )
 
-    return {
-        "has_trail_braking": has_trail_braking,
-        "distance": trail_brake_distance,
-        "percentage": trail_brake_percentage,
-    }
+    return TrailBrakingInfo(
+        has_trail_braking=has_trail_braking,
+        distance=trail_brake_distance,
+        percentage=trail_brake_percentage,
+    )
+
+
+def _compute_corner_metrics(
+    frames: list[TelemetryFrame],
+    turn_in_idx: int,
+    apex_idx: int,
+    exit_idx: int,
+    throttle_threshold: float,
+) -> CornerMetrics:
+    """
+    Compute CornerMetrics given key frame indices.
+
+    Shared by both auto-detection and segment-based extraction (DRY).
+
+    Args:
+        frames: All telemetry frames for the lap
+        turn_in_idx: Frame index where corner entry begins
+        apex_idx: Frame index of the apex
+        exit_idx: Frame index where corner exit ends
+        throttle_threshold: Minimum throttle to consider as application
+
+    Returns:
+        CornerMetrics with all computed values
+    """
+    turn_in_frame = frames[turn_in_idx]
+    apex_frame = frames[apex_idx]
+    exit_frame = frames[exit_idx]
+
+    # Get all stats in single pass
+    stats = _compute_frame_range_stats(frames, turn_in_idx, exit_idx, throttle_threshold)
+    throttle_frame = frames[stats.throttle_application_idx]
+
+    # Calculate time and distance
+    time_in_corner = (exit_frame.timestamp - turn_in_frame.timestamp).total_seconds()
+    corner_distance = normalize_lap_distance_delta(
+        exit_frame.lap_distance - turn_in_frame.lap_distance
+    )
+
+    # Calculate speed deltas
+    speed_loss = turn_in_frame.speed - stats.min_speed
+    speed_gain = exit_frame.speed - stats.min_speed
+
+    return CornerMetrics(
+        turn_in_distance=turn_in_frame.lap_distance,
+        apex_distance=apex_frame.lap_distance,
+        exit_distance=exit_frame.lap_distance,
+        throttle_application_distance=throttle_frame.lap_distance,
+        turn_in_speed=turn_in_frame.speed,
+        apex_speed=stats.min_speed,
+        exit_speed=exit_frame.speed,
+        throttle_application_speed=throttle_frame.speed,
+        max_lateral_g=stats.max_lateral_g,
+        time_in_corner=time_in_corner,
+        corner_distance=corner_distance,
+        max_steering_angle=stats.max_steering_angle,
+        speed_loss=speed_loss,
+        speed_gain=speed_gain,
+    )
+
+
+def _find_apex_in_segment(
+    frames: list[TelemetryFrame],
+    segment_indices: list[int],
+    lateral_positions: list[float] | None,
+) -> int:
+    """
+    Find apex index within a segment.
+
+    Uses lateral position if available (point closest to inside edge),
+    otherwise falls back to max lateral G.
+
+    Args:
+        frames: All telemetry frames
+        segment_indices: Indices of frames within this corner segment
+        lateral_positions: Optional lateral positions (-1=left, +1=right)
+
+    Returns:
+        Frame index of the apex
+    """
+    if lateral_positions is None:
+        # Fallback: use max lateral G
+        return max(segment_indices, key=lambda i: abs(frames[i].lateral_acceleration))
+
+    # Determine corner direction from average steering
+    avg_steering = sum(frames[i].steering_angle for i in segment_indices) / len(segment_indices)
+    is_left_corner = avg_steering < 0
+
+    # Apex = point closest to inside edge
+    # Left corner: inside edge is left boundary (lateral_position = -1)
+    # Right corner: inside edge is right boundary (lateral_position = +1)
+    if is_left_corner:
+        return min(segment_indices, key=lambda i: lateral_positions[i])
+    else:
+        return max(segment_indices, key=lambda i: lateral_positions[i])
+
+
+def _extract_corners_from_segments(
+    frames: list[TelemetryFrame],
+    segments: list[CornerSegmentInput],
+    track_length: float,
+    lateral_positions: list[float] | None,
+    throttle_threshold: float,
+) -> list[CornerMetrics]:
+    """
+    Extract corners using predefined segment boundaries.
+
+    Args:
+        frames: All telemetry frames for the lap
+        segments: Corner segment definitions with start/end distances in meters
+        track_length: Total track length in meters (for distance conversion)
+        lateral_positions: Optional lateral positions for apex detection
+        throttle_threshold: Minimum throttle to consider as application
+
+    Returns:
+        List of CornerMetrics for each segment with sufficient data
+    """
+    corners: list[CornerMetrics] = []
+
+    for segment in sorted(segments, key=lambda s: s.corner_number):
+        # Convert meters to lap_distance_pct
+        start_pct = segment.start_distance / track_length
+        end_pct = segment.end_distance / track_length
+
+        # Find frame indices within segment
+        segment_indices = [
+            i for i, f in enumerate(frames) if start_pct <= f.lap_distance_pct <= end_pct
+        ]
+
+        if len(segment_indices) < 2:
+            logger.warning(
+                f"Corner {segment.corner_number}: insufficient frames "
+                f"(found {len(segment_indices)}, need at least 2)"
+            )
+            continue
+
+        turn_in_idx = segment_indices[0]
+        exit_idx = segment_indices[-1]
+        apex_idx = _find_apex_in_segment(frames, segment_indices, lateral_positions)
+
+        corner = _compute_corner_metrics(
+            frames, turn_in_idx, apex_idx, exit_idx, throttle_threshold
+        )
+        corners.append(corner)
+
+    return corners

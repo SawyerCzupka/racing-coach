@@ -20,6 +20,28 @@ class CornerEvent:
 
 
 @dataclass
+class CornerSegmentInput:
+    """Corner segment definition for segment-based extraction.
+
+    Used to define corner boundaries from saved track segments rather than
+    auto-detecting from telemetry.
+    """
+
+    corner_number: int  # 1-indexed corner number
+    start_distance: float  # Start distance in meters from S/F line
+    end_distance: float  # End distance in meters from S/F line
+
+
+@dataclass
+class TrailBrakingInfo:
+    """Trail braking detection results."""
+
+    has_trail_braking: bool
+    distance: float  # Track distance of trail braking overlap
+    percentage: float  # Average brake pressure during turn-in
+
+
+@dataclass
 class BrakingMetrics:
     """Comprehensive braking metrics for a braking zone."""
 

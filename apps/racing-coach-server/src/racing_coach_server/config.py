@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     web_session_duration_days: int = 30
     device_token_duration_days: int = 365
     device_auth_expiration_minutes: int = 15
+    web_app_url: str = "http://localhost:3000"  # URL of the web dashboard
 
 
 settings = Settings()

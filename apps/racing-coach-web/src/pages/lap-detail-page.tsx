@@ -1,14 +1,14 @@
-import { useParams, useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { LoadingState, EmptyState } from '@/components/ui/loading-states';
-import { formatLapTime, formatSpeed, formatGForce, formatDistance } from '@/lib/format';
 import { useGetLapMetrics } from '@/api/generated/metrics/metrics';
 import type { BrakingMetrics, CornerMetrics } from '@/api/generated/models';
+import { Badge } from '@/components/ui/badge';
+import { Breadcrumbs } from '@/components/ui/breadcrumbs';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { EmptyState, LoadingState } from '@/components/ui/loading-states';
+import { formatDistance, formatGForce, formatLapTime, formatSpeed } from '@/lib/format';
+import { useParams } from 'react-router';
 
 export function LapDetailPage() {
   const { lapId } = useParams<{ lapId: string }>();
-  const navigate = useNavigate();
   const { data: metrics, isLoading, error } = useGetLapMetrics(
     lapId ?? ''
   );
@@ -31,12 +31,14 @@ export function LapDetailPage() {
     return (
       <div className="space-y-6">
         <div>
-          <button
-            onClick={() => navigate(-1)}
-            className="flex items-center gap-1 mb-2 text-sm text-gray-400 hover:text-white"
-          >
-            &larr; Back
-          </button>
+          <Breadcrumbs
+            items={[
+              { label: 'Dashboard', href: '/dashboard' },
+              { label: 'Sessions', href: '/sessions' },
+              { label: 'Lap Analysis' },
+            ]}
+            className="mb-3"
+          />
           <h2 className="text-3xl font-bold tracking-tight text-white">Lap Details</h2>
           <p className="text-gray-400">No metrics available for this lap</p>
         </div>
@@ -60,12 +62,14 @@ export function LapDetailPage() {
     return (
       <div className="space-y-6">
         <div>
-          <button
-            onClick={() => navigate(-1)}
-            className="flex items-center gap-1 mb-2 text-sm text-gray-400 hover:text-white"
-          >
-            &larr; Back
-          </button>
+          <Breadcrumbs
+            items={[
+              { label: 'Dashboard', href: '/dashboard' },
+              { label: 'Sessions', href: '/sessions' },
+              { label: 'Lap Analysis' },
+            ]}
+            className="mb-3"
+          />
           <h2 className="text-3xl font-bold tracking-tight text-white">Lap Details</h2>
           <p className="text-gray-400">Lap not found</p>
         </div>
@@ -84,12 +88,14 @@ export function LapDetailPage() {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <button
-            onClick={() => navigate(-1)}
-            className="flex items-center gap-1 mb-2 text-sm text-gray-400 hover:text-white"
-          >
-            &larr; Back
-          </button>
+          <Breadcrumbs
+            items={[
+              { label: 'Dashboard', href: '/dashboard' },
+              { label: 'Sessions', href: '/sessions' },
+              { label: 'Lap Analysis' },
+            ]}
+            className="mb-3"
+          />
           <h2 className="text-3xl font-bold tracking-tight text-white">
             Lap Analysis
           </h2>
