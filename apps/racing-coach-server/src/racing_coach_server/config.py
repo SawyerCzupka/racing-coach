@@ -21,6 +21,10 @@ class Settings(BaseSettings):
     device_token_duration_days: int = 365
     device_auth_expiration_minutes: int = 15
     web_app_url: str = "http://localhost:3000"  # URL of the web dashboard
+    marketing_site_url: str = "http://localhost:4321"  # URL of the marketing site
+
+    # CORS settings - comma-separated list of allowed origins
+    cors_origins: str = "http://localhost:3000,http://localhost:4321"
 
 
 settings = Settings()

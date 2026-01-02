@@ -1,0 +1,84 @@
+---
+
+---
+
+<section class="relative pt-32 pb-20 md:pt-40 md:pb-32 overflow-hidden">
+  <!-- Background gradient -->
+  <div class="absolute inset-0 -z-10">
+    <div
+      class="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"
+    >
+    </div>
+    <div
+      class="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl"
+    >
+    </div>
+  </div>
+
+  <div class="mx-auto max-w-6xl px-6 text-center">
+    <!-- Badge -->
+    <div
+      class="inline-flex items-center gap-2 rounded-full border border-blue-500/20 bg-blue-500/10 px-4 py-1.5 text-sm text-blue-400 mb-8"
+    >
+      <span class="relative flex h-2 w-2">
+        <span
+          class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"
+        ></span>
+        <span class="relative inline-flex rounded-full h-2 w-2 bg-blue-500"
+        ></span>
+      </span>
+      Now accepting early access signups
+    </div>
+
+    <!-- Headline -->
+    <h1 class="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight mb-6">
+      Evolve Your
+      <span class="gradient-text">Lap Times</span>
+    </h1>
+
+    <!-- Subheadline -->
+    <p class="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10">
+      AI-powered telemetry analysis for iRacing. Compare laps, identify braking
+      zones, and get actionable insights to shave seconds off your times.
+    </p>
+
+    <!-- CTAs -->
+    <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+      <a
+        href="#waitlist"
+        class="w-full sm:w-auto rounded-lg bg-linear-to-r from-blue-500 to-blue-600 px-8 py-3 text-base font-medium text-white transition-all hover:from-blue-600 hover:to-blue-700 hover:shadow-lg hover:shadow-blue-500/25"
+      >
+        Get Early Access
+      </a>
+      <a
+        href="#features"
+        class="w-full sm:w-auto rounded-lg border border-border bg-card px-8 py-3 text-base font-medium text-foreground transition-colors hover:bg-muted"
+      >
+        See Features
+      </a>
+    </div>
+
+    <!-- Social proof placeholder -->
+    <div class="mt-16 flex flex-col items-center gap-4">
+      <p class="text-sm text-muted-foreground">
+        Trusted by sim racers worldwide
+      </p>
+      <div class="flex items-center gap-1">
+        {
+          [1, 2, 3, 4, 5].map(() => (
+            <svg
+              class="w-5 h-5 text-yellow-500"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+            </svg>
+          ))
+        }
+        <span class="ml-2 text-sm text-muted-foreground"
+          >Built by racers, for racers</span
+        >
+      </div>
+    </div>
+  </div>
+</section>

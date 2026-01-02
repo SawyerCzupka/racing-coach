@@ -1,0 +1,52 @@
+---
+interface Props {
+  currentPath?: string;
+}
+
+const { currentPath = "/" } = Astro.props;
+
+const navLinks = [
+  { href: "/#features", label: "Features" },
+  { href: "/blog", label: "Blog" },
+];
+---
+
+<header
+  class="fixed top-0 left-0 right-0 z-50 border-b border-border bg-background/80 backdrop-blur-md"
+>
+  <nav class="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+    <!-- Logo -->
+    <a href="/" class="flex items-center gap-2 group">
+      <div
+        class="flex h-8 w-8 items-center justify-center rounded-md bg-linear-to-br from-blue-500 to-blue-700 text-sm font-bold text-white transition-transform group-hover:scale-105"
+      >
+        L
+      </div>
+      <span class="text-xl font-semibold text-foreground">LapEvo</span>
+    </a>
+
+    <!-- Navigation -->
+    <div class="hidden md:flex items-center gap-8">
+      {
+        navLinks.map((link) => (
+          <a
+            href={link.href}
+            class="text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            {link.label}
+          </a>
+        ))
+      }
+    </div>
+
+    <!-- CTA -->
+    <div class="flex items-center gap-4">
+      <a
+        href="#waitlist"
+        class="rounded-lg bg-linear-to-r from-blue-500 to-blue-600 px-4 py-2 text-sm font-medium text-white transition-all hover:from-blue-600 hover:to-blue-700 hover:shadow-lg hover:shadow-blue-500/25"
+      >
+        Get Early Access
+      </a>
+    </div>
+  </nav>
+</header>

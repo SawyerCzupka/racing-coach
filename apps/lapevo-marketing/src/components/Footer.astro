@@ -1,0 +1,73 @@
+---
+const currentYear = new Date().getFullYear();
+
+const footerLinks = [
+  {
+    title: "Product",
+    links: [
+      { href: "/#features", label: "Features" },
+      { href: "/#waitlist", label: "Get Early Access" },
+    ],
+  },
+  {
+    title: "Resources",
+    links: [{ href: "/blog", label: "Blog" }],
+  },
+];
+---
+
+<footer class="border-t border-border bg-card/50">
+  <div class="mx-auto max-w-6xl px-6 py-12">
+    <div class="grid gap-8 md:grid-cols-4">
+      <!-- Brand -->
+      <div class="md:col-span-2">
+        <a href="/" class="flex items-center gap-2 mb-4">
+          <div
+            class="flex h-8 w-8 items-center justify-center rounded-md bg-linear-to-br from-blue-500 to-blue-700 text-sm font-bold text-white"
+          >
+            L
+          </div>
+          <span class="text-xl font-semibold text-foreground">LapEvo</span>
+        </a>
+        <p class="text-sm text-muted-foreground max-w-xs">
+          AI-powered telemetry analysis for sim racers. Evolve your lap times.
+        </p>
+      </div>
+
+      <!-- Links -->
+      {
+        footerLinks.map((section) => (
+          <div>
+            <h3 class="text-sm font-semibold text-foreground mb-3">
+              {section.title}
+            </h3>
+            <ul class="space-y-2">
+              {section.links.map((link) => (
+                <li>
+                  <a
+                    href={link.href}
+                    class="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {link.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))
+      }
+    </div>
+
+    <!-- Bottom -->
+    <div
+      class="mt-12 pt-8 border-t border-border flex flex-col md:flex-row justify-between items-center gap-4"
+    >
+      <p class="text-sm text-muted-foreground">
+        &copy; {currentYear} LapEvo. All rights reserved.
+      </p>
+      <p class="text-sm text-muted-foreground">
+        Built for sim racers who want to go faster.
+      </p>
+    </div>
+  </div>
+</footer>

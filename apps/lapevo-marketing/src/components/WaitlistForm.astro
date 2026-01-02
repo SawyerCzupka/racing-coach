@@ -1,0 +1,132 @@
+---
+// API URL - in production this would be configured via environment variable
+const apiUrl = import.meta.env.PUBLIC_API_URL || "http://localhost:8000";
+---
+
+<section id="waitlist" class="py-20 md:py-32">
+  <div class="mx-auto max-w-2xl px-6">
+    <div class="rounded-2xl border border-border bg-card p-8 md:p-12">
+      <!-- Header -->
+      <div class="text-center mb-8">
+        <h2 class="text-2xl md:text-3xl font-bold mb-3">
+          Get <span class="gradient-text">Early Access</span>
+        </h2>
+        <p class="text-muted-foreground">
+          Be among the first to try LapEvo. We'll notify you when we launch.
+        </p>
+      </div>
+
+      <!-- Form -->
+      <form id="waitlist-form" class="space-y-4">
+        <!-- Email -->
+        <div>
+          <label
+            for="email"
+            class="block text-sm font-medium text-foreground mb-2"
+          >
+            Email address
+          </label>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            required
+            placeholder="you@example.com"
+            class="w-full rounded-lg border border-input bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
+          />
+        </div>
+
+        <!-- Feedback (optional) -->
+        <div>
+          <label
+            for="feedback"
+            class="block text-sm font-medium text-foreground mb-2"
+          >
+            What would you most like to see? <span class="text-muted-foreground"
+              >(optional)</span
+            >
+          </label>
+          <textarea
+            id="feedback"
+            name="feedback"
+            rows="3"
+            placeholder="Tell us what features matter most to you, or any other thoughts..."
+            class="w-full rounded-lg border border-input bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all resize-none"
+          ></textarea>
+        </div>
+
+        <!-- Submit -->
+        <button
+          type="submit"
+          id="submit-btn"
+          class="w-full rounded-lg bg-linear-to-r from-blue-500 to-blue-600 px-6 py-3 text-base font-medium text-white transition-all hover:from-blue-600 hover:to-blue-700 hover:shadow-lg hover:shadow-blue-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Join the Waitlist
+        </button>
+
+        <!-- Status messages -->
+        <div id="form-status" class="hidden text-center text-sm"></div>
+      </form>
+
+      <!-- Privacy note -->
+      <p class="mt-6 text-center text-xs text-muted-foreground">
+        We respect your privacy. No spam, ever. Unsubscribe anytime.
+      </p>
+    </div>
+  </div>
+</section>
+
+<script define:vars={{ apiUrl }}>
+  const form = document.getElementById("waitlist-form");
+  const submitBtn = document.getElementById("submit-btn");
+  const statusDiv = document.getElementById("form-status");
+
+  form?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const email = document.getElementById("email")?.value;
+    const feedback = document.getElementById("feedback")?.value;
+
+    if (!email) return;
+
+    // Disable button and show loading state
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Joining...";
+    statusDiv.classList.add("hidden");
+
+    try {
+      const response = await fetch(`${apiUrl}/api/v1/waitlist`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          feedback: feedback || null,
+          source: "landing",
+        }),
+      });
+
+      if (response.ok) {
+        // Success
+        statusDiv.textContent = "You're on the list! We'll be in touch soon.";
+        statusDiv.className = "text-center text-sm text-green-400";
+        statusDiv.classList.remove("hidden");
+        form.reset();
+        submitBtn.textContent = "Joined!";
+      } else {
+        // Error from server
+        const data = await response.json();
+        throw new Error(data.detail || "Something went wrong");
+      }
+    } catch (error) {
+      // Network or other error
+      statusDiv.textContent =
+        error.message || "Failed to join. Please try again.";
+      statusDiv.className = "text-center text-sm text-red-400";
+      statusDiv.classList.remove("hidden");
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Join the Waitlist";
+    }
+  });
+</script>
