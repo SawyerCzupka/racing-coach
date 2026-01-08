@@ -10,7 +10,6 @@ tags:
 
 dependsOn:
   - 'racing-coach-core'
-  - 'racing-coach-api-client'
 
 fileGroups:
   sources:

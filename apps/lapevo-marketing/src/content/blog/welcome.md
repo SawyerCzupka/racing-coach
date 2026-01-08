@@ -6,7 +6,7 @@ author: "LapEvo Team"
 tags: ["announcement", "getting-started"]
 ---
 
-## Welcome to LapEvo (HI)
+## Welcome to LapEvo
 
 We're building the future of sim racing telemetry analysis. LapEvo combines professional-grade telemetry tools with modern AI to help you find those crucial tenths of a second.
 

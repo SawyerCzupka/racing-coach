@@ -60,3 +60,6 @@ data_out/
 node_modules/
 
 .dockerdata/
+# moon
+.moon/cache
+.moon/docker

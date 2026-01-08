@@ -3,9 +3,10 @@ $schema: './cache/schemas/workspace.json'
 
 # extends: './shared/workspace.yml'
 
+# projects are only apps/libs that include a moon.yml file.
 projects:
-  - 'apps/*'
-  - 'libs/*'
+  - 'apps/*/moon.yml'
+  - 'libs/*/moon.yml'
 vcs:
   manager: 'git'
   defaultBranch: 'main'

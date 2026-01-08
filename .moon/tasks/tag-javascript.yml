@@ -29,27 +29,6 @@ tasks:
       persistent: true
       cache: false
 
-  lint:
-    command: 'npm run lint'
-    inputs:
-      - 'src/**/*.{ts,tsx,js,jsx}'
-      - 'eslint.config.js'
-      - 'package.json'
-    deps:
-      - '~:install'
-    options:
-      cache: true
-
-  format:
-    command: 'npm run format'
-    inputs:
-      - 'src/**/*.{ts,tsx,js,jsx,json,css}'
-    deps:
-      - '~:install'
-    local: true
-    options:
-      cache: false
-
   install:
     command: 'npm install'
     inputs:
