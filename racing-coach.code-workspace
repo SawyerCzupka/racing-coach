@@ -2,23 +2,31 @@
 	"folders": [
 		{
 			"path": "apps/racing-coach-client",
-			"name": "Racing Coach Client",
+			"name": "Racing Coach Client"
+		},
+		{
+			"path": "apps/client-rs",
+			"name": "Racing Coach Client (Rust)"
 		},
 		{
 			"path": "apps/racing-coach-server",
-			"name": "Racing Coach Server",
+			"name": "Racing Coach Server"
 		},
 		{
 			"path": "apps/racing-coach-web",
 			"name": "Racing Coach Web"
 		},
 		{
+			"path": "apps/lapevo-marketing",
+			"name": "Marketing"
+		},
+		{
 			"path": "libs/racing-coach-core",
-			"name": "Racing Coach Core Library",
+			"name": "Racing Coach Core Library"
 		},
 		{
 			"path": ".",
-			"name": "Racing Coach Workspace",
+			"name": "Racing Coach Workspace"
 		}
 	],
 	"settings": {
@@ -28,5 +36,9 @@
 			"editor.defaultFormatter": "charliermarsh.ruff"
 		},
 		"python.analysis.typeCheckingMode": "strict",
+		"[rust]": {
+			"editor.defaultFormatter": "rust-lang.rust-analyzer"
+		},
+		"rust-analyzer.check.command": "clippy"
 	}
 }

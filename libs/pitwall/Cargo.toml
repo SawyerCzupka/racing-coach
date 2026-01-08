@@ -1,0 +1,87 @@
+[package]
+name = "pitwall"
+version = "0.1.0"
+edition = "2021"
+description = "Modern, type-safe Rust library for iRacing telemetry data (local fork with broadcast channels)"
+license = "MIT"
+
+[features]
+default = ["derive"]
+derive = ["dep:pitwall-derive"]
+benchmark = []
+schema-discovery = []
+tauri = ["dep:specta"]
+
+[lib]
+name = "pitwall"
+path = "src/lib.rs"
+
+[[test]]
+name = "pitwall_frame"
+path = "tests/pitwall_frame.rs"
+
+[[test]]
+name = "typescript_generation"
+path = "tests/typescript_generation.rs"
+
+[[bench]]
+name = "adapter_performance"
+path = "benches/adapter_performance.rs"
+harness = false
+required-features = ["benchmark"]
+
+[[bench]]
+name = "frame_construction"
+path = "benches/frame_construction.rs"
+harness = false
+required-features = ["benchmark"]
+
+[[bench]]
+name = "live_frame_latency"
+path = "benches/live_frame_latency.rs"
+harness = false
+required-features = ["benchmark"]
+
+[[bench]]
+name = "var_data_extraction"
+path = "benches/var_data_extraction.rs"
+harness = false
+required-features = ["benchmark"]
+
+[dependencies]
+anyhow = "1.0"
+async-trait = "0.1"
+futures = "0.3"
+pin-project-lite = "0.2"
+serde = { version = "1.0", features = ["derive"] }
+serde_yaml_ng = "0.10"
+thiserror = "2.0"
+tokio = { version = "1.47", features = ["full"] }
+tokio-stream = { version = "0.1", features = ["sync"] }
+tokio-util = "0.7"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["fmt", "env-filter"] }
+
+# Optional dependencies
+pitwall-derive = { path = "../pitwall-derive", optional = true }
+specta = { version = "2.0.0-rc.22", features = ["derive"], optional = true }
+
+[dev-dependencies]
+criterion = "0.7"
+futures = "0.3"
+futures-util = "0.3"
+proptest = "1.7"
+tokio = { version = "1.42", features = ["rt", "rt-multi-thread", "macros", "test-util"] }
+tokio-stream = { version = "0.1", features = ["sync"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["fmt", "env-filter"] }
+trybuild = "1.0"
+
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.62", features = [
+    "Win32_Foundation",
+    "Win32_System_Memory",
+    "Win32_System_Threading",
+    "Win32_UI_WindowsAndMessaging",
+] }
+windows-core = "0.62"
