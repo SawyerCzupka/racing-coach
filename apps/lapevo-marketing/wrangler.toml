@@ -1,0 +1,37 @@
+# keep_vars
+# migrations (durable)
+# send_metrics
+# site
+
+
+name = "lapevo-marketing"
+main = "./dist/_worker.js/index.js"
+compatibility_date = "2026-01-07"
+compatibility_flags = ["nodejs_compat"]
+
+[assets]
+binding = "ASSETS"
+directory = "./dist"
+
+[observability]
+[observability.logs]
+enabled = true
+head_sampling_rate = 1
+invocation_logs = true
+persist = true
+
+# D1 Database binding
+# After creating the database with `wrangler d1 create lapevo-db`,
+# replace "LOCAL_ONLY" with the actual database_id from the output
+[[d1_databases]]
+binding = "DB"
+database_name = "lapevo-db" # Not the actual D1 name, just used as a reference to the id (e.g. in migrate apply command)
+database_id = "3a2f19bd-c8bf-48f2-a424-4742bafda116"
+migrations_dir = "migrations"
+
+[vars]
+ENVIRONMENT = "production"
+
+# Local development settings
+[env.development]
+vars = { ENVIRONMENT = "development" }

@@ -1,0 +1,17 @@
+[package]
+name = "client-rs"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+name = "client_rs"
+
+[dependencies]
+async-trait = "0.1"
+futures = "0.3.31"
+pitwall = { path = "../../libs/pitwall" }
+tokio = { version = "1.48.0", features = ["full"] }
+tokio-stream = "0.1"
+tokio-util = "0.7"
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.22", features = ["env-filter", "fmt"] }

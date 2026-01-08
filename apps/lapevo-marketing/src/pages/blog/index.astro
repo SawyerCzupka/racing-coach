@@ -5,6 +5,8 @@ import Footer from "@/components/Footer.astro";
 import BlogCard from "@/components/BlogCard.astro";
 import { getCollection } from "astro:content";
 
+export const prerender = true;
+
 const posts = (await getCollection("blog", ({ data }) => !data.draft)).sort(
   (a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf()
 );

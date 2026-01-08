@@ -1,25 +1,41 @@
-# Development stage - hot reload
-FROM node:22-alpine AS development
+# Development stage - wrangler dev with D1 emulation
+# NOTE: Must use Debian-based image (not Alpine) because workerd requires glibc
+FROM node:lts-slim AS development
 WORKDIR /app
+
+# Disable wrangler telemetry in Docker (prevents interactive prompt freeze)
+ENV WRANGLER_SEND_METRICS=false
+
 COPY package*.json ./
 RUN npm ci
 COPY . .
+
+# Create wrangler state directory for local D1
+RUN mkdir -p .wrangler/state/v3/d1
+
 EXPOSE 4321
+# Use astro dev with platformProxy for D1 bindings locally
 CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
 
 # Build stage
-FROM node:22-alpine AS builder
+FROM node:lts-slim AS builder
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 COPY . .
 RUN npm run build
 
-# Production stage - static nginx
-FROM nginx:alpine AS production
-COPY nginx.conf /etc/nginx/nginx.conf
-COPY --from=builder /app/dist /usr/share/nginx/html
-EXPOSE 80
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:80/ || exit 1
-CMD ["nginx", "-g", "daemon off;"]
+# Production stage - for local testing only (production uses Cloudflare Pages)
+FROM node:lts-slim AS production
+WORKDIR /app
+
+# Disable wrangler telemetry
+ENV WRANGLER_SEND_METRICS=false
+
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/wrangler.toml ./
+COPY --from=builder /app/package*.json ./
+RUN npm ci --omit=dev && npm install wrangler
+
+EXPOSE 8788
+CMD ["npx", "wrangler", "pages", "dev", "dist", "--port", "8788", "--ip", "0.0.0.0"]
