@@ -1,0 +1,67 @@
+# Common tasks for Rust projects using cargo
+# Inherited by projects with tags: ['rust'] (via tag-* filename convention)
+$schema: '../cache/schemas/tasks.json'
+
+tasks:
+  build:
+    command: 'cargo build'
+    inputs:
+      - 'src/**/*.rs'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+    outputs:
+      - 'target/debug'
+    options:
+      cache: true
+
+  build-release:
+    command: 'cargo build --release'
+    inputs:
+      - 'src/**/*.rs'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+    outputs:
+      - 'target/release'
+    options:
+      cache: true
+
+  test:
+    command: 'cargo test'
+    inputs:
+      - 'src/**/*.rs'
+      - 'tests/**/*.rs'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+    options:
+      cache: true
+
+  check:
+    command: 'cargo check'
+    inputs:
+      - 'src/**/*.rs'
+      - 'Cargo.toml'
+    options:
+      cache: true
+
+  clippy:
+    command: 'cargo clippy -- -D warnings'
+    inputs:
+      - 'src/**/*.rs'
+      - 'Cargo.toml'
+    options:
+      cache: true
+
+  fmt:
+    command: 'cargo fmt'
+    inputs:
+      - 'src/**/*.rs'
+    local: true
+    options:
+      cache: false
+
+  fmt-check:
+    command: 'cargo fmt --check'
+    inputs:
+      - 'src/**/*.rs'
+    options:
+      cache: true

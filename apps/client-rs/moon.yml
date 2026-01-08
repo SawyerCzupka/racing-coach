@@ -1,0 +1,28 @@
+$schema: '../../.moon/cache/schemas/project.json'
+
+type: 'application'
+language: 'rust'
+
+tags:
+  - 'rust'
+  - 'client'
+
+dependsOn:
+  - 'pitwall'
+
+fileGroups:
+  sources:
+    - 'src/**/*.rs'
+
+tasks:
+  run:
+    command: 'cargo run'
+    inputs:
+      - 'src/**/*.rs'
+      - 'Cargo.toml'
+    local: true
+    options:
+      persistent: true
+      cache: false
+
+# Inherits build, test, check, clippy, fmt from .moon/tasks/rust.yml

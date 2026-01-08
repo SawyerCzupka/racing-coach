@@ -1,0 +1,38 @@
+$schema: '../../.moon/cache/schemas/project.json'
+
+type: 'library'
+language: 'python'
+
+tags:
+  - 'python'
+  - 'api-client'
+  - 'generated'
+
+fileGroups:
+  sources:
+    - 'racing_coach_server_client/**/*.py'
+
+tasks:
+  # Only lint/format for generated code - override inherited tasks
+  lint:
+    command: 'uv run ruff check .'
+    inputs:
+      - 'racing_coach_server_client/**/*.py'
+      - 'pyproject.toml'
+    options:
+      cache: true
+
+  format:
+    command: 'uv run ruff format .'
+    inputs:
+      - 'racing_coach_server_client/**/*.py'
+    local: true
+    options:
+      cache: false
+
+  format-check:
+    command: 'uv run ruff format --check .'
+    inputs:
+      - 'racing_coach_server_client/**/*.py'
+    options:
+      cache: true

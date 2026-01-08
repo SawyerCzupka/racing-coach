@@ -1,0 +1,48 @@
+$schema: '../../.moon/cache/schemas/project.json'
+
+type: 'application'
+language: 'javascript'
+
+tags:
+  - 'javascript'
+  - 'react'
+  - 'frontend'
+
+fileGroups:
+  sources:
+    - 'src/**/*.{ts,tsx}'
+  configs:
+    - 'package.json'
+    - 'tsconfig.json'
+    - 'vite.config.ts'
+    - 'orval.config.ts'
+
+tasks:
+  build:
+    command: 'npm run build'
+    inputs:
+      - 'src/**/*'
+      - 'public/**/*'
+      - 'package.json'
+      - 'tsconfig.json'
+      - 'vite.config.ts'
+      - 'index.html'
+    outputs:
+      - 'dist'
+    deps:
+      - '~:install'
+    options:
+      cache: true
+
+  generate-api:
+    command: 'npm run generate:api'
+    inputs:
+      - 'orval.config.ts'
+    outputs:
+      - 'src/api/generated'
+    deps:
+      - '~:install'
+    options:
+      cache: true
+
+# Inherits dev, lint, format, install from .moon/tasks/javascript.yml

@@ -1,0 +1,49 @@
+$schema: '../../.moon/cache/schemas/project.json'
+
+id: 'marketing'
+layer: 'application' 
+language: 'javascript' # Used for task inheritance
+
+tags:
+  - 'javascript'
+  - 'astro'
+  - 'marketing'
+
+fileGroups:
+  sources:
+    - 'src/**/*'
+  configs:
+    - 'package.json'
+    - 'astro.config.mjs'
+
+tasks:
+  build:
+    command: 'npm run build'
+    inputs:
+      - 'src/**/*'
+      - 'public/**/*'
+      - 'package.json'
+      - 'astro.config.mjs'
+    outputs:
+      - 'dist'
+    deps:
+      - '~:install'
+    options:
+      cache: true
+
+  deploy:
+    command: 'npx wrangler@latest deploy'
+    deps:
+      - '~:build'
+    local: true
+    options:
+      cache: false
+
+  preview:
+    command: 'npm run preview'
+    deps:
+      - '~:build'
+    local: true
+    options:
+      persistent: true
+      cache: false

@@ -1,0 +1,14 @@
+$schema: '../../.moon/cache/schemas/project.json'
+
+type: 'library'
+language: 'rust'
+
+tags:
+  - 'rust'
+  - 'proc-macro'
+
+fileGroups:
+  sources:
+    - 'src/**/*.rs'
+
+# Inherits all tasks from .moon/tasks/rust.yml

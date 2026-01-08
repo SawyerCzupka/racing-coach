@@ -1,0 +1,56 @@
+$schema: '../../.moon/cache/schemas/project.json'
+
+type: 'application'
+language: 'python'
+
+tags:
+  - 'python'
+  - 'fastapi'
+  - 'backend'
+
+dependsOn:
+  - 'racing-coach-core'
+
+fileGroups:
+  sources:
+    - 'src/**/*.py'
+  tests:
+    - 'tests/**/*.py'
+  migrations:
+    - 'migrations/**/*.py'
+
+tasks:
+  dev:
+    command: 'uv run fastapi dev src/racing_coach_server/app.py'
+    inputs:
+      - 'src/**/*.py'
+    local: true
+    options:
+      persistent: true
+      cache: false
+
+  test-integration:
+    command: 'uv run pytest -m integration'
+    inputs:
+      - 'src/**/*.py'
+      - 'tests/**/*.py'
+      - 'pyproject.toml'
+    options:
+      cache: false
+
+  migrate:
+    command: 'uv run alembic upgrade head'
+    inputs:
+      - 'migrations/**/*.py'
+      - 'alembic.ini'
+    local: true
+    options:
+      cache: false
+
+  migrate-create:
+    command: 'uv run alembic revision --autogenerate'
+    local: true
+    options:
+      cache: false
+
+# Inherits test, test-unit, lint, format, typecheck, sync from .moon/tasks/python.yml

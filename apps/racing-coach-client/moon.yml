@@ -1,0 +1,31 @@
+$schema: '../../.moon/cache/schemas/project.json'
+
+type: 'application'
+language: 'python'
+
+tags:
+  - 'python'
+  - 'desktop'
+  - 'pyside6'
+
+dependsOn:
+  - 'racing-coach-core'
+  - 'racing-coach-api-client'
+
+fileGroups:
+  sources:
+    - 'src/**/*.py'
+  tests:
+    - 'tests/**/*.py'
+
+tasks:
+  run:
+    command: 'uv run run-client'
+    inputs:
+      - 'src/**/*.py'
+    local: true
+    options:
+      persistent: true
+      cache: false
+
+# Inherits test, test-unit, lint, format, typecheck, sync from .moon/tasks/python.yml

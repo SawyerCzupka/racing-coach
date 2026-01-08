@@ -1,0 +1,33 @@
+$schema: '../../.moon/cache/schemas/project.json'
+
+type: 'library'
+language: 'rust'
+
+tags:
+  - 'rust'
+  - 'telemetry'
+  - 'iracing'
+
+dependsOn:
+  - 'pitwall-derive'
+
+fileGroups:
+  sources:
+    - 'src/**/*.rs'
+  tests:
+    - 'tests/**/*.rs'
+  benches:
+    - 'benches/**/*.rs'
+
+tasks:
+  bench:
+    command: 'cargo bench'
+    inputs:
+      - 'src/**/*.rs'
+      - 'benches/**/*.rs'
+      - 'Cargo.toml'
+    local: true
+    options:
+      cache: false
+
+# Inherits build, test, check, clippy, fmt from .moon/tasks/rust.yml
