@@ -1,5 +1,6 @@
 $schema: '../../.moon/cache/schemas/project.json'
 
+id: web
 type: 'application'
 language: 'javascript'
 

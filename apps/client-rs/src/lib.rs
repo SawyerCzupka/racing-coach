@@ -1,23 +1,20 @@
-mod config;
-mod pos_service;
-
 pub mod events;
 pub mod handlers;
 pub mod pitwall_ext;
 pub mod telem;
 
-pub use config::Config;
-// pub use models::{Sample, SampleKind};
-pub use pitwall_ext::AcceleratedReplayConnection;
+mod config;
+mod pos_service;
 
+use crate::pos_service::PositionState;
+pub use config::Config;
 use eventbus::{EventBus, HandlerRegistry};
 use handlers::{LapHandler, LogHandler};
+pub use pitwall_ext::AcceleratedReplayConnection;
 use pos_service::PositionService;
 use telem::read_telemetry_eventbus;
 use tokio::sync::watch;
 use tokio::time::sleep;
-
-use crate::pos_service::PositionState;
 
 pub async fn run_events() {
     let bus = EventBus::new(10000);

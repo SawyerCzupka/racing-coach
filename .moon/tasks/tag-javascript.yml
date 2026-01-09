@@ -4,7 +4,6 @@ $schema: '../cache/schemas/tasks.json'
 
 tasks:
   build:
-    command: 'npm run build'
     inputs:
       - 'src/**/*'
       - 'package.json'
@@ -24,7 +23,6 @@ tasks:
       - 'package.json'
     deps:
       - '~:install'
-    local: true
     options:
       persistent: true
       cache: false

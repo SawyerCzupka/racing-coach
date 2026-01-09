@@ -66,7 +66,6 @@ export function SessionsPage() {
         </div>
         <Card>
           <EmptyState message="No sessions found. Start racing to see your data here!" />
-          <p>{JSON.stringify(response)}</p>
         </Card>
       </div>
     );

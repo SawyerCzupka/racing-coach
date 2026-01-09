@@ -1,11 +1,13 @@
-use crate::events::RacingEvent;
-use crate::pitwall_ext::AcceleratedReplayConnection;
-use crate::pos_service::PositionState;
+use std::sync::Arc;
+
 use eventbus::EventBus;
 use futures::StreamExt;
 use pitwall::{PitwallFrame, UpdateRate};
-use std::sync::Arc;
 use tokio::sync::watch;
+
+use crate::events::RacingEvent;
+use crate::pitwall_ext::AcceleratedReplayConnection;
+use crate::pos_service::PositionState;
 
 #[derive(Debug, PitwallFrame)]
 pub struct TelemetryFrame {

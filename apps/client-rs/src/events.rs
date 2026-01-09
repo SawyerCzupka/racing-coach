@@ -1,6 +1,7 @@
+use std::sync::Arc;
+
 use crate::telem::TelemetryFrame;
 use eventbus::EventLike;
-use std::sync::Arc;
 
 /// Discriminant enum for channel routing (no payload, just identifies event kind).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]

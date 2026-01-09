@@ -1,5 +1,4 @@
 use std::fmt::Display;
-
 use tokio::sync::watch;
 
 pub struct PositionService {

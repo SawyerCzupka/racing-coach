@@ -12,7 +12,7 @@ tasks:
     outputs:
       - 'target/debug'
     options:
-      cache: true
+      cache: false
 
   build-release:
     command: 'cargo build --release'
