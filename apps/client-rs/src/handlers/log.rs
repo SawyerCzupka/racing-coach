@@ -3,8 +3,8 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use async_trait::async_trait;
 use tracing::info;
 
-use crate::events::handler::{EventHandler, HandlerContext};
-use crate::events::types::{Event, EventKind};
+use crate::events::{RacingEvent, RacingEventKind};
+use eventbus::{EventHandler, HandlerContext};
 
 /// Logs telemetry frames at configurable frequency
 pub struct LogHandler {
@@ -28,17 +28,17 @@ impl Default for LogHandler {
 }
 
 #[async_trait]
-impl EventHandler for LogHandler {
-    fn handles(&self) -> EventKind {
-        EventKind::TelemetryFrame
+impl EventHandler<RacingEvent> for LogHandler {
+    fn handles(&self) -> RacingEventKind {
+        RacingEventKind::TelemetryFrameCollected
     }
 
     fn name(&self) -> &'static str {
         "LogHandler"
     }
 
-    async fn handle(&self, event: Event, _ctx: &HandlerContext) {
-        let Event::TelemetryFrame(frame) = event else {
+    async fn handle(&self, event: RacingEvent, _ctx: &HandlerContext<RacingEvent>) {
+        let RacingEvent::TelemetryFrameCollected(frame) = event else {
             return;
         };
 
@@ -46,8 +46,15 @@ impl EventHandler for LogHandler {
 
         if count.is_multiple_of(self.log_frequency) {
             info!(
-                "Frame {}: Speed={:.1}, RPM={:.0}, Gear={}, Lap={}, DistPct={}",
-                count, frame.speed, frame.rpm, frame.gear, frame.lap_number, frame.lap_distance_pct
+                "Frame {}: Speed={:.1}, RPM={:.0}, Gear={}, Lap={}, DistPct={}, LapTime={}, Surface={}",
+                count,
+                frame.speed,
+                frame.rpm,
+                frame.gear,
+                frame.lap_number,
+                frame.lap_distance_pct,
+                frame.current_lap_time,
+                frame.track_surface
             );
         }
     }

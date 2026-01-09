@@ -2,6 +2,7 @@ mod config;
 mod pos_service;
 
 pub mod events;
+pub mod handlers;
 pub mod pitwall_ext;
 pub mod telem;
 
@@ -9,8 +10,8 @@ pub use config::Config;
 // pub use models::{Sample, SampleKind};
 pub use pitwall_ext::AcceleratedReplayConnection;
 
-use events::handlers::{LapHandler, LogHandler};
-use events::{EventBus, HandlerRegistry};
+use eventbus::{EventBus, HandlerRegistry};
+use handlers::{LapHandler, LogHandler};
 use pos_service::PositionService;
 use telem::read_telemetry_eventbus;
 use tokio::sync::watch;
@@ -27,7 +28,7 @@ pub async fn run_events() {
     // Set up handler registry
     let mut registry = HandlerRegistry::new();
     registry.register(LapHandler::new());
-    registry.register(LogHandler::new(120));
+    registry.register(LogHandler::new(500));
 
     // Start all handlers
     let handles = registry.run(bus.clone());

@@ -1,27 +1,44 @@
-use std::sync::Arc;
-
-use futures::StreamExt;
-use pitwall::{PitwallFrame, UpdateRate};
-use tokio::sync::watch;
-
-use crate::events::{Event, EventBus, TelemetryFramePayload};
+use crate::events::RacingEvent;
 use crate::pitwall_ext::AcceleratedReplayConnection;
 use crate::pos_service::PositionState;
+use eventbus::EventBus;
+use futures::StreamExt;
+use pitwall::{PitwallFrame, UpdateRate};
+use std::sync::Arc;
+use tokio::sync::watch;
 
 #[derive(Debug, PitwallFrame)]
-struct CarData {
-    #[field_name = "Speed"]
-    speed: f32,
-    #[field_name = "RPM"]
-    rpm: f32,
-    #[field_name = "Gear"]
-    gear: i32,
-    #[field_name = "Lap"]
-    lap: i32,
-    #[field_name = "LapDistPct"]
-    lap_dist_pct: f32,
+pub struct TelemetryFrame {
     #[field_name = "SessionTime"]
-    session_time: f64,
+    pub session_time: f64,
+    #[field_name = "Lap"]
+    pub lap_number: i32,
+    #[field_name = "LapDistPct"]
+    pub lap_distance_pct: f32,
+    #[field_name = "LapDist"]
+    pub lap_distance: f32,
+    #[field_name = "LapCurrentLapTime"]
+    pub current_lap_time: f32,
+    #[field_name = "LapLastLapTime"]
+    pub last_lap_time: f32,
+    #[field_name = "LapBestLapTime"]
+    pub best_lap_time: f32,
+
+    #[field_name = "Speed"]
+    pub speed: f32,
+    #[field_name = "RPM"]
+    pub rpm: f32,
+    #[field_name = "Gear"]
+    pub gear: i32,
+    #[field_name = "Throttle"]
+    pub throttle: f32,
+    #[field_name = "Brake"]
+    pub brake: f32,
+    #[field_name = "Clutch"]
+    pub clutch: f32,
+
+    #[field_name = "PlayerTrackSurface"]
+    pub track_surface: i32,
 }
 
 pub async fn read_telemetry_print() {
@@ -32,7 +49,7 @@ pub async fn read_telemetry_print() {
     .await
     .unwrap();
 
-    let mut stream = connection.subscribe::<CarData>(UpdateRate::Max(60));
+    let mut stream = connection.subscribe::<TelemetryFrame>(UpdateRate::Max(60));
 
     while let Some(frame) = stream.next().await {
         println!(
@@ -43,24 +60,24 @@ pub async fn read_telemetry_print() {
 }
 
 pub async fn read_telemetry_eventbus(
-    bus: EventBus,
+    bus: EventBus<RacingEvent>,
     speed: f64,
     pos_tx: watch::Sender<PositionState>,
 ) {
     let connection = AcceleratedReplayConnection::open(
-        "../../sample_data/ligierjsp320_bathurst 2025-11-17 18-15-16.ibt",
+        "../../../sample_data/ligierjsp320_bathurst 2025-11-17 18-15-16.ibt",
         speed,
     )
     .await
     .unwrap();
 
-    let mut stream = connection.subscribe::<CarData>(UpdateRate::Max(60));
+    let mut stream = connection.subscribe::<TelemetryFrame>(UpdateRate::Max(60));
     let mut published_count: u64 = 0;
 
     while let Some(frame) = stream.next().await {
         match pos_tx.send(PositionState {
-            lap_dist_pct: frame.lap_dist_pct,
-            lap_number: frame.lap,
+            lap_dist_pct: frame.lap_distance_pct,
+            lap_number: frame.lap_number,
         }) {
             Ok(_) => {}
             Err(error) => {
@@ -69,17 +86,12 @@ pub async fn read_telemetry_eventbus(
             }
         }
 
-        let payload = TelemetryFramePayload {
-            speed: frame.speed,
-            rpm: frame.rpm,
-            gear: frame.gear,
-            lap_number: frame.lap,
-            lap_distance_pct: frame.lap_dist_pct,
-            session_time: frame.session_time,
-        };
-
-        bus.publish(Event::TelemetryFrame(Arc::new(payload)))
-            .unwrap();
+        match bus.publish(RacingEvent::TelemetryFrameCollected(Arc::new(frame))) {
+            Ok(_) => {}
+            Err(error) => {
+                println!("Error Msg: {error}")
+            }
+        }
         published_count += 1;
     }
 

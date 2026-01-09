@@ -1,8 +1,8 @@
 // use client_rs::Config;
+// use voirs::prelude::*;
+use client_rs::run_events;
 use tracing::info;
 use tracing_subscriber::{EnvFilter, fmt};
-
-use client_rs::run_events;
 
 #[tokio::main]
 async fn main() {

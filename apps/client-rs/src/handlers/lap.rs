@@ -1,11 +1,9 @@
-use std::sync::Arc;
-
 use async_trait::async_trait;
 use tokio::sync::Mutex;
 use tracing::{debug, info};
 
-use crate::events::handler::{EventHandler, HandlerContext};
-use crate::events::types::{Event, EventKind, LapCompletePayload};
+use crate::events::{LapCompletePayload, RacingEvent, RacingEventKind};
+use eventbus::{EventHandler, HandlerContext};
 
 /// Detects lap completion by monitoring lap_number changes
 pub struct LapHandler {
@@ -15,6 +13,7 @@ pub struct LapHandler {
 struct LapHandlerState {
     current_lap: i32,
     frame_count: usize,
+    valid: bool,
 }
 
 impl LapHandler {
@@ -23,6 +22,7 @@ impl LapHandler {
             state: Mutex::new(LapHandlerState {
                 current_lap: -1,
                 frame_count: 0,
+                valid: true,
             }),
         }
     }
@@ -35,38 +35,40 @@ impl Default for LapHandler {
 }
 
 #[async_trait]
-impl EventHandler for LapHandler {
-    fn handles(&self) -> EventKind {
-        EventKind::TelemetryFrame
+impl EventHandler<RacingEvent> for LapHandler {
+    fn handles(&self) -> RacingEventKind {
+        RacingEventKind::TelemetryFrameCollected
     }
 
     fn name(&self) -> &'static str {
         "LapHandler"
     }
 
-    async fn handle(&self, event: Event, ctx: &HandlerContext) {
-        let Event::TelemetryFrame(frame) = event else {
+    async fn handle(&self, event: RacingEvent, ctx: &HandlerContext<RacingEvent>) {
+        let RacingEvent::TelemetryFrameCollected(frame) = event else {
             return;
         };
 
         let mut state = self.state.lock().await;
         state.frame_count += 1;
 
+        if state.valid && frame.track_surface != 3 {
+            state.valid = false;
+        }
+
         // Detect lap change
         if frame.lap_number != state.current_lap && state.current_lap >= 0 {
             info!(
-                "Lap {} complete after {} frames",
-                state.current_lap, state.frame_count
+                "Lap {} complete after {} frames. Valid: {}",
+                state.current_lap, state.frame_count, state.valid
             );
 
-            // Publish LapComplete event
-            let lap_complete = LapCompletePayload {
+            // Publish LapComplete event (no Arc needed - small payload)
+            ctx.publish(RacingEvent::LapComplete(LapCompletePayload {
                 lap_number: state.current_lap,
                 lap_time_ms: None,
                 frame_count: state.frame_count,
-            };
-
-            ctx.publish(Event::LapComplete(Arc::new(lap_complete)));
+            }));
 
             // Reset for new lap
             state.frame_count = 0;

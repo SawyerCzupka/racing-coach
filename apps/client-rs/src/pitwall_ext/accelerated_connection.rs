@@ -117,15 +117,16 @@ impl AcceleratedReplayConnection {
         let validation = T::validate_schema(&self.schema).expect("Schema validation failed");
 
         // Create base frame stream from broadcast channel
-        let frames = BroadcastStream::new(self.frame_tx.subscribe()).filter_map(|result| async move {
-            match result {
-                Ok(frame) => Some(frame),
-                Err(BroadcastStreamRecvError::Lagged(n)) => {
-                    warn!("Frame subscriber lagged by {} frames", n);
-                    None
+        let frames =
+            BroadcastStream::new(self.frame_tx.subscribe()).filter_map(|result| async move {
+                match result {
+                    Ok(frame) => Some(frame),
+                    Err(BroadcastStreamRecvError::Lagged(n)) => {
+                        warn!("Frame subscriber lagged by {} frames", n);
+                        None
+                    }
                 }
-            }
-        });
+            });
 
         // Apply rate control and adaptation
         let effective_rate = rate.normalize(self.source_hz);

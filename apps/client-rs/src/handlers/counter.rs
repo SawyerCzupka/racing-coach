@@ -3,8 +3,8 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use async_trait::async_trait;
 use tracing::info;
 
-use crate::events::handler::{EventHandler, HandlerContext};
-use crate::events::types::{Event, EventKind};
+use crate::events::{RacingEvent, RacingEventKind};
+use eventbus::{EventHandler, HandlerContext};
 
 /// Counts telemetry frames received - useful for debugging event delivery
 pub struct CounterHandler {
@@ -31,24 +31,24 @@ impl Default for CounterHandler {
 }
 
 #[async_trait]
-impl EventHandler for CounterHandler {
-    fn handles(&self) -> EventKind {
-        EventKind::TelemetryFrame
+impl EventHandler<RacingEvent> for CounterHandler {
+    fn handles(&self) -> RacingEventKind {
+        RacingEventKind::TelemetryFrameCollected
     }
 
     fn name(&self) -> &'static str {
         "CounterHandler"
     }
 
-    async fn handle(&self, event: Event, _ctx: &HandlerContext) {
-        let Event::TelemetryFrame(_) = event else {
+    async fn handle(&self, event: RacingEvent, _ctx: &HandlerContext<RacingEvent>) {
+        let RacingEvent::TelemetryFrameCollected(_) = event else {
             return;
         };
 
         let count = self.frame_count.fetch_add(1, Ordering::Relaxed) + 1;
 
         // Log periodically to show progress without flooding
-        if count % 5000 == 0 {
+        if count.is_multiple_of(5000) {
             info!("CounterHandler: {} frames received so far", count);
         }
     }
