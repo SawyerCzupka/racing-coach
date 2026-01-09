@@ -50,7 +50,7 @@ tasks:
       cache: true
 
   typecheck:
-    command: 'uv run basedpyright'
+    command: 'uv run basedpyright src/'
     inputs:
       - 'src/**/*.py'
       - 'pyproject.toml'
@@ -64,6 +64,5 @@ tasks:
       - 'uv.lock'
     outputs:
       - '.venv'
-    local: true
     options:
-      cache: true
+      cache: false

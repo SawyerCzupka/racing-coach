@@ -37,4 +37,4 @@ tasks:
     outputs:
       - 'node_modules'
     options:
-      cache: true
+      cache: false

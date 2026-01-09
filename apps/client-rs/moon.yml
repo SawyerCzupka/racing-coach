@@ -16,13 +16,15 @@ fileGroups:
 
 tasks:
   run:
+    # No dependencies since cargo run manages building automatically.
     command: 'cargo run'
     inputs:
       - 'src/**/*.rs'
       - 'Cargo.toml'
-    local: true
     options:
       persistent: true
       cache: false
+      outputStyle: stream
+      runInCI: false
 
 # Inherits build, test, check, clippy, fmt from .moon/tasks/rust.yml

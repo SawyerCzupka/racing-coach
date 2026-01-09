@@ -1,5 +1,6 @@
 $schema: '../../.moon/cache/schemas/project.json'
 
+id: server
 type: 'application'
 language: 'python'
 
@@ -24,7 +25,7 @@ tasks:
     command: 'uv run fastapi dev src/racing_coach_server/app.py'
     inputs:
       - 'src/**/*.py'
-    local: true
+    # local: true
     options:
       persistent: true
       cache: false
@@ -43,13 +44,13 @@ tasks:
     inputs:
       - 'migrations/**/*.py'
       - 'alembic.ini'
-    local: true
+    # local: true
     options:
       cache: false
 
   migrate-create:
     command: 'uv run alembic revision --autogenerate'
-    local: true
+    # local: true
     options:
       cache: false
 
